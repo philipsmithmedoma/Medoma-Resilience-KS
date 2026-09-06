@@ -1,0 +1,145 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+  DESIGN.md § 1 tokens. Declared inside @theme so that Tailwind emits them as
+  CSS variables on :root and exposes them as utilities with the same names
+  (bg-primary, text-text-secondary, border-border, ...).
+*/
+@theme {
+  --color-*: initial;
+
+  /* Core */
+  --color-primary: #186ce9;
+  --color-primary-hover: #1663d6; /* 8 % darker than primary */
+  --color-text: #000000;
+  --color-text-secondary: #5a5a5a;
+  --color-text-muted: #8b8b8b;
+  --color-bg: #ffffff;
+  --color-bg-muted: #f5f6f7;
+  --color-border: #eaeced;
+  --color-border-input: #cccccc;
+  --color-badge: #000000;
+
+  /* Semantic */
+  --color-red: #e33026;
+  --color-red-icon: #eb5757;
+  --color-red-light: #fdeeee;
+  --color-red-pill: #fac4c4;
+  --color-orange: #f2994a;
+  --color-orange-light: #fef5ed;
+  --color-orange-pill: #ffcf99;
+  --color-orange-text: #9a7040;
+  --color-brown: #7b460a;
+  --color-green: #1aa339;
+  --color-green-text: #2c872b;
+  --color-green-light: #e8f6eb;
+  --color-green-pill: #cbe8c0;
+  --color-blue-pill: #cdddff;
+  --color-indigo: #7488ed;
+  --color-indigo-light: #f1f3fd;
+  --color-purple: #bb6bd9;
+  --color-purple-light: #f8f0fb;
+  --color-teal: #13a0b9;
+  --color-olive: #b9ab41;
+
+  /* Plain white and black for shadcn internals */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* shadcn/ui token names mapped onto the DESIGN.md palette */
+  --color-background: #ffffff;
+  --color-foreground: #000000;
+  --color-card: #ffffff;
+  --color-card-foreground: #000000;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #000000;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f5f6f7;
+  --color-secondary-foreground: #000000;
+  --color-muted: #f5f6f7;
+  --color-muted-foreground: #8b8b8b;
+  --color-accent: #f5f6f7;
+  --color-accent-foreground: #000000;
+  --color-destructive: #e33026;
+  --color-input: #cccccc;
+  --color-ring: #186ce9;
+
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    color-scheme: light;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 400;
+    min-width: 1280px;
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  label {
+    display: block;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+}
+
+/* DESIGN.md § 2 type scale */
+@utility text-title {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+}
+@utility text-heading {
+  font-size: 18px;
+  line-height: 28px;
+  font-weight: 600;
+}
+@utility text-nav {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+@utility text-body {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 400;
+}
+@utility text-small {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}
+@utility text-figure {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
+}
