@@ -5,6 +5,7 @@ import { TICK_WALL_MS } from '@/lib/time';
 import { Nav } from './Nav';
 import { IncidentBanner } from './IncidentBanner';
 import { CloseIncidentDialog } from '@/modules/incident/CloseIncidentDialog';
+import { ScenarioPanel } from '@/modules/scenario/ScenarioPanel';
 
 /** Runs the scenario clock: one tick per 2 s of wall time while running and not held by a dialog (SPEC.md § 7.2). */
 function useClockTicker() {
@@ -34,6 +35,7 @@ export function Layout() {
         <Outlet />
       </main>
       <CloseIncidentDialog open={closeOpen} onOpenChange={setCloseOpen} />
+      <ScenarioPanel />
     </div>
   );
 }

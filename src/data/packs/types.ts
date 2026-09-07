@@ -391,6 +391,33 @@ export interface ScenarioState {
   appliedAt: Record<string, number>;
   series: TickResult[];
   events: ScenarioEvent[];
+  recommendations: Recommendation[];
+  inputs: ScenarioInputs; // baseline captured when the scenario started
+  hubNodeId?: string; // node stood up by the vardhubb recommendation
+}
+
+/** Baseline the engine simulates against, captured from the store at start (SPEC.md § 7.3). */
+export interface ScenarioInputs {
+  tickMin: number;
+  horizonTicks: number;
+  sites: Record<
+    SiteId,
+    {
+      akutrum: number;
+      overvakning: number;
+      behandlingsrum: number;
+      ctScanners: number;
+      orSlots: number;
+      ivaFree: number;
+      imaFree: number;
+      bedsFree: number;
+      bloodUnits: number;
+      edPatients: number;
+      asihEligible: number;
+    }
+  >;
+  akutambulans: number;
+  regionNodes: Array<{ id: string; name: string; shortName: string; free: number }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -453,8 +480,15 @@ export interface Organisation {
 
 // ---------------------------------------------------------------------------
 // The pack
+export interface EdRooms {
+  akutrum: Figure;
+  overvakning: Figure;
+  behandlingsrum: Figure;
+}
+
 export interface DataPack {
   nodes: CareNode[];
+  edRooms: Record<SiteId, EdRooms>;
   ladders: Record<'karolinska' | SiteId, LadderStep[]>;
   hospital: HospitalFigures;
   organisation: Organisation[];

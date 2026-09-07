@@ -24,13 +24,14 @@ import type {
   Ward,
 } from './types';
 import { loadPack } from './packs/karolinska';
-import { AUDIT, CURRENT_USER, DEFAULT_SCOPE, SYSTEM_ACTOR } from './vocab';
+import { AUDIT, CURRENT_USER, DEFAULT_SCOPE, SCENARIO, SCENARIO_NAMES, SYSTEM_ACTOR } from './vocab';
 import { DAY_MIN, INITIAL_CLOCK, TICK_MIN, formatClock } from '@/lib/time';
 import { createIncidentSlice, type IncidentActions } from './store-incident';
 import { createEvacuationSlice, type EvacuationActions } from './store-evacuation';
 import { createResourcesSlice, type ResourcesActions } from './store-resources';
 import { createNetworkSlice, type NetworkActions } from './store-network';
 import { createFlowSlice, type FlowActions } from './store-flow';
+import { createScenarioSlice, type ScenarioActions } from './store-scenario';
 
 export interface DataState {
   pack: DataPack;
@@ -64,8 +65,8 @@ export interface DataState {
 }
 
 export interface Actions {
-  /** Append an audit entry and advance the clock one minute. Returns the entry id. */
-  logEntry: (action: string, object: string, detail?: string, actor?: string, ref?: string) => string;
+  /** Append an audit entry and advance the clock one minute (scenario-driven entries pass advance: false). Returns the entry id. */
+  logEntry: (action: string, object: string, detail?: string, actor?: string, ref?: string, options?: { advance?: boolean }) => string;
   nextId: (prefix: string) => string;
   setScope: (scope: NodeId) => void;
   setEhrOutage: (on: boolean, detail?: string) => void;
@@ -80,11 +81,11 @@ export interface Actions {
   reset: () => void;
   /** Opens the scenario panel on Kapacitet with a preset selected (chapters 3 and 5). */
   openScenarioPanel: (key: ScenarioKey | null) => void;
-  /** Arms (and optionally starts) a scenario for a chapter; wired to the engine in Batch 3. */
+  /** Starts a scenario with its defaults for a chapter; `start` also runs the clock. */
   armScenario: (key: ScenarioKey, start: boolean) => void;
 }
 
-export type AppStore = DataState & Actions & IncidentActions & EvacuationActions & ResourcesActions & NetworkActions & FlowActions;
+export type AppStore = DataState & Actions & IncidentActions & EvacuationActions & ResourcesActions & NetworkActions & FlowActions & ScenarioActions;
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -137,6 +138,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
   ...createResourcesSlice(set, get, api),
   ...createNetworkSlice(set, get, api),
   ...createFlowSlice(set, get, api),
+  ...createScenarioSlice(set, get, api),
 
   nextId: (prefix) => {
     const n = get().ids + 1;
@@ -144,11 +146,11 @@ export const useStore = create<AppStore>()((set, get, api) => ({
     return `${prefix}-${n}`;
   },
 
-  logEntry: (action, object, detail, actor = CURRENT_USER.name, ref) => {
+  logEntry: (action, object, detail, actor = CURRENT_USER.name, ref, options) => {
     const state = get();
     const id = `log-${state.log.length + 1}-${state.ids + 1}`;
     const entry: AuditEntry = { id, at: formatClock(state.clock), actor, action, object, detail, ref };
-    set({ log: [...state.log, entry], clock: state.clock + 1, ids: state.ids + 1 });
+    set({ log: [...state.log, entry], clock: state.clock + (options?.advance === false ? 0 : 1), ids: state.ids + 1 });
     get().settleDischarges();
     return id;
   },
@@ -185,12 +187,13 @@ export const useStore = create<AppStore>()((set, get, api) => ({
     const s = get();
     set({ clock: s.clock + tickMinutes(s) });
     get().settleDischarges();
+    if (s.scenario?.running) get().advanceScenario();
   },
 
   resetClock: () => {
-    const { logEntry } = get();
+    const { logEntry, scenario } = get();
     set({ clock: INITIAL_CLOCK, clockRunning: false, scenario: null, freedByScenario: 0 });
-    logEntry(AUDIT.clockReset, AUDIT.clockObject, undefined, SYSTEM_ACTOR);
+    logEntry(AUDIT.clockReset, AUDIT.clockObject, scenario ? SCENARIO.stopped(SCENARIO_NAMES[scenario.key]) : undefined, SYSTEM_ACTOR);
     set({ clock: INITIAL_CLOCK });
   },
 
@@ -198,7 +201,10 @@ export const useStore = create<AppStore>()((set, get, api) => ({
 
   openScenarioPanel: (key) => set({ scenarioPanel: { open: true, key } }),
 
-  armScenario: (key) => set({ scenarioPanel: { open: false, key } }),
+  armScenario: (key, start) => {
+    set({ scenarioPanel: { open: false, key } });
+    get().startScenario(key, {}, start);
+  },
 }));
 
 /** Convenience selectors. */

@@ -40,6 +40,11 @@ export function collectFigures(pack: DataPack): FigureEntry[] {
     for (const e of n.extraFigures ?? []) out.push({ label: `${n.name}: ${e.label}`, figure: e.figure, section: s.nodes, text: e.text });
   }
 
+  for (const [site, rooms] of Object.entries(pack.edRooms)) {
+    out.push({ label: `Akutrum, ${SCOPE_LABELS[site as 'solna' | 'huddinge']}`, figure: rooms.akutrum, section: s.nodes });
+    out.push({ label: `Övervakningsplatser akuten, ${SCOPE_LABELS[site as 'solna' | 'huddinge']}`, figure: rooms.overvakning, section: s.nodes });
+    out.push({ label: `Behandlingsrum akuten, ${SCOPE_LABELS[site as 'solna' | 'huddinge']}`, figure: rooms.behandlingsrum, section: s.nodes });
+  }
   for (const m of pack.flowMetrics) out.push({ label: `${m.label}, ${SCOPE_LABELS[m.site]}`, figure: m.value, section: s.flow });
 
   for (const c of pack.capabilities) {

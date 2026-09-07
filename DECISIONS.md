@@ -319,3 +319,43 @@ Spec: SPEC.md § 6.4, § 7.2
 Decision: Region scope renders Läget nu exactly like Karolinska scope (the region hospitals share no flow figures); a stood-up node scope shows the sentence "Läget nu finns för Karolinska Solna och Karolinska Huddinge…" with a link to Kapacitet. The status chip at Karolinska scope is the worse of the two site statuses; the sum column never drives a status.
 Rejected: Hiding the module at region scope – the presenter's chapter 5 starts at region scope and may click Läget nu.
 Spec: SPEC.md § 2, § 6.1
+
+## 2026-09-07 – Batch 3 – Engine timelines and capacities
+Decision: Casualties are generated deterministically: category counts by integer distribution with carry (60 → 12/24/24), arrival minute `första + floor(j × fönster / n)` per category, routing by sequential largest-deficit assignment (yellow 50/50, green 30/40/30), and every per-patient attribute (CT, operation, IVA, vårdplats, blod) by whether patient j crosses the next integer at the share. Red: akutrum from arrival for 60 min, one CT in the arrival tick, operation 50 % from +60 for 120 min, IVA 60 % from +30 min (the patient is committed to IVA once assessed) for the horizon, the other 40 % to a vårdplats after operation or akutrum, blod 4 enheter for 50 % at arrival. Yellow: övervakning 120 min, CT 60 %, operation 20 % from +120 for 90 min, vårdplats 80 % afterwards. Green: behandlingsrum 60 min, vårdplats 10 % afterwards. Pool capacities are the baseline free counts where one exists (IVA, vårdplatser, blod, akutambulans) and the room counts for akutrum/övervakning/behandlingsrum (zero baseline occupancy: PB1's "Töm akuten på färdigbedömda patienter"); `ct_slots` capacity is scanners in operation × 2 per hour × tick/60 and may be fractional (1,5 per 15 min); `or_slots` is the Akut operation capability capacity as concurrent operations. Events: the first arrival (from the parameter, "+20 min"), the first tick with demand > capacity per pool, and every applied recommendation; offsets follow DESIGN-KS ("+1 h 30 min").
+Rejected: Random arrival jitter – the spec requires determinism; IVA demand only after operation – the DoD's "brist within 2 h" would not occur.
+Spec: SPEC.md § 7.3, DATA.md § 8.3
+
+## 2026-09-07 – Batch 3 – The engine projects its current tick onto the live figures
+Decision: The store captures a baseline (`ScenarioInputs`) when a scenario starts and re-runs `simulate` from it whenever a recommendation is applied. On every tick the current pools are projected onto the live state: node free beds and free IVA become max(0, capacity − demand), akuten patients become the baseline plus the ED pools' demand, O-negativ stock becomes stock − units used, region nodes' free beds follow their vårdplatser pools. Manual actions during a running scenario (a placement, a discharge) still apply but are overwritten at the next tick; recommendation effects are inside the capacity, so they persist.
+Rejected: Incremental deltas per tick – drift after any manual action; keeping the scenario in a parallel read model – Läget nu, Kapacitet and Nätverk would need a second data path.
+Spec: SPEC.md § 5, § 6.1 ("update live"), § 7.4 ("re-run the simulation from the current tick")
+
+## 2026-09-07 – Batch 3 – Recommendation applicability
+Decision: `ima_overflow` and `stryk_elektiv` are applicable while the IVA (primary site) or or_slots pool shows brist anywhere in the horizon; `vardhubb` while any vårdplatser pool shows brist; `asih`, `tidig_utskrivning` and `omfördela` as soon as the scenario consumes beds or övervakning at all (masskada's 4 h horizon never reaches a vårdplats brist, but the DoD expects `asih` to run in chapter 3); `forstarkning`, `katastrof` and `transport` always. `katastrof` with skadade ≤ 60 opens a confirmation dialog quoting the illustrative threshold; ≥ 60 it applies directly. Applied recommendations show "Utförd" and cannot be applied twice. Store effects: `forstarkning`/`katastrof` activate PB1 with the läge or change it; `stryk_elektiv`, `ima_overflow`, `tidig_utskrivning`, `transport` and `o_huset` mark the matching PB1/PB5 task done; `asih` discharges every ASIH-eligible named row, lowers utskrivningsklara by 5/8 and ASIH-kandidater to 0, ASIH capacity −13, and counts 13 towards "Vårdplatser frigjorda"; `omfördela` takes up to 10 beds each at SÖS and DS; `transport` creates a request of 4 Transportambulans from Ambulanssjukvården to the primary site (Hög); `vardhubb` stands up Tillfällig vårdhubb Flemingsberg (40 platser, Mats Öberg) and sets it "I drift" four ticks later.
+Rejected: Brist-only applicability for the bed recommendations – the presenter's chapter 3 would have three permanently grey buttons.
+Spec: SPEC.md § 7.4
+
+## 2026-09-07 – Batch 3 – Scenario-driven log entries do not advance the clock
+Decision: Entries the scenario writes as actor System (events reaching the current tick, "nådde horisonten") pass `advance: false` to `logEntry`, so a tick is exactly 15 minutes (or a day) on the clock. User-authorised recommendations still advance one minute like any action.
+Rejected: Advancing per event – the clock drifted one minute per event and broke the tick arithmetic.
+Spec: SPEC.md § 7.2, § 7.5
+
+## 2026-09-07 – Batch 3 – Scenario panel is store-driven, non-modal and sits below the nav
+Decision: The panel is one Sheet mounted in the app shell, opened through `scenarioPanel` in the store (Kapacitet and Nätverk both have a "Scenario" button; chapters 3 and 5 open it on their route). It is non-modal, ignores outside clicks (Escape closes) and starts 48 px down so the clock controls stay reachable; it also carries its own Spela/Pausa, Stega and Stoppa buttons. Parameters are editable only before "Starta".
+Rejected: A modal sheet – the presenter could not step the clock or read Kapacitet while the panel is open.
+Spec: DESIGN-KS.md § 7, SPEC.md § 6.5, § 8
+
+## 2026-09-07 – Batch 3 – Pandemi is one IVA pool at Karolinska level
+Decision: IVA demand is `ivaPerDygn × dag` against one pool "IVA-platser Karolinska" whose capacity is the sum of free IVA beds (2) plus O-huset: +6,4 per day from the day the recommendation is applied, capped at 64. Ticks are days (`DAY_MIN`), the clock shows "dag n" and the step button reads "Stega 1 dygn"; the PB5 target "IVA-platser tillkomna" follows the O-huset ramp.
+Rejected: Per-site pools – Huddinge's 0 free beds would show brist on day 1 regardless of O-huset, contradicting the required "none with it".
+Spec: SPEC.md § 7.3 Pandemi, § 6.6 PB5
+
+## 2026-09-07 – Batch 3 – Mottagande allocation
+Decision: 260 patients arrive at `floor(260 × t / 48)` cumulative per tick; each patient goes to Karolinska when it crosses the 35 % share (91), split Solna/Huddinge by free beds (23/9); the rest to the six region hospitals in proportion to their free beds regardless of running out, so SÖS, DS and S:t Göran show "vårdplatser slut" at +3 h 30 min. Once the vårdhubb is open, region-bound patients fill it first (40). Node pools use the node's short name in events.
+Rejected: Stopping allocation at zero free beds – the point of the chapter is to show the nodes running out.
+Spec: SPEC.md § 7.3 Mottagande, § 9 Batch 3
+
+## 2026-09-07 – Batch 3 – Journalbortfall, Tryck, Siteevac and chapters
+Decision: `journalbortfall` activates PB2 when no incident is active (which turns the outage on) or turns the outage on directly, and the horizon (6 h = 24 ticks) turns it off and stops the clock. `tryck` only feeds the Prognos multiplier (1,3 for 6 h at Huddinge) and logs its event. `siteevac` sets the scope to the site, activates PB4 when no incident is active and navigates to Evakuering. Chapters reset the demo, set scope and route; chapters 2 and 4 start their scenario with the clock running, chapters 3 and 5 open the panel with the preset selected and the clock paused. "Återställ klockan" logs which scenario it stopped.
+Rejected: Auto-activating PB3 for mottagande – the spec ties only PB2 to a scenario start.
+Spec: SPEC.md § 7.3, § 8

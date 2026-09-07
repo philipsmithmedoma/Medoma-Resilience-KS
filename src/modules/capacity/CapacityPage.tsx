@@ -18,7 +18,6 @@ import { WhatLimitsWhat } from './WhatLimitsWhat';
 import { SourcesPopover } from './SourcesPopover';
 import { ObjectivesStrip } from './ObjectivesStrip';
 import { Ladder } from './Ladder';
-import { ScenarioPanel } from '@/modules/scenario/ScenarioPanel';
 import { ScenarioStrip } from '@/modules/scenario/ScenarioStrip';
 
 const WLW_ID = 'what-limits-what';
@@ -43,7 +42,7 @@ export function CapacityPage() {
   const log = useStore((s) => s.log);
   const incident = useStore((s) => s.incident);
   const scenario = useStore((s) => s.scenario);
-  const scenarioPanel = useStore((s) => s.scenarioPanel);
+  const openScenarioPanel = useStore((s) => s.openScenarioPanel);
   const whatIf = useStore((s) => s.whatIf);
   const setWhatIf = useStore((s) => s.setWhatIf);
   const clearWhatIf = useStore((s) => s.clearWhatIf);
@@ -57,13 +56,12 @@ export function CapacityPage() {
   const [selectedCap, setSelectedCap] = useState<string>(scopeCaps[0]?.id ?? '');
   const [whatIfOn, setWhatIfOn] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
     if (!scopeCaps.some((c) => c.id === selectedCap)) setSelectedCap(scopeCaps[0]?.id ?? '');
   }, [scopeCaps, selectedCap]);
 
-  // "Vad frigör" links from Läget nu arrive as /kapacitet?kapacitet=<kind>; a chapter can open the scenario panel.
+  // "Vad frigör" links from Läget nu arrive as /kapacitet?kapacitet=<kind>.
   useEffect(() => {
     const kind = new URLSearchParams(location.search).get('kapacitet') as CapabilityKind | null;
     if (kind) {
@@ -74,10 +72,6 @@ export function CapacityPage() {
       }
     }
   }, [location.search, scopeCaps]);
-
-  useEffect(() => {
-    if (scenarioPanel.open) setPanelOpen(true);
-  }, [scenarioPanel]);
 
   const cards = scopeCards({ scope, nodes, capabilities, flowMetrics, outage });
   const scopeBottlenecks = region ? bottlenecks : bottlenecks.filter((b) => (sites.length ? sites.includes(b.nodeId as SiteId) : b.nodeId === scope));
@@ -128,7 +122,7 @@ export function CapacityPage() {
               {LABELS.log}
             </Button>
           </PageTitle>
-          <Button variant="secondary" onClick={() => setPanelOpen(true)}>
+          <Button variant="secondary" onClick={() => openScenarioPanel(scenario?.key ?? null)}>
             {CAP.scenario}
           </Button>
         </div>
@@ -177,7 +171,6 @@ export function CapacityPage() {
       ) : null}
 
       <LogDrawer open={logOpen} onOpenChange={setLogOpen} entries={log} />
-      <ScenarioPanel open={panelOpen} onOpenChange={setPanelOpen} />
     </div>
   );
 }

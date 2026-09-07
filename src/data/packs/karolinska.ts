@@ -351,6 +351,21 @@ export const WARDS: Ward[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Emergency department rooms used by the scenario engine (SPEC.md § 7.3)
+export const ED_ROOMS: DataPack['edRooms'] = {
+  solna: {
+    akutrum: i(6, 'Intensivakuten Solna; antal rum ej offentligt'),
+    overvakning: i(20, 'Intensivakuten Solna; antal platser ej offentligt'),
+    behandlingsrum: i(16, 'Intensivakuten Solna; antal rum ej offentligt'),
+  },
+  huddinge: {
+    akutrum: v(4, 'S6', '2024-09'),
+    overvakning: v(25, 'S6', '2024-09', { basis: 'Mitti anger 50 – avvikelse noterad' }),
+    behandlingsrum: v(25, 'S6', '2024-09'),
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Capabilities (components illustrative unless a verified total is cited)
 export const CAPABILITIES: Capability[] = [
   {
@@ -1089,6 +1104,7 @@ export const INITIAL_LOG: AuditEntry[] = [
 // ---------------------------------------------------------------------------
 export const KAROLINSKA_PACK: DataPack = {
   nodes: NODES,
+  edRooms: ED_ROOMS,
   ladders: LADDERS,
   hospital: HOSPITAL,
   organisation: ORGANISATION,
