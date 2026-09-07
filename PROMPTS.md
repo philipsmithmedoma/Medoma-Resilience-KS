@@ -1,23 +1,15 @@
-# PROMPTS.md – what to paste into Claude Code, one per batch
+# PROMPTS.md – Karolinska version
 
-Setup once: create an empty GitHub repository, put CLAUDE.md, SPEC.md, DESIGN.md, DECISIONS.md and the assets/ folder at its root on `main`, connect it to Claude Code, and in the repository settings set Pages → Source to "GitHub Actions". Then run the prompts below in order, merging each pull request before starting the next.
+Setup: upload CLAUDE.md, SPEC.md, DATA.md, DESIGN-KS.md and this file to the root of the KS repository on `main`, overwriting the first prototype's CLAUDE.md, SPEC.md and PROMPTS.md. Keep DESIGN.md, DECISIONS.md, assets/ and all code as they are. Enable Pages (Settings → Pages → Source: GitHub Actions) if not inherited. Then start one Claude Code session on the repository with the prompt below, mode Accept edits.
 
-## Batch 1
+## All four batches in one session
 
-Read CLAUDE.md, SPEC.md and DESIGN.md in full before doing anything else. Then implement Batch 1 exactly as defined in SPEC.md § 9, on a new branch. Do not ask questions; follow the decision protocol in CLAUDE.md and log every choice the spec does not make in DECISIONS.md. Finish by running the build, the type check and the tests, working through the Batch 1 definition-of-done checklist item by item in the running app, and opening a pull request whose description contains the checklist with a result per item and the DECISIONS.md entries you added.
+Read CLAUDE.md, SPEC.md, DATA.md, DESIGN.md and DESIGN-KS.md in full before doing anything else. This repository already contains the complete first prototype; inspect the actual code on main (routes, store, mock data, components, tests) before changing anything, and reuse it. Then implement Batches 1, 2, 3 and 4 in that order, exactly as defined in SPEC.md § 9, on one new branch. Treat each batch as a unit: complete it, run the build, the type check and the tests, work through that batch's definition-of-done checklist in the running app, commit with a message naming the batch, and only then start the next. Do not ask questions; follow the decision protocol in CLAUDE.md and append every choice the spec does not make to DECISIONS.md under a heading "## KS build", keeping the existing entries. Every figure shown in the UI must carry the confidence and source defined in DATA.md; never present an illustrative value as verified. Finish by opening a pull request whose description contains all four checklists with a result per item, the dead-link sweep table, and the DECISIONS.md entries you added.
 
-## Batch 2
+## If the session stops before all four batches are done
 
-Read CLAUDE.md, SPEC.md, DESIGN.md and DECISIONS.md in full. Batch 1 has been merged: inspect the actual code on main (routes, store, mock data, components) before changing anything, and do not assume what it contains. Then implement Batch 2 exactly as defined in SPEC.md § 9, on a new branch, without asking questions. Finish by running the build, the type check and the tests, working through the Batch 2 definition-of-done checklist in the running app, and opening a pull request whose description contains the checklist with a result per item and the DECISIONS.md entries you added.
+Reply: "Continue with the next batch as instructed."
 
-## Batch 3
+## If the session asks a question
 
-Read CLAUDE.md, SPEC.md, DESIGN.md and DECISIONS.md in full. Batches 1 and 2 have been merged: inspect the actual code on main before changing anything. Then implement Batch 3 exactly as defined in SPEC.md § 9, on a new branch, without asking questions. Finish by running the build, the type check and the tests, working through the Batch 3 definition-of-done checklist in the running app, and opening a pull request whose description contains the checklist with a result per item and the DECISIONS.md entries you added.
-
-## Batch 4
-
-Read CLAUDE.md, SPEC.md, DESIGN.md and DECISIONS.md in full. Batches 1–3 have been merged: inspect the actual code on main before changing anything. Then implement Batch 4 exactly as defined in SPEC.md § 9, on a new branch, without asking questions. This batch ends with the polish pass and the dead-link sweep of every route; record the sweep in the pull request. Finish by running the build, the type check and the tests, working through the Batch 4 definition-of-done checklist in the running app, and opening a pull request whose description contains the checklist with a result per item and the DECISIONS.md entries you added.
-
-## If a batch comes back with questions or unfinished items
-
-Reply with exactly: "Do not ask. Apply the decision protocol in CLAUDE.md, log the decision in DECISIONS.md, and finish the batch." The spec is written so that this is always possible.
+Reply: "Do not ask. Apply the decision protocol in CLAUDE.md, log the decision in DECISIONS.md under KS build, and finish the batch."
