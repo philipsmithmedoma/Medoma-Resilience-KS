@@ -16,7 +16,7 @@ function IconButton({ label, onClick, primary, children }: { label: string; onCl
           type="button"
           aria-label={label}
           onClick={onClick}
-          className={cn('flex size-8 items-center justify-center rounded-md hover:bg-bg-muted', primary ? 'bg-primary text-white hover:bg-primary-hover' : 'text-text')}
+          className={cn('flex size-8 items-center justify-center rounded-md hover:bg-bg-muted', primary ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-text')}
         >
           {children}
         </button>

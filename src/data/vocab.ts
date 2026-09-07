@@ -214,6 +214,10 @@ const TONES: Record<string, ChipTone> = {
   Low: 'warning',
   Estimat: 'warning',
   Spegel: 'warning',
+  estimate: 'warning',
+  mirror: 'warning',
+  reported: 'grey',
+  illustrative: 'grey',
   Monitor: 'warning',
   'Standing up': 'warning',
   Suggested: 'warning',
@@ -302,6 +306,9 @@ export const LABELS = {
   ariaSortBy: (label: string) => `Sortera efter ${label}`,
   ariaFilter: (label: string) => `Filtrera ${label}`,
   ariaProgress: (label: string) => `${label}, förlopp`,
+  darkMode: 'Mörkt läge',
+  lightMode: 'Ljust läge',
+  fictionalPatients: 'Fiktiva patientuppgifter – inte Karolinskas data.',
 } as const;
 
 export const CLOCK = {
@@ -326,15 +333,17 @@ export const AUDIT = {
   columns: { time: 'Tid', actor: 'Aktör', action: 'Åtgärd', object: 'Objekt', detail: 'Detalj' },
 } as const;
 
+// Icon tile tokens (DESIGN.md § 4, DESIGN-DARK.md § 2): the dark theme mixes the tint and lightens the icon.
 export const ICON_TINTS = {
-  beds: { icon: 'text-primary', tile: 'bg-indigo-light' },
-  intensive: { icon: 'text-red-icon', tile: 'bg-red-light' },
-  theatres: { icon: 'text-purple', tile: 'bg-purple-light' },
-  imaging: { icon: 'text-indigo', tile: 'bg-indigo-light' },
-  ed: { icon: 'text-orange', tile: 'bg-orange-light' },
-  staff: { icon: 'text-green', tile: 'bg-green-light' },
-  transport: { icon: 'text-teal', tile: 'bg-indigo-light' },
-  supplies: { icon: 'text-olive', tile: 'bg-orange-light' },
+  beds: { icon: 'text-icon-primary', tile: 'bg-tile-indigo' },
+  intensive: { icon: 'text-icon-red', tile: 'bg-tile-red' },
+  theatres: { icon: 'text-icon-purple', tile: 'bg-tile-purple' },
+  imaging: { icon: 'text-icon-indigo', tile: 'bg-tile-indigo' },
+  ed: { icon: 'text-icon-orange', tile: 'bg-tile-orange' },
+  staff: { icon: 'text-icon-green', tile: 'bg-tile-green' },
+  transport: { icon: 'text-icon-teal', tile: 'bg-tile-indigo' },
+  supplies: { icon: 'text-icon-olive', tile: 'bg-tile-orange' },
+  messages: { icon: 'text-icon-primary', tile: 'bg-tile-indigo' },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -724,11 +733,12 @@ export const EVAC = {
   moveStatusLabel: 'Flyttstatus',
 } as const;
 
+/** Colour tokens per node status for the map markers; resolved through the theme at render time. */
 export const NODE_STATUS_COLOURS: Record<NodeStatus, string> = {
-  Operational: '#1AA339',
-  Degraded: '#F2994A',
-  'Standing up': '#F2994A',
-  Offline: '#EB5757',
+  Operational: '--color-green',
+  Degraded: '--color-orange',
+  'Standing up': '--color-orange',
+  Offline: '--color-red-icon',
 };
 
 // ---------------------------------------------------------------------------

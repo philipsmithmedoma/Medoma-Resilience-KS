@@ -379,3 +379,33 @@ Spec: SPEC.md § 4, § 9 Batch 4
 Decision: The README is written in Swedish and carries the whole presenter script: what each confidence chip means and the example figure to point at, the five chapters with what to click and the values to expect (occupancy, deficit time, +20 min, +1 h 30 min, 0 free at SÖS/DS/S:t Göran, the vårdhubb), and the demos outside the chapters (Evakuering, Från meddelande, Pandemi, Källor). Expected values are quoted from the pack so the presenter can check the app against the script.
 Rejected: A separate `PRESENTER.md` – one document is easier to keep in step with the pack.
 Spec: SPEC.md § 9 Batch 4
+
+## 2026-09-07 – Batch 5 – Dark tokens live in the same stylesheet as the light tokens
+Decision: `src/index.css` is both the token stylesheet and the Tailwind theme file: the light values stay in `@theme` (which emits them on `:root` and generates the utilities) and a `.dark` block overrides the same variables, with `@custom-variant dark` on the `html` class. New tokens carry every treatment DESIGN-DARK.md § 2 describes so that no component references a colour except through a token: `surface`, `primary-text`, `badge-text`, `track`, `overlay`, chip fill/border/text per tone, role-pill fill/border, icon-tile background/icon, banner and avatar. Semantic mixes use `color-mix(in srgb, …)` in the dark values. Shadows are `none` in dark mode through `--shadow-card`; the vendored shadcn `shadow-md/lg/xs/sm` classes were replaced by `shadow-card`.
+Rejected: A separate `tokens.css` with `@theme inline` – the same names would have been declared twice (raw variable and theme variable) and every utility would have carried an extra `var()` indirection.
+Spec: DESIGN-DARK.md § 1–2, § 5
+
+## 2026-09-07 – Batch 5 – Blue chip text lightened to pass the contrast floor
+Decision: DESIGN-DARK.md § 2 gives `#4D8EF0` for blue chip text, which measures 4,36:1 on the 16 % primary mix over the surface; the chip text token uses `#66A0F3` (5,34:1) instead. `#4D8EF0` stays for links, active tabs and secondary buttons, where it measures 5,08:1 on the surface. All other pairs pass; the ratios are in the pull request.
+Rejected: Keeping `#4D8EF0` and raising the fill mix – the fill would no longer match the other chips.
+Spec: DESIGN-DARK.md § 2 (contrast floor)
+
+## 2026-09-07 – Batch 5 – Map colours resolve through the theme at render time
+Decision: Leaflet paints SVG paths with literal colours, so `NodeMap` reads the primary and status tokens with `getComputedStyle` (`cssColor`) and re-renders on a theme change; `NODE_STATUS_COLOURS` maps statuses to token names. The tile pane gets the § 3 filter under `.dark`; map surfaces (container, tooltips, popups, zoom bar, attribution) follow the tokens with `html`-prefixed selectors because Leaflet's stylesheet loads after ours.
+Rejected: `var()` in SVG presentation attributes – not reliable across the renderers Leaflet uses.
+Spec: DESIGN-DARK.md § 3
+
+## 2026-09-07 – Batch 5 – Theme and locale are small zustand stores outside the demo store
+Decision: `src/lib/theme.ts` and `src/lib/i18n.ts` hold their state in their own stores with `localStorage` persistence (`theme`, `locale`), applied to `<html>` before the first render from `main.tsx`. They are not part of the demo store, so "Återställ demo" leaves them alone and nothing is logged when they change.
+Rejected: Putting them in the app store – a demo reset would flip the presenter's theme and language.
+Spec: DESIGN-DARK.md § 1, DESIGN-LANG.md § 1
+
+## 2026-09-07 – Batch 5 – Nav name hidden below 1360 px
+Decision: With the language and theme toggles the right cluster no longer fits at 1280 px next to "Eva Lind"; the name text is hidden below 1360 px (the avatar keeps it as a title) and the cluster gap is 8 px. Modules keep their 32 px gap.
+Rejected: Narrowing the module gap – a Batch 1 requirement.
+Spec: DESIGN-KS.md § 2, DESIGN-DARK.md § 1, DESIGN-LANG.md § 1
+
+## 2026-09-07 – Batch 5 – Screenshots are committed under docs/screenshots/batch5
+Decision: The GitHub tools available in the session cannot attach files to a pull request, so the required screenshots (six pages in both themes, Start and Läget nu in English) are committed under `docs/screenshots/batch5/` and embedded in the pull request description from the branch. The 1440 px set was checked but not committed.
+Rejected: Uploading elsewhere – nothing outside the repository is allowed.
+Spec: DESIGN-DARK.md § 5, DESIGN-LANG.md § 6

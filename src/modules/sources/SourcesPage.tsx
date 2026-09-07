@@ -70,7 +70,7 @@ export function SourcesPage() {
                     <TableCell className="whitespace-normal">{src.date}</TableCell>
                     <TableCell>
                       {src.url ? (
-                        <a href={src.url} target="_blank" rel="noreferrer" className="text-primary hover:text-primary-hover hover:underline">
+                        <a href={src.url} target="_blank" rel="noreferrer" className="text-primary-text hover:text-primary-hover hover:underline">
                           {SOURCES.open}
                         </a>
                       ) : (

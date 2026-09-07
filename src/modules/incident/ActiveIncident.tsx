@@ -66,7 +66,7 @@ export function ActiveIncident({ incident }: { incident: Incident }) {
             ) : (
               <>
                 <StatusChip status={incident.lage} />
-                <button type="button" className="text-small text-primary hover:text-primary-hover hover:underline" onClick={() => setEditingLage(true)}>
+                <button type="button" className="text-small text-primary-text hover:text-primary-hover hover:underline" onClick={() => setEditingLage(true)}>
                   {LABELS.change}
                 </button>
               </>

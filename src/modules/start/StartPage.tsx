@@ -50,7 +50,7 @@ export function StartPage() {
         <h1 className="text-title">{START.title}</h1>
         <p className="text-body text-text-secondary">
           {START.subtitle}{' '}
-          <Link to="/kallor" className="text-primary hover:text-primary-hover hover:underline">
+          <Link to="/kallor" className="text-primary-text hover:text-primary-hover hover:underline">
             {START.sourcesLink}
           </Link>
         </p>
@@ -59,7 +59,7 @@ export function StartPage() {
       <section aria-label={START.chapters}>
         <div className="grid grid-cols-5 gap-4">
           {START.chapterList.map((c) => (
-            <article key={c.n} className="flex flex-col rounded-lg border border-border bg-white p-5 shadow-card">
+            <article key={c.n} className="flex flex-col rounded-lg border border-border bg-surface p-5 shadow-card">
               <span className="text-small text-text-secondary tabular">{c.n}</span>
               <h2 className="mt-1 text-heading">{c.title}</h2>
               <p className="mt-2 flex-1 text-body text-text-secondary">{c.description}</p>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import type { ResourceRequest } from '@/data/types';
 import { useStore } from '@/data/store';
-import { LABELS, REQUEST_STATUSES, REQUEST_STATUS_LABELS, RES } from '@/data/vocab';
+import { ICON_TINTS, LABELS, REQUEST_STATUSES, REQUEST_STATUS_LABELS, RES } from '@/data/vocab';
 import { fmt } from '@/lib/format';
 import { IconTile } from '@/components/Card';
 import { StatusChip } from '@/components/Chip';
@@ -63,7 +63,7 @@ export function RequestsTab() {
 function RequestRow({ request: r, from, to, onClick }: { request: ResourceRequest; from?: string; to: string; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className="flex w-full items-center gap-4 py-2 text-left hover:bg-bg-muted" aria-label={LABELS.ariaOpen(`${r.resourceName} × ${r.quantity}`)}>
-      <IconTile icon={ArrowLeftRightIcon} iconClass="text-teal" tileClass="bg-indigo-light" />
+      <IconTile icon={ArrowLeftRightIcon} iconClass={ICON_TINTS.transport.icon} tileClass={ICON_TINTS.transport.tile} />
       <span className="w-16 shrink-0">
         <PriorityText priority={r.priority} />
       </span>

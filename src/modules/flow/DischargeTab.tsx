@@ -61,6 +61,7 @@ export function DischargeTab({ sites }: { sites: SiteId[] }) {
           { label: FLOW.discharge.kpi.asih, value: fmt(asih) },
         ]}
       />
+      <p className="text-small text-text-muted">{LABELS.fictionalPatients}</p>
       {rows.length === 0 ? (
         <p className="text-text-secondary">{FLOW.discharge.empty}</p>
       ) : (

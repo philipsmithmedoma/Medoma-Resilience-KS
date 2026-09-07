@@ -69,7 +69,7 @@ export function TasksTab({ incident }: { incident: Incident }) {
                         }}
                       />
                     ) : (
-                      <button type="button" className="w-16 text-right text-primary hover:text-primary-hover hover:underline" onClick={() => setAssigning(t.id)}>
+                      <button type="button" className="w-16 text-right text-primary-text hover:text-primary-hover hover:underline" onClick={() => setAssigning(t.id)}>
                         {INCIDENT.assign}
                       </button>
                     )}

@@ -34,6 +34,10 @@ Kräver Node 22. Minsta bredd 1280 px. Kartunderlaget hämtas från OpenStreetMa
 
 Klockan uppe till höger är enda tidskällan. Den startar 14:40, fredag 4 september 2026, går fram en minut per åtgärd och, när ett scenario spelas, 15 minuter per 2 sekunder (ett dygn per 2 sekunder i pandemiscenariot). Spela/pausa, Stega och Återställ klockan sitter bredvid tiden. Demo-knappen återställer hela demon.
 
+## Mörkt läge
+
+Knappen med måne/sol i navigationsfältet växlar mellan ljust och mörkt läge. Valet sparas i webbläsaren (`localStorage`, nyckeln `theme`) och ljust läge är standard. Kartan får ett inverteringsfilter i mörkt läge; markörer och ASIH-cirkeln påverkas inte.
+
 ## Presentatörsmanus
 
 Startsidan (logotypen) har fem kapitel. Varje kapitel återställer demon, sätter omfattning och sida och startar vid behov ett scenario, så kapitlen kan visas i valfri ordning.

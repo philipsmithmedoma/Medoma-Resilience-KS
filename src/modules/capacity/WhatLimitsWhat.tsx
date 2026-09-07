@@ -135,7 +135,7 @@ export function WhatLimitsWhat(props: WhatLimitsWhatProps) {
               {capability.ladder.map((step) => (
                 <li key={step.label} className="grid grid-cols-[180px_minmax(0,1fr)_48px] items-center gap-3 text-small">
                   <span>{step.label}</span>
-                  <span className="h-4 rounded-sm bg-border">
+                  <span className="h-4 rounded-sm bg-track">
                     <span className="block h-4 rounded-sm bg-primary" style={{ width: `${ladderMax > 0 ? Math.max(2, Math.round((step.value / ladderMax) * 100)) : 0}%` }} />
                   </span>
                   <span className="text-right tabular">{fmt(step.value)}</span>

@@ -215,7 +215,7 @@ export function ScenarioPanel() {
                                   <span className="truncate" title={SCENARIO.poolLabels[p.pool] ?? p.pool}>
                                     {SCENARIO.poolLabels[p.pool] ?? p.pool}
                                   </span>
-                                  <span className="relative h-4 rounded-sm bg-border">
+                                  <span className="relative h-4 rounded-sm bg-track">
                                     <span className={cn('block h-4 rounded-sm', brist ? 'bg-red-icon' : 'bg-primary')} style={{ width: `${Math.min(100, Math.round((p.demand / max) * 100))}%` }} />
                                     <span className="absolute top-0 h-4 w-0.5 bg-text" style={{ left: `${Math.min(100, Math.round((p.capacity / max) * 100))}%` }} aria-hidden />
                                   </span>

@@ -39,9 +39,9 @@ export function MessageThread({ messages, onSend, onCreateRequest, emptyText = I
               <div className="mb-1 text-small text-text-secondary">
                 {m.author}, {m.role}, <span className="tabular">{m.at}</span>
               </div>
-              <div className={cn('max-w-[70%] rounded-lg px-3 py-2 text-body', sent ? 'bg-primary text-white' : 'bg-border text-text')}>{m.text}</div>
+              <div className={cn('max-w-[70%] rounded-lg px-3 py-2 text-body', sent ? 'bg-primary text-primary-foreground' : 'bg-bg-muted text-text')}>{m.text}</div>
               {received && onCreateRequest ? (
-                <button type="button" className="mt-1 text-small text-primary hover:text-primary-hover hover:underline" onClick={() => onCreateRequest(m)}>
+                <button type="button" className="mt-1 text-small text-primary-text hover:text-primary-hover hover:underline" onClick={() => onCreateRequest(m)}>
                   {INCIDENT.createRequest}
                 </button>
               ) : null}
@@ -58,13 +58,13 @@ export function MessageThread({ messages, onSend, onCreateRequest, emptyText = I
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={INCIDENT.messagePlaceholder}
-          className="h-9 flex-1 rounded-md border border-border-input bg-white px-3 text-body"
+          className="h-9 flex-1 rounded-md border border-border-input bg-surface px-3 text-body"
         />
         <button
           type="submit"
           aria-label={INCIDENT.send}
           disabled={!text.trim()}
-          className="flex size-9 items-center justify-center rounded-md bg-primary text-white hover:bg-primary-hover disabled:bg-border-input"
+          className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary-hover disabled:bg-border-input"
         >
           <SendIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </button>

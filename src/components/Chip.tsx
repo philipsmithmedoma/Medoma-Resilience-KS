@@ -2,12 +2,13 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { toneOf, type ChipTone } from '@/data/vocab';
 
+// Fill, 1 px border and text per tone; the chip tokens carry the light and dark values (DESIGN-DARK.md § 2).
 const TONE_CLASSES: Record<ChipTone, string> = {
-  green: 'bg-green-light border-green text-green-text',
-  warning: 'bg-orange-light border-orange text-orange-text',
-  red: 'bg-red-light border-red-icon text-red',
-  grey: 'bg-bg-muted border-border text-text-secondary',
-  blue: 'bg-blue-pill border-primary text-text',
+  green: 'bg-chip-green-bg border-chip-green-border text-chip-green-text',
+  warning: 'bg-chip-orange-bg border-chip-orange-border text-chip-orange-text',
+  red: 'bg-chip-red-bg border-chip-red-border text-chip-red-text',
+  grey: 'bg-chip-grey-bg border-chip-grey-border text-chip-grey-text',
+  blue: 'bg-chip-blue-bg border-chip-blue-border text-chip-blue-text',
 };
 
 interface ChipProps {
@@ -41,7 +42,7 @@ export function StatusChip({ status, label, className, title }: { status: string
 /** Count badge: 16 px black circle with white 11/600 text. */
 export function CountBadge({ count }: { count: number }) {
   return (
-    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-badge px-1 text-[11px] leading-none font-semibold text-white tabular">
+    <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-badge px-1 text-[11px] leading-none font-semibold text-badge-text tabular">
       {count}
     </span>
   );

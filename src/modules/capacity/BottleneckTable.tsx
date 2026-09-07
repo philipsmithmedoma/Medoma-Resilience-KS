@@ -52,7 +52,7 @@ export function BottleneckTable({ bottlenecks, capabilities, nodes, showNode = f
             >
               <TableCell className="tabular">{b.rank}</TableCell>
               {showNode ? <TableCell>{nodes.find((n) => n.id === b.nodeId)?.name ?? b.nodeId}</TableCell> : null}
-              <TableCell className={cn(clickable && 'text-primary')}>{b.capacity}</TableCell>
+              <TableCell className={cn(clickable && 'text-primary-text')}>{b.capacity}</TableCell>
               <TableCell className="whitespace-normal">{b.limitingResource}</TableCell>
               <TableCell className="whitespace-normal">{b.impact}</TableCell>
               <TableCell className="whitespace-normal">{b.wouldUnlock}</TableCell>

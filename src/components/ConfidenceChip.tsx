@@ -33,7 +33,7 @@ export function ConfidenceChip({ figure, showSource = false, className }: Confid
     if (!showSource || !figure.source) return null;
     return (
       <ConfidencePopover figure={figure}>
-        <button type="button" className={`text-small text-text-muted hover:text-primary hover:underline ${className ?? ''}`}>
+        <button type="button" className={`text-small text-text-muted hover:text-primary-text hover:underline ${className ?? ''}`}>
           {CONFIDENCE_TEXT.source} {figure.source}
         </button>
       </ConfidencePopover>
@@ -42,7 +42,7 @@ export function ConfidenceChip({ figure, showSource = false, className }: Confid
   return (
     <ConfidencePopover figure={figure}>
       <button type="button" className={`rounded-full ${className ?? ''}`} aria-label={`${label}: ${CONFIDENCE_TEXT[mirror ? 'mirror' : figure.confidence]}`}>
-        <Chip tone={toneOf(label)}>{label}</Chip>
+        <Chip tone={toneOf(mirror ? 'mirror' : figure.confidence)}>{label}</Chip>
       </button>
     </ConfidencePopover>
   );
@@ -63,7 +63,7 @@ export function ConfidencePopover({ figure, children }: { figure: Figure; childr
           <p className="text-small text-text-secondary">
             {source.key}: {source.name}, {source.date}.{' '}
             {source.url ? (
-              <a href={source.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+              <a href={source.url} target="_blank" rel="noreferrer" className="text-primary-text hover:underline">
                 {SOURCES.open}
               </a>
             ) : null}
@@ -74,7 +74,7 @@ export function ConfidencePopover({ figure, children }: { figure: Figure; childr
             {CONFIDENCE_TEXT.basis}: {figure.basis}
           </p>
         ) : null}
-        <Link to={`/kallor#${sourceAnchor(figure)}`} className="block text-primary hover:text-primary-hover hover:underline">
+        <Link to={`/kallor#${sourceAnchor(figure)}`} className="block text-primary-text hover:text-primary-hover hover:underline">
           {CONFIDENCE_TEXT.showInSources}
         </Link>
       </PopoverContent>

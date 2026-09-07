@@ -2,22 +2,17 @@ import type { Profession } from '@/data/types';
 import { PROFESSION_LABELS } from '@/data/vocab';
 import { cn } from '@/lib/utils';
 
-// Fill per profession with a 1 px dashed border in a 20 % darker tint of the fill (DESIGN.md § 4).
-const PILL: Record<Profession, { fill: string; border: string }> = {
-  Doc: { fill: '#FAC4C4', border: '#C89D9D' },
-  Nrs: { fill: '#CDDFFF', border: '#A4B2CC' },
-  AsPr: { fill: '#CBE8C0', border: '#A2BA9A' },
-  Supp: { fill: '#FFCF99', border: '#CCA67A' },
+// Fill per profession with a 1 px dashed border in a darker tint of the fill (DESIGN.md § 4); tokens carry the dark values.
+const PILL: Record<Profession, string> = {
+  Doc: 'bg-pill-doc border-pill-doc-border',
+  Nrs: 'bg-pill-nrs border-pill-nrs-border',
+  AsPr: 'bg-pill-aspr border-pill-aspr-border',
+  Supp: 'bg-pill-supp border-pill-supp-border',
 };
 
 export function RolePill({ profession, className }: { profession: Profession; className?: string }) {
-  const p = PILL[profession];
   return (
-    <span
-      title={PROFESSION_LABELS[profession]}
-      className={cn('inline-flex h-[22px] items-center rounded-full border border-dashed px-2 text-small text-text', className)}
-      style={{ backgroundColor: p.fill, borderColor: p.border }}
-    >
+    <span title={PROFESSION_LABELS[profession]} className={cn('inline-flex h-[22px] items-center rounded-full border border-dashed px-2 text-small text-text', PILL[profession], className)}>
       {profession}
     </span>
   );

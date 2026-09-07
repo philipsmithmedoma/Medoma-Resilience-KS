@@ -22,7 +22,7 @@ function HeaderFilter({ label, values, labels, selected, onToggle }: { label: st
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className={cn('inline-flex items-center gap-1 hover:text-text', active && 'text-primary')} aria-label={LABELS.ariaFilter(label)}>
+        <button type="button" className={cn('inline-flex items-center gap-1 hover:text-text', active && 'text-primary-text')} aria-label={LABELS.ariaFilter(label)}>
           {label}
           <ChevronDownIcon className="size-4" strokeWidth={1.5} aria-hidden />
         </button>

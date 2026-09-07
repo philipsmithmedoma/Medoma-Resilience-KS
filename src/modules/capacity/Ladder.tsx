@@ -20,7 +20,7 @@ export function Ladder({ steps }: LadderProps) {
         {steps.map((step) => (
           <li key={step.key} className="grid grid-cols-[240px_minmax(0,1fr)_80px_120px] items-center gap-4 text-body">
             <span>{step.label}</span>
-            <span className="h-5 rounded-sm bg-border">
+            <span className="h-5 rounded-sm bg-track">
               <span
                 className="block h-5 rounded-sm bg-primary"
                 style={{ width: `${max > 0 && step.figure.value !== null ? Math.max(1, Math.round((step.figure.value / max) * 100)) : 0}%` }}

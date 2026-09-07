@@ -6,20 +6,20 @@ import { Slot } from "radix-ui"
 
 // DESIGN.md § 4 Buttons: 36 px high, radius 6, 16 px horizontal padding, 15/500.
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-body font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1 disabled:pointer-events-none disabled:bg-border-input disabled:border-border-input disabled:text-white [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-body font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:outline-2 focus-visible:outline-primary-text focus-visible:outline-offset-1 disabled:pointer-events-none disabled:bg-border-input disabled:border-border-input disabled:text-primary-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
   {
     variants: {
       variant: {
         // Primary: primary fill, white text.
-        default: "bg-primary text-white hover:bg-primary-hover",
+        default: "bg-primary text-primary-foreground hover:bg-primary-hover",
         // Secondary: white fill, 1 px primary border, primary text.
-        secondary: "border border-primary bg-white text-primary hover:bg-bg-muted",
+        secondary: "border border-primary-text bg-surface text-primary-text hover:bg-bg-muted",
         // Tertiary/create: text link in primary with a leading plus icon.
-        tertiary: "h-auto px-0 text-primary hover:text-primary-hover hover:underline disabled:bg-transparent disabled:text-text-muted",
+        tertiary: "h-auto px-0 text-primary-text hover:text-primary-hover hover:underline disabled:bg-transparent disabled:text-text-muted",
         // Text link without the plus icon.
-        link: "h-auto px-0 text-primary hover:text-primary-hover hover:underline disabled:bg-transparent disabled:text-text-muted",
+        link: "h-auto px-0 text-primary-text hover:text-primary-hover hover:underline disabled:bg-transparent disabled:text-text-muted",
         // Destructive: secondary styling with red text and border.
-        destructive: "border border-red bg-white text-red hover:bg-red-light",
+        destructive: "border border-red bg-surface text-red hover:bg-red-light",
         ghost: "hover:bg-bg-muted",
       },
       size: {

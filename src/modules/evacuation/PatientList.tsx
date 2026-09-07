@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Patient, Stability, TransportNeed } from '@/data/types';
-import { EQUIPMENT_LABELS, EVAC, MOVE_STATUS_LABELS, STABILITIES, STABILITY_LABELS, TRANSPORT_LABELS, TRANSPORT_NEEDS } from '@/data/vocab';
+import { EQUIPMENT_LABELS, EVAC, LABELS, MOVE_STATUS_LABELS, STABILITIES, STABILITY_LABELS, TRANSPORT_LABELS, TRANSPORT_NEEDS } from '@/data/vocab';
 import { isInTransit, patientName } from '@/lib/evacuation';
 import { cn } from '@/lib/utils';
 import { StatusChip } from '@/components/Chip';
@@ -36,7 +36,7 @@ function FilterRow<T extends string>({ label, options, value, onChange }: { labe
             type="button"
             aria-pressed={active}
             onClick={() => onChange(o.key)}
-            className={cn('h-[22px] rounded-full border px-2 text-small transition-colors duration-150', active ? 'border-primary bg-primary text-white' : 'border-border bg-white text-text hover:bg-bg-muted')}
+            className={cn('h-[22px] rounded-full border px-2 text-small transition-colors duration-150', active ? 'border-primary-text bg-primary text-primary-foreground' : 'border-border bg-surface text-text hover:bg-bg-muted')}
           >
             {o.label}
           </button>
@@ -75,8 +75,9 @@ export function PatientList({ patients, selectedId, onSelect }: PatientListProps
 
   return (
     <div>
-      <div className="sticky top-0 z-10 space-y-2 border-b border-border bg-white px-4 py-3">
+      <div className="sticky top-0 z-10 space-y-2 border-b border-border bg-surface px-4 py-3">
         <h2 className="text-heading">{EVAC.patients(filtered.length)}</h2>
+        <p className="text-small text-text-muted">{LABELS.fictionalPatients}</p>
         <FilterRow label={EVAC.filters.stability} options={STABILITY_OPTIONS} value={stability} onChange={setStability} />
         <FilterRow label={EVAC.filters.transport} options={TRANSPORT_OPTIONS} value={transport} onChange={setTransport} />
         <FilterRow label={EVAC.filters.status} options={EVAC.statusFilters} value={status} onChange={setStatus} />

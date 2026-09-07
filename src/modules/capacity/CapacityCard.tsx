@@ -23,7 +23,7 @@ export function CapacityCard({ card, clock, onShowDetail, format }: CapacityCard
     action = (
       <Popover>
         <PopoverTrigger asChild>
-          <button type="button" className="text-primary hover:text-primary-hover hover:underline">
+          <button type="button" className="text-primary-text hover:text-primary-hover hover:underline">
             {LABELS.showDetail}
           </button>
         </PopoverTrigger>
@@ -34,7 +34,7 @@ export function CapacityCard({ card, clock, onShowDetail, format }: CapacityCard
     );
   } else if (card.detail && onShowDetail) {
     action = (
-      <button type="button" className="text-primary hover:text-primary-hover hover:underline" onClick={() => onShowDetail(card)}>
+      <button type="button" className="text-primary-text hover:text-primary-hover hover:underline" onClick={() => onShowDetail(card)}>
         {LABELS.showDetail}
       </button>
     );

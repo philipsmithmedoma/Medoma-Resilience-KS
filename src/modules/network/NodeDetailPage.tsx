@@ -39,7 +39,7 @@ export function NodeDetailPage() {
       <div className="space-y-4">
         <PageTitle title={NET.title} />
         <p>{NET.notFound}</p>
-        <Link to="/natverk" className="text-primary hover:text-primary-hover hover:underline">
+        <Link to="/natverk" className="text-primary-text hover:text-primary-hover hover:underline">
           {NET.back}
         </Link>
       </div>
@@ -51,7 +51,7 @@ export function NodeDetailPage() {
   const nodeBottlenecks = bottlenecks.filter((b) => b.nodeId === node.id);
   const stoodUp = node.id.startsWith('node-');
   const change = (field: 'status' | 'sharing') => (
-    <button type="button" className="text-primary hover:text-primary-hover hover:underline" onClick={() => setEditing(field)}>
+    <button type="button" className="text-primary-text hover:text-primary-hover hover:underline" onClick={() => setEditing(field)}>
       {LABELS.change}
     </button>
   );
@@ -67,7 +67,7 @@ export function NodeDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/natverk" className="text-primary hover:text-primary-hover hover:underline">
+      <Link to="/natverk" className="text-primary-text hover:text-primary-hover hover:underline">
         {NET.back}
       </Link>
       <PageTitle title={node.name}>
@@ -285,7 +285,7 @@ export function NodeDetailPage() {
               <SectionHeading>{NET.detail.resources}</SectionHeading>
               <button
                 type="button"
-                className="text-primary hover:text-primary-hover hover:underline"
+                className="text-primary-text hover:text-primary-hover hover:underline"
                 onClick={() => {
                   setScope(node.id);
                   navigate('/resurser/lager');

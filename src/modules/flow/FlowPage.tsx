@@ -24,7 +24,7 @@ export function FlowPage({ tab }: { tab: FlowTab }) {
       <div className="space-y-4">
         <PageTitle title={FLOW.title} scope={scopeName(scope, nodes)} />
         <p>{FLOW.notForScope}</p>
-        <Link to="/kapacitet" className="text-primary hover:text-primary-hover hover:underline">
+        <Link to="/kapacitet" className="text-primary-text hover:text-primary-hover hover:underline">
           {FLOW.goToCapacity}
         </Link>
       </div>

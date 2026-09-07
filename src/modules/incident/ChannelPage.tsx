@@ -23,7 +23,7 @@ export function ChannelPage() {
       <div className="space-y-4">
         <PageTitle title={INCIDENT.title} />
         <p>{INCIDENT.noActive}</p>
-        <Link to="/incident" className="text-primary hover:text-primary-hover hover:underline">
+        <Link to="/incident" className="text-primary-text hover:text-primary-hover hover:underline">
           {INCIDENT.backToIncident}
         </Link>
       </div>
@@ -37,7 +37,7 @@ export function ChannelPage() {
 
   return (
     <div className="space-y-4">
-      <Link to="/incident" className="text-primary hover:text-primary-hover hover:underline">
+      <Link to="/incident" className="text-primary-text hover:text-primary-hover hover:underline">
         {INCIDENT.backToIncident}
       </Link>
       <PageTitle title={channel.name} scope={incident.name} />

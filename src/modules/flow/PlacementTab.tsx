@@ -50,6 +50,7 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
           { label: FLOW.kpiWaitingBed, value: fmt(sumMetric('akuten.waitingBed', values)) },
         ]}
       />
+      <p className="text-small text-text-muted">{LABELS.fictionalPatients}</p>
       <div className="grid grid-cols-[minmax(0,1fr)_300px] gap-8">
         {requests.length === 0 ? (
           <p className="text-text-secondary">{FLOW.placement.empty}</p>
@@ -142,7 +143,7 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
           </Table>
         )}
 
-        <aside className="rounded-lg border border-border bg-white p-5 shadow-card">
+        <aside className="rounded-lg border border-border bg-surface p-5 shadow-card">
           <h2 className="mb-3 text-[18px] leading-7">{FLOW.placement.wards}</h2>
           {sites.map((site) => (
             <div key={site} className="mb-4 last:mb-0">

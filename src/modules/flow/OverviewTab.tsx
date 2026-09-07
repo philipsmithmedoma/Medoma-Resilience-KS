@@ -122,7 +122,7 @@ function UnlockLink({ unlock, values }: { unlock: NonNullable<FlowRow['unlock']>
   const route = UNLOCK_ROUTES[unlock];
   if (route) {
     return (
-      <Link to={route} className="text-primary hover:text-primary-hover hover:underline">
+      <Link to={route} className="text-primary-text hover:text-primary-hover hover:underline">
         {FLOW.whatFrees}
       </Link>
     );
@@ -132,7 +132,7 @@ function UnlockLink({ unlock, values }: { unlock: NonNullable<FlowRow['unlock']>
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" className="text-primary hover:text-primary-hover hover:underline">
+        <button type="button" className="text-primary-text hover:text-primary-hover hover:underline">
           {FLOW.whatFrees}
         </button>
       </PopoverTrigger>

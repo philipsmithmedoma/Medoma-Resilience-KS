@@ -19,7 +19,7 @@ export function ScopeSelector() {
   const name = scopeName(scope, nodes);
   const stoodUp = nodes.filter((n) => n.id.startsWith('node-'));
   const item = (id: string, label: string) => (
-    <DropdownMenuItem key={id} onSelect={() => setScope(id)} className={cn(scope === id && 'text-primary')}>
+    <DropdownMenuItem key={id} onSelect={() => setScope(id)} className={cn(scope === id && 'text-primary-text')}>
       {label}
     </DropdownMenuItem>
   );

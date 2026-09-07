@@ -71,7 +71,7 @@ export function OverviewTab({ incident }: { incident: Incident }) {
                 ),
               action:
                 editing === role ? null : (
-                  <button type="button" className="text-primary hover:text-primary-hover hover:underline" onClick={() => setEditing(role)}>
+                  <button type="button" className="text-primary-text hover:text-primary-hover hover:underline" onClick={() => setEditing(role)}>
                     {LABELS.change}
                   </button>
                 ),

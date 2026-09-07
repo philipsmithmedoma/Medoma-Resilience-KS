@@ -2,9 +2,11 @@ import { Link, NavLink } from 'react-router-dom';
 import { BookOpenIcon, HeadphonesIcon, MessageSquareIcon } from 'lucide-react';
 import { CURRENT_USER, LABELS, MODULES } from '@/data/vocab';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/Logo';
 import { ScopeSelector } from './ScopeSelector';
 import { DemoControls } from './DemoControls';
 import { ClockControl } from './ClockControl';
+import { ThemeToggle } from './ThemeToggle';
 
 function ModuleTab({ label, path }: { label: string; path: string }) {
   return (
@@ -12,9 +14,9 @@ function ModuleTab({ label, path }: { label: string; path: string }) {
       to={path}
       className={({ isActive }) =>
         cn(
-          'relative flex h-12 items-center text-nav whitespace-nowrap text-text hover:text-primary',
+          'relative flex h-12 items-center text-nav whitespace-nowrap text-text hover:text-primary-text',
           // The platform marks the active module with a 3 px primary bar along the very top edge of the nav.
-          isActive && 'text-primary before:absolute before:top-0 before:right-0 before:left-0 before:h-[3px] before:bg-primary',
+          isActive && 'text-primary-text before:absolute before:top-0 before:right-0 before:left-0 before:h-[3px] before:bg-primary',
         )
       }
     >
@@ -26,10 +28,10 @@ function ModuleTab({ label, path }: { label: string; path: string }) {
 /** DESIGN-KS.md § 2 top navigation: logo → Start, scope selector, six modules at 16/500 with 32 px gap, right cluster. */
 export function Nav() {
   return (
-    <header className="flex h-12 items-center border-b border-border bg-bg px-4 whitespace-nowrap">
+    <header className="flex h-12 items-center border-b border-border bg-surface px-4 whitespace-nowrap">
       <div className="flex shrink-0 items-center gap-3">
         <Link to="/" aria-label={LABELS.backToStart} className="flex items-center">
-          <img src={`${import.meta.env.BASE_URL}logo-symbol.svg`} alt="Medoma" width={24} height={24} className="size-6" />
+          <Logo />
         </Link>
         <ScopeSelector />
       </div>
@@ -38,7 +40,7 @@ export function Nav() {
           <ModuleTab key={m.key} label={m.label} path={m.path} />
         ))}
       </nav>
-      <div className="ml-auto flex shrink-0 items-center gap-3 pl-4">
+      <div className="ml-auto flex shrink-0 items-center gap-2 pl-4">
         <span title={LABELS.chat} className="text-text">
           <MessageSquareIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </span>
@@ -49,10 +51,11 @@ export function Nav() {
           <BookOpenIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </span>
         <ClockControl />
+        <ThemeToggle />
         <DemoControls />
         <span
           title={CURRENT_USER.name}
-          className="flex size-8 items-center justify-center rounded-full bg-orange-light text-[14px] font-semibold text-brown"
+          className="flex size-8 items-center justify-center rounded-full bg-avatar-bg text-[14px] font-semibold text-avatar-text"
         >
           {CURRENT_USER.initials}
         </span>

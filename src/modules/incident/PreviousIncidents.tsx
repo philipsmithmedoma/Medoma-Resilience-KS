@@ -39,7 +39,7 @@ export function PreviousIncidents() {
                   {counts.done} / {counts.total}
                 </TableCell>
                 <TableCell className="text-right">
-                  <button type="button" className="text-primary hover:text-primary-hover hover:underline" onClick={() => setShowing(c)}>
+                  <button type="button" className="text-primary-text hover:text-primary-hover hover:underline" onClick={() => setShowing(c)}>
                     {LABELS.showLog}
                   </button>
                 </TableCell>
