@@ -420,6 +420,8 @@ export const FLOW = {
   columns: { metric: 'Mått', solna: 'Solna', huddinge: 'Huddinge', sum: 'Karolinska' },
   whatFrees: 'Vad frigör',
   perSiteOnly: 'per site',
+  blocksQualifier: { ofWhich: 'varav', asih: 'ASIH-kandidater' },
+  kpiWaitingBed: 'Väntar på vårdplats (akuten)',
   tabs: {
     overview: 'Översikt',
     placement: (n: number) => `Patientplacering (${n})`,

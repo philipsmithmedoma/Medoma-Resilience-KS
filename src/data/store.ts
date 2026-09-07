@@ -30,6 +30,7 @@ import { createIncidentSlice, type IncidentActions } from './store-incident';
 import { createEvacuationSlice, type EvacuationActions } from './store-evacuation';
 import { createResourcesSlice, type ResourcesActions } from './store-resources';
 import { createNetworkSlice, type NetworkActions } from './store-network';
+import { createFlowSlice, type FlowActions } from './store-flow';
 
 export interface DataState {
   pack: DataPack;
@@ -81,11 +82,9 @@ export interface Actions {
   openScenarioPanel: (key: ScenarioKey | null) => void;
   /** Arms (and optionally starts) a scenario for a chapter; wired to the engine in Batch 3. */
   armScenario: (key: ScenarioKey, start: boolean) => void;
-  /** Hook for slices that settle pending work when the clock moves (set by the flow slice). */
-  onClockAdvanced: (() => void) | null;
 }
 
-export type AppStore = DataState & Actions & IncidentActions & EvacuationActions & ResourcesActions & NetworkActions;
+export type AppStore = DataState & Actions & IncidentActions & EvacuationActions & ResourcesActions & NetworkActions & FlowActions;
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -137,7 +136,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
   ...createEvacuationSlice(set, get, api),
   ...createResourcesSlice(set, get, api),
   ...createNetworkSlice(set, get, api),
-  onClockAdvanced: null,
+  ...createFlowSlice(set, get, api),
 
   nextId: (prefix) => {
     const n = get().ids + 1;
@@ -150,7 +149,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
     const id = `log-${state.log.length + 1}-${state.ids + 1}`;
     const entry: AuditEntry = { id, at: formatClock(state.clock), actor, action, object, detail, ref };
     set({ log: [...state.log, entry], clock: state.clock + 1, ids: state.ids + 1 });
-    get().onClockAdvanced?.();
+    get().settleDischarges();
     return id;
   },
 
@@ -185,7 +184,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
   stepClock: () => {
     const s = get();
     set({ clock: s.clock + tickMinutes(s) });
-    get().onClockAdvanced?.();
+    get().settleDischarges();
   },
 
   resetClock: () => {

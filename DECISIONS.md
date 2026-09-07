@@ -284,3 +284,38 @@ Spec: SPEC.md § 6.9, DATA.md § 2.7
 Decision: "Återställ demo" restores the pack, clears incident and scenario, sets 14:40, navigates to Start and toasts "Demon återställd". "Återställ klockan" sets 14:40, stops the scenario, keeps everything else and writes a System entry "Återställde klockan" stamped 14:40.
 Rejected: Staying on the current page after reset – the page may no longer make sense (an incident channel, a stood-up node).
 Spec: SPEC.md § 2, § 7.2
+
+## 2026-09-07 – Batch 2 – Läget nu derives beläggning, lediga, IVA and IMA from live state
+Decision: Each site's "Lediga" is the site node's free-bed figure, "Belagda" is disponibla normalvecka minus lediga, beläggning the ratio; IVA lediga/belagda come from the node's IVA figure; IMA-platser/belagda from the IMA ward rows; "Längsta väntan på vårdplats" is the longest wait among bed requests from the site's emergency department (Intensivakuten / Akutmottagningen), growing with the scenario clock. The pack keeps DATA.md § 4's baselines for the tests. A placement therefore lowers lediga and raises belagda; a discharge does the reverse.
+Rejected: Keeping belagda as its own stored metric updated in parallel – two sources of truth for the same beds.
+Spec: SPEC.md § 5 ("derived where possible"), § 6.1
+
+## 2026-09-07 – Batch 2 – "Väntar på vårdplats" only counts placements from the emergency department
+Decision: "Placera" decrements the site's "Väntar på vårdplats" only when the request comes from the site's emergency department (br-1…br-4, br-8, br-9); Postop, IVA nedflytt and remiss placements do not touch the akuten queue. Placing into the IMA does not consume a vårdplats. Utlokalisering adds one to "Utlokaliserade patienter" and is logged as "Utlokaliserade patient – {avdelning}".
+Rejected: Decrementing for every placement – the akuten figure would go below the number of akuten patients waiting.
+Spec: SPEC.md § 6.2, DATA.md § 4
+
+## 2026-09-07 – Batch 2 – Placement table controls
+Decision: "Föreslagen avdelning" is a select preselected with the rule's suggestion and listing every ward at the site with a free bed (IMA only for IMA needs); a chip "Utlokalisering" appears when the chosen ward does not match the request's tema, and the action button is then "Utlokalisera" instead of "Placera". When no ward qualifies the cell shows "Ingen plats – överväg {other site}" and only "Avvisa" remains. The KPI strip adds a fourth figure, "Väntar på vårdplats (akuten)", so the presenter sees the Läget nu figure move; "Lediga platser" is the sum of free beds in the listed wards (IMA excluded).
+Rejected: A separate ward picker dialog – one more click on stage.
+Spec: SPEC.md § 6.2
+
+## 2026-09-07 – Batch 2 – Forecast model details
+Decision: Arrivals are integrated minute by minute over each hourly bucket from 14:40 using the profile's hour ranges; the residual 5 % of discharges is spread evenly over the 16 hours outside the profile's windows; tomorrow's discharges use the same shares from 10:00 and nothing before; elective admissions are spread evenly over 07–09. The deficit time is the end of the first bucket whose free-bed figure is negative. With DATA.md § 5.4 and baseline free beds 23/9 the implementation computes: Huddinge free +4 h 14, +12 h 1, +24 h −16, first deficit 1 plats at 03:40; Solna 34 / 31 / 30, no deficit; Tryck (1,3 for 6 h) moves Huddinge's deficit to 23:40 (+12 h −4). SPEC.md § 6.3's expectation that Huddinge goes negative "before midnight" holds under Tryck; at baseline the data give 03:40, and the tests assert the computed values as the spec instructs.
+Rejected: Tuning the profile or counting the färdigbedömda queue as immediate admissions to force a pre-midnight deficit – that would invent data or make Solna negative too.
+Spec: SPEC.md § 6.3, DATA.md § 5.4
+
+## 2026-09-07 – Batch 2 – Forecast is anchored at 14:40 and marks "nu"
+Decision: The 24-hour window always starts at 14:40 (the demo baseline the free-bed figure belongs to); a dashed "nu" marker shows where the scenario clock is. The chart is plain SVG: grouped bars per hour on the left axis, the free-bed line on the right axis with a zero line, negative points in red.
+Rejected: Sliding the window with the clock – the baseline free beds would no longer match the window start, and the deficit hour would drift while the presenter talks.
+Spec: SPEC.md § 6.3 ("from 14:40")
+
+## 2026-09-07 – Batch 2 – Discharge settlement and the geriatrik flow
+Decision: A sent ASIH or geriatrik request becomes "Utskriven" when the clock has advanced two minutes past the send, which the next logged action (clock +1 after the send's own +1) or one scenario tick always satisfies. Settlement is a System entry "Utskriven till ASIH – {patient}" and frees the ward bed, the site bed, one unit of the ASIH (120 → 119) or Geriatrik (23 → 22) capacity, and lowers utskrivningsklara (and ASIH-kandidater for ASIH). "Till geriatrik" shows for age ≥ 75 with waitingFor Geriatrik (dr-3; dr-11 is 72 and gets "Avvakta" only). The confirmation dialog holds a running scenario clock while open.
+Rejected: Settling immediately on confirm – the presenter could not point at the "förfrågan skickad" state.
+Spec: SPEC.md § 6.4, § 7.2
+
+## 2026-09-07 – Batch 2 – Läget nu at region scope shows both sites; other nodes get an empty state
+Decision: Region scope renders Läget nu exactly like Karolinska scope (the region hospitals share no flow figures); a stood-up node scope shows the sentence "Läget nu finns för Karolinska Solna och Karolinska Huddinge…" with a link to Kapacitet. The status chip at Karolinska scope is the worse of the two site statuses; the sum column never drives a status.
+Rejected: Hiding the module at region scope – the presenter's chapter 5 starts at region scope and may click Läget nu.
+Spec: SPEC.md § 2, § 6.1
