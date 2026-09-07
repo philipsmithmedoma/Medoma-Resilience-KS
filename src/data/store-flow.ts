@@ -3,7 +3,8 @@ import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
 import type { DischargeReady, FlowMetric, SiteId } from './types';
 import { ED_NAME } from './packs/karolinska';
-import { ASIH_ID, FLOW, GERIATRIK_ID, SYSTEM_ACTOR } from './vocab';
+import { ASIH_ID, GERIATRIK_ID, SYSTEM_ACTOR } from './vocab';
+import { t } from '@/lib/i18n';
 import { addToFigure } from '@/lib/figure';
 import { fmtDuration } from '@/lib/format';
 import { isImaWard } from '@/lib/placement';
@@ -57,7 +58,7 @@ export const createFlowSlice: StateCreator<AppStore, [], [], FlowActions> = (set
       });
       if (!isImaWard(w)) adjustSiteFree(r.site, -1);
       const waited = fmtDuration(r.waitingMin + Math.max(0, clock - INITIAL_CLOCK));
-      logEntry(relocate ? FLOW.placement.audit.relocated(w.name) : FLOW.placement.audit.placed(w.name), r.patient, `${r.from}, ${waited}`);
+      logEntry(relocate ? t('FLOW.placement.audit.relocated', { ward: w.name }) : t('FLOW.placement.audit.placed', { ward: w.name }), r.patient, `${r.from}, ${waited}`);
     },
 
     rejectPlacement: (requestId, reason) => {
@@ -65,18 +66,18 @@ export const createFlowSlice: StateCreator<AppStore, [], [], FlowActions> = (set
       const r = bedRequests.find((x) => x.id === requestId);
       if (!r) return;
       set((s) => ({ bedRequests: s.bedRequests.filter((x) => x.id !== requestId) }));
-      logEntry(FLOW.placement.audit.rejected(r.patient), r.patient, reason.trim() || undefined);
+      logEntry(t('FLOW.placement.audit.rejected', { patient: r.patient }), r.patient, reason.trim() || undefined);
     },
 
-    sendToAsih: (id) => send(id, 'ASIH-förfrågan skickad', FLOW.discharge.audit.asihSent),
+    sendToAsih: (id) => send(id, 'ASIH-förfrågan skickad', (patient) => t('FLOW.discharge.audit.asihSent', { patient })),
 
-    sendToGeriatrik: (id) => send(id, 'Geriatrik-förfrågan skickad', FLOW.discharge.audit.geriatrikSent),
+    sendToGeriatrik: (id) => send(id, 'Geriatrik-förfrågan skickad', (patient) => t('FLOW.discharge.audit.geriatrikSent', { patient })),
 
     waitDischarge: (id) => {
       const { dischargeReady, logEntry } = get();
       const d = dischargeReady.find((x) => x.id === id);
       if (!d) return;
-      logEntry(FLOW.discharge.audit.waited(d.patient), d.patient, d.waitingFor);
+      logEntry(t('FLOW.discharge.audit.waited', { patient: d.patient }), d.patient, d.waitingFor);
     },
 
     settleDischarges: () => {
@@ -96,7 +97,7 @@ export const createFlowSlice: StateCreator<AppStore, [], [], FlowActions> = (set
           }));
           adjustWard(d.wardId, 1);
           adjustSiteFree(d.site, 1);
-          get().logEntry(toAsih ? FLOW.discharge.audit.dischargedAsih(d.patient) : FLOW.discharge.audit.dischargedGeriatrik(d.patient), d.patient, d.waitingFor, SYSTEM_ACTOR);
+          get().logEntry(toAsih ? t('FLOW.discharge.audit.dischargedAsih', { patient: d.patient }) : t('FLOW.discharge.audit.dischargedGeriatrik', { patient: d.patient }), d.patient, d.waitingFor, SYSTEM_ACTOR);
         }
       } finally {
         settling = false;

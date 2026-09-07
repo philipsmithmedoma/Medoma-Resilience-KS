@@ -74,10 +74,10 @@ describe('incident actions (SPEC.md § 6.6)', () => {
     expect(inc.targets).toHaveLength(4);
     expect(inc.lage).toBe('Förstärkningsläge');
     expect(inc.commander).toBe('Eva Lind');
-    expect(inc.tasks[0]).toMatchObject({ title: 'Upprätta triagezoner röd/gul/grön', status: 'Not started', due: '14:55' });
+    expect(inc.tasks[0]).toMatchObject({ title: { sv: 'Upprätta triagezoner röd/gul/grön', en: 'Set up triage zones red/yellow/green' }, status: 'Not started', due: '14:55' });
     expect(inc.channels[0].messages[0].text).toBe('Incident Allvarlig händelse: masskada aktiverad 14:40. Förstärkningsläge.');
-    expect(inc.channels[1].memberRoles).toEqual(['Sjukvårdsledare LSSL', 'Medicinskt ansvarig', 'Akutansvarig']);
-    expect(inc.channels[4].memberRoles).toContain('Kommunikationsansvarig (KiB)');
+    expect(inc.channels[1].memberRoles.map((r) => r.sv)).toEqual(['Sjukvårdsledare LSSL', 'Medicinskt ansvarig', 'Akutansvarig']);
+    expect(inc.channels[4].memberRoles.map((r) => r.sv)).toContain('Kommunikationsansvarig (KiB)');
     const added = s().log.slice(7);
     expect(added[0]).toMatchObject({ actor: 'Eva Lind', action: 'Aktiverade incident – Allvarlig händelse: masskada', detail: 'Förstärkningsläge. Bussolycka på E4' });
     expect(added.filter((e) => e.action.startsWith('Skapade uppgift')).length).toBe(15);

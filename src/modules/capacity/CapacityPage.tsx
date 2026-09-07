@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { CapabilityKind, LadderStep, SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { CAP, LABELS } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { isHospitalScope, isRegion, scopeName, sitesInScope } from '@/lib/scope';
 import { sourcesForScope, sumFigures, viewFigure, withValue } from '@/lib/figure';
 import { PageTitle, SectionHeading } from '@/components/PageTitle';
@@ -111,19 +111,19 @@ export function CapacityPage() {
     <div className="space-y-8">
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-4">
-          <PageTitle title={CAP.title} scope={scopeName(scope, nodes)}>
+          <PageTitle title={t('CAP.title')} scope={scopeName(scope, nodes)}>
             {syncNode ? (
               <SourcesPopover sources={sources} clock={clock}>
                 <SyncChip node={syncNode} clock={clock} outage={outage} ehrScope={hospital} />
               </SourcesPopover>
             ) : null}
-            {ehrOutage && hospital ? <StatusChip status="Spegel" label={LABELS.operatingOnMirror} /> : null}
+            {ehrOutage && hospital ? <StatusChip status="Spegel" label={t('LABELS.operatingOnMirror')} /> : null}
             <Button variant="link" onClick={() => setLogOpen(true)}>
-              {LABELS.log}
+              {t('LABELS.log')}
             </Button>
           </PageTitle>
           <Button variant="secondary" onClick={() => openScenarioPanel(scenario?.key ?? null)}>
-            {CAP.scenario}
+            {t('CAP.scenario')}
           </Button>
         </div>
         {incident ? <ObjectivesStrip /> : null}
@@ -133,7 +133,7 @@ export function CapacityPage() {
       {ladderSteps ? <Ladder steps={ladderSteps} /> : null}
 
       <section>
-        <SectionHeading>{CAP.capacityNow}</SectionHeading>
+        <SectionHeading>{t('CAP.capacityNow')}</SectionHeading>
         <div className="grid grid-cols-3 gap-4">
           {cards.map((card) => (
             <CapacityCard key={card.key} card={card} clock={clock} onShowDetail={onShowDetail} />
@@ -143,15 +143,15 @@ export function CapacityPage() {
 
       {region ? (
         <section id={NODES_ID} className="scroll-mt-4">
-          <SectionHeading>{CAP.nodes}</SectionHeading>
+          <SectionHeading>{t('CAP.nodes')}</SectionHeading>
           <NodesTable nodes={nodes} clock={clock} outage={outage} />
-          <p className="mt-3 text-text-secondary">{CAP.selectNode}</p>
+          <p className="mt-3 text-text-secondary">{t('CAP.selectNode')}</p>
         </section>
       ) : null}
 
       {scopeBottlenecks.length ? (
         <section>
-          <SectionHeading>{CAP.bottlenecks}</SectionHeading>
+          <SectionHeading>{t('CAP.bottlenecks')}</SectionHeading>
           <BottleneckTable bottlenecks={scopeBottlenecks} capabilities={capabilities} nodes={nodes} showNode={region || sites.length > 1} onSelectCapability={region ? undefined : selectCapability} />
         </section>
       ) : null}

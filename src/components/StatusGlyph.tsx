@@ -10,13 +10,13 @@ export function StatusGlyph({ status, className }: { status: TaskStatus; classNa
   if (status === 'Done') {
     return (
       <span className={cn('flex size-4 items-center justify-center rounded-full bg-green', className)} aria-hidden>
-        <CheckIcon className="size-3 text-white" strokeWidth={2.5} />
+        <CheckIcon className="size-3 text-primary-foreground" strokeWidth={2.5} />
       </span>
     );
   }
   if (status === 'In progress') {
     return (
-      <span className={cn('flex size-4 items-center justify-center rounded-full border-2 border-primary', className)} aria-hidden>
+      <span className={cn('flex size-4 items-center justify-center rounded-full border-2 border-primary-text', className)} aria-hidden>
         <span className="size-1.5 rounded-full bg-primary" />
       </span>
     );

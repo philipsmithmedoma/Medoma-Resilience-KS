@@ -1,5 +1,5 @@
 import type { AuditEntry } from '@/data/types';
-import { AUDIT } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface AuditTableProps {
@@ -14,11 +14,11 @@ export function AuditTable({ entries, limit = 200 }: AuditTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-16">{AUDIT.columns.time}</TableHead>
-          <TableHead className="w-32">{AUDIT.columns.actor}</TableHead>
-          <TableHead>{AUDIT.columns.action}</TableHead>
-          <TableHead>{AUDIT.columns.object}</TableHead>
-          <TableHead>{AUDIT.columns.detail}</TableHead>
+          <TableHead className="w-16">{t('AUDIT.columns.time')}</TableHead>
+          <TableHead className="w-32">{t('AUDIT.columns.actor')}</TableHead>
+          <TableHead>{t('AUDIT.columns.action')}</TableHead>
+          <TableHead>{t('AUDIT.columns.object')}</TableHead>
+          <TableHead>{t('AUDIT.columns.detail')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

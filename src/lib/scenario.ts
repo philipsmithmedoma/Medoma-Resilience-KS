@@ -1,6 +1,6 @@
 // Scenario engine – SPEC.md § 7.3. Pure, deterministic, tick-based; integer distribution with carry.
 import type { Recommendation, ScenarioEvent, ScenarioInputs, ScenarioKey, ScenarioPreset, SiteId, TickResult } from '@/data/types';
-import { SCENARIO, SCOPE_LABELS, SITE_LABELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt, fmtOffset } from './format';
 
 export interface SimulationResult {
@@ -41,12 +41,12 @@ interface Pool {
 }
 
 function rec(key: string, applicable: boolean, applied: Applied): Recommendation {
-  const r = SCENARIO.recs[key];
+  const r = tm('SCENARIO.recs')[key];
   return { key, label: r.label, effect: r.effect, applicable: applicable && applied[key] === undefined };
 }
 
 function offsetLabel(minutes: number, dayTicks: boolean): string {
-  return dayTicks ? SCENARIO.offsetDay(Math.round(minutes / 1440)) : fmtOffset(minutes);
+  return dayTicks ? t('SCENARIO.offsetDay', { d: Math.round(minutes / 1440) }) : fmtOffset(minutes);
 }
 
 /** Builds the series from pools and emits the first-brist event per pool. */
@@ -54,14 +54,14 @@ function run(pools: Pool[], horizon: number, tickMin: number, dayTicks: boolean,
   const series: TickResult[] = [];
   const events: ScenarioEvent[] = [];
   const flagged = new Set<string>();
-  for (let t = 0; t <= horizon; t++) {
-    const result: TickResult = { tick: t, pools: pools.map((p) => ({ pool: p.pool, site: p.site, demand: round1(p.demand(t)), capacity: round1(p.capacity(t)) })) };
+  for (let tk = 0; tk <= horizon; tk++) {
+    const result: TickResult = { tick: tk, pools: pools.map((p) => ({ pool: p.pool, site: p.site, demand: round1(p.demand(tk)), capacity: round1(p.capacity(tk)) })) };
     series.push(result);
     for (const p of result.pools) {
       const key = `${p.pool}:${p.site}`;
-      if (t > 0 && p.demand > p.capacity && !flagged.has(key)) {
+      if (tk > 0 && p.demand > p.capacity && !flagged.has(key)) {
         flagged.add(key);
-        events.push({ tick: t, text: `${offsetLabel(t * tickMin, dayTicks)}: ${SCENARIO.eventText.poolFull(SCENARIO.poolLabels[p.pool] ?? p.pool, siteName(p.site))}` });
+        events.push({ tick: tk, text: `${offsetLabel(tk * tickMin, dayTicks)}: ${t('SCENARIO.eventText.poolFull', { pool: tm('SCENARIO.poolLabels')[p.pool] ?? p.pool, site: siteName(p.site) })}` });
       }
     }
   }
@@ -81,7 +81,7 @@ function hasDemand(series: TickResult[], pool: string, site: string): boolean {
   return series.some((r) => r.pools.some((p) => p.pool === pool && p.site === site && p.demand > 0));
 }
 
-const siteLabel = (site: string) => (site === 'solna' || site === 'huddinge' ? SITE_LABELS[site] : site === 'karolinska' ? SCOPE_LABELS.karolinska : site);
+const siteLabel = (site: string) => (site === 'solna' || site === 'huddinge' ? tm('SITE_LABELS')[site] : site === 'karolinska' ? t('SCOPE_LABELS.karolinska') : site);
 
 // ---------------------------------------------------------------------------
 // Masskada
@@ -194,7 +194,7 @@ function simulateMasskada(inputs: ScenarioInputs, params: Record<string, number 
 
   const { series, events } = run(pools, horizon, tick, false, siteLabel);
   const first = casualties[0];
-  if (first) events.unshift({ tick: Math.ceil(first.arrival / tick), text: `${fmtOffset(first.arrival)}: ${SCENARIO.eventText.firstArrivals(siteLabel(primar))}` });
+  if (first) events.unshift({ tick: Math.ceil(first.arrival / tick), text: `${fmtOffset(first.arrival)}: ${t('SCENARIO.eventText.firstArrivals', { site: siteLabel(primar) })}` });
   const bedsBrist = SITES.some((s) => hasBrist(series, 'vardplatser', s, 0));
   const bedsPressure = SITES.some((s) => hasDemand(series, 'vardplatser', s));
   const recommendations: Recommendation[] = [
@@ -266,11 +266,11 @@ function simulateMottagande(inputs: ScenarioInputs, params: Record<string, numbe
   });
   inputs.regionNodes.forEach((r, i) => pools.push({ pool: 'vardplatser', site: r.id, capacity: () => r.free, demand: (t) => cumulativeAt(SITES.length + i, t) }));
   if (hubOpenAt !== undefined) pools.push({ pool: 'vardplatser', site: 'vardhubb', capacity: (t) => (t >= hubOpenAt ? hubCapacity : 0), demand: (t) => cumulativeAt(destinations.length - 1, t) });
-  const nameOf = (site: string) => inputs.regionNodes.find((r) => r.id === site)?.shortName ?? (site === 'vardhubb' ? SCENARIO.recs.vardhubb.label.replace('Etablera ', '') : siteLabel(site));
+  const nameOf = (site: string) => inputs.regionNodes.find((r) => r.id === site)?.shortName ?? (site === 'vardhubb' ? t('SCENARIO.recs.vardhubb.label').replace('Etablera ', '') : siteLabel(site));
   const { series, events } = run(pools, horizon, tick, false, nameOf);
   // Node-level "runs out" events replace the generic pool text.
-  for (const e of events) e.text = e.text.replace(`${SCENARIO.poolLabels.vardplatser} `, '').replace(': brist', `: ${SCENARIO.eventText.nodeOut('').replace(': vårdplatser slut', '')}vårdplatser slut`);
-  events.unshift({ tick: 1, text: `${fmtOffset(tick)}: ${SCENARIO.eventText.receiving(fmt(total))}` });
+  for (const e of events) e.text = e.text.replace(`${t('SCENARIO.poolLabels.vardplatser')} `, '').replace(': brist', `: ${t('SCENARIO.eventText.nodeOut', { node: '' }).replace(': vårdplatser slut', '')}vårdplatser slut`);
+  events.unshift({ tick: 1, text: `${fmtOffset(tick)}: ${t('SCENARIO.eventText.receiving', { n: fmt(total) })}` });
   const anyBrist = pools.some((p) => hasBrist(series, p.pool, p.site, 0));
   const karolinskaBrist = SITES.some((s) => hasBrist(series, 'vardplatser', s, 0));
   const recommendations: Recommendation[] = [
@@ -292,7 +292,7 @@ function simulatePandemi(inputs: ScenarioInputs, params: Record<string, number |
   const oHuset = (t: number) => (applied.o_huset !== undefined && t >= applied.o_huset ? Math.min(64, Math.round(6.4 * (t - applied.o_huset))) : 0);
   const pools: Pool[] = [{ pool: 'iva', site: 'karolinska', capacity: (t) => baseline + oHuset(t), demand: (t) => t * perDay }];
   const { series, events } = run(pools, horizon, 1440, true, siteLabel);
-  events.unshift({ tick: 1, text: `${SCENARIO.offsetDay(1)}: ${SCENARIO.eventText.pandemic(fmt(perDay))}` });
+  events.unshift({ tick: 1, text: `${t('SCENARIO.offsetDay', { d: 1 })}: ${t('SCENARIO.eventText.pandemic', { n: fmt(perDay) })}` });
   const brist = hasBrist(series, 'iva', 'karolinska', 0);
   return {
     series,
@@ -305,7 +305,7 @@ function simulatePandemi(inputs: ScenarioInputs, params: Record<string, number |
 function simulateTryck(inputs: ScenarioInputs, params: Record<string, number | string>): SimulationResult {
   return {
     series: [],
-    events: [{ tick: 0, text: `${fmtOffset(0)}: ${SCENARIO.eventText.pressure(String(params.faktor).replace('.', ','), fmt(Number(params.timmar)))}` }],
+    events: [{ tick: 0, text: `${fmtOffset(0)}: ${t('SCENARIO.eventText.pressure', { factor: String(params.faktor).replace('.', ','), hours: fmt(Number(params.timmar)) })}` }],
     recommendations: [{ ...rec('asih', true, {}), applicable: true }, rec('tidig_utskrivning', true, {})].map((r) => ({ ...r, applicable: inputs.sites.huddinge.bedsFree < 10 })),
   };
 }
@@ -314,8 +314,8 @@ function simulateJournalbortfall(inputs: ScenarioInputs): SimulationResult {
   return {
     series: [],
     events: [
-      { tick: 0, text: `${fmtOffset(0)}: ${SCENARIO.eventText.outageStart}` },
-      { tick: inputs.horizonTicks, text: `${fmtOffset(inputs.horizonTicks * inputs.tickMin)}: ${SCENARIO.eventText.outageEnd}` },
+      { tick: 0, text: `${fmtOffset(0)}: ${t('SCENARIO.eventText.outageStart')}` },
+      { tick: inputs.horizonTicks, text: `${fmtOffset(inputs.horizonTicks * inputs.tickMin)}: ${t('SCENARIO.eventText.outageEnd')}` },
     ],
     recommendations: [rec('forstarkning', true, {})],
   };

@@ -2,7 +2,8 @@ import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import type { Priority } from '@/data/types';
 import { useStore } from '@/data/store';
-import { LABELS, PRIORITIES, PRIORITY_LABELS, RES } from '@/data/vocab';
+import { PRIORITIES } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { distinctResourceNames } from '@/lib/inventory';
 import type { ParsedRequest } from '@/lib/parse';
 import { StatusChip } from '@/components/Chip';
@@ -46,7 +47,7 @@ export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDial
     if (!valid) return;
     createRequest({ resourceName, quantity: Number(quantity), toNodeId, priority, note });
     onOpenChange(false);
-    toast(RES.requestCreated);
+    toast(t('RES.requestCreated'));
   };
 
   return (
@@ -54,17 +55,17 @@ export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDial
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {RES.newRequest}
-            {prefill ? <StatusChip status="Suggested" label={RES.suggestedPrefill} /> : null}
+            {t('RES.newRequest')}
+            {prefill ? <StatusChip status="Suggested" label={t('RES.suggestedPrefill')} /> : null}
           </DialogTitle>
-          {prefill ? <DialogDescription>{RES.suggestedPrefill}</DialogDescription> : null}
+          {prefill ? <DialogDescription>{t('RES.suggestedPrefill')}</DialogDescription> : null}
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1">
-            <label htmlFor={ids.resource}>{RES.fields.resource}</label>
+            <label htmlFor={ids.resource}>{t('RES.fields.resource')}</label>
             <Select value={resourceName} onValueChange={setResourceName}>
               <SelectTrigger id={ids.resource} className="w-full">
-                <SelectValue placeholder={RES.fields.resource} />
+                <SelectValue placeholder={t('RES.fields.resource')} />
               </SelectTrigger>
               <SelectContent>
                 {names.map((n) => (
@@ -76,14 +77,14 @@ export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDial
             </Select>
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.quantity}>{RES.fields.quantity}</label>
+            <label htmlFor={ids.quantity}>{t('RES.fields.quantity')}</label>
             <Input id={ids.quantity} type="number" min={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} className="w-32" />
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.to}>{RES.fields.toNode}</label>
+            <label htmlFor={ids.to}>{t('RES.fields.toNode')}</label>
             <Select value={toNodeId} onValueChange={setToNodeId}>
               <SelectTrigger id={ids.to} className="w-full">
-                <SelectValue placeholder={RES.fields.toNode} />
+                <SelectValue placeholder={t('RES.fields.toNode')} />
               </SelectTrigger>
               <SelectContent>
                 {targets.map((n) => (
@@ -95,7 +96,7 @@ export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDial
             </Select>
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.priority}>{RES.fields.priority}</label>
+            <label htmlFor={ids.priority}>{t('RES.fields.priority')}</label>
             <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
               <SelectTrigger id={ids.priority} className="w-48">
                 <SelectValue />
@@ -103,23 +104,23 @@ export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDial
               <SelectContent>
                 {PRIORITIES.map((p) => (
                   <SelectItem key={p} value={p}>
-                    {PRIORITY_LABELS[p]}
+                    {tm('PRIORITY_LABELS')[p]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.note}>{RES.fields.note}</label>
+            <label htmlFor={ids.note}>{t('RES.fields.note')}</label>
             <Textarea id={ids.note} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            {LABELS.cancel}
+            {t('LABELS.cancel')}
           </Button>
           <Button onClick={submit} disabled={!valid}>
-            {RES.actions.create}
+            {t('RES.actions.create')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -32,7 +32,7 @@ interface CardProps {
 /** White card, 1 px border, radius 8, padding 20, soft shadow; header tile + 18/400 title. */
 export function Card({ title, subtitle, tile, titleRight, children, action, className, id }: CardProps) {
   return (
-    <section id={id} className={cn('flex flex-col rounded-lg border border-border bg-white p-5 shadow-card', className)}>
+    <section id={id} className={cn('flex flex-col rounded-lg border border-border bg-surface p-5 shadow-card', className)}>
       <div className="flex items-center gap-3">
         {tile ? <IconTile {...tile} /> : null}
         <h3 className="text-[18px] leading-7 font-normal">

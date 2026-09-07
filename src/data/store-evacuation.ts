@@ -2,7 +2,8 @@
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
 import type { CareNode, NodeId, Patient, Resource, SiteId } from './types';
-import { EVAC, SYSTEM_ACTOR } from './vocab';
+import { SYSTEM_ACTOR } from './vocab';
+import { t } from '@/lib/i18n';
 import { canCancel, patientName } from '@/lib/evacuation';
 import { addToFigure } from '@/lib/figure';
 import { suggestMoves } from '@/lib/suggest';
@@ -50,7 +51,7 @@ export const createEvacuationSlice: StateCreator<AppStore, [], [], EvacuationAct
     set((s) => ({ nodes: adjustDestination(s.nodes, destinationId, patient, -1) }));
     updatePatient(patient.id, (p) => ({ ...p, move: { destinationId, status: 'Planned', suggested: false } }));
     get().logEntry(
-      suggested ? EVAC.audit.authorised(patientName(patient), nodeName(destinationId)) : EVAC.audit.planned(patientName(patient), nodeName(destinationId)),
+      suggested ? t('EVAC.audit.authorised', { patient: patientName(patient), node: nodeName(destinationId) }) : t('EVAC.audit.planned', { patient: patientName(patient), node: nodeName(destinationId) }),
       patientName(patient),
       nodeName(destinationId),
     );
@@ -67,7 +68,7 @@ export const createEvacuationSlice: StateCreator<AppStore, [], [], EvacuationAct
       const patient = patientById(patientId);
       if (!patient?.move || patient.move.status !== 'Planned' || patient.move.suggested) return;
       updatePatient(patientId, (p) => ({ ...p, move: { ...p.move!, status: 'Accepted' } }));
-      get().logEntry(EVAC.audit.accepted(patientName(patient)), patientName(patient), nodeName(patient.move.destinationId));
+      get().logEntry(t('EVAC.audit.accepted', { patient: patientName(patient) }), patientName(patient), nodeName(patient.move.destinationId));
     },
 
     assignTransport: (patientId, resourceId) => {
@@ -76,7 +77,7 @@ export const createEvacuationSlice: StateCreator<AppStore, [], [], EvacuationAct
       if (!patient?.move || patient.move.status !== 'Accepted' || !vehicle || vehicle.available <= 0) return;
       set((s) => ({ resources: adjustResource(s.resources, (r) => r.id === resourceId, { available: -1, reserved: 1 }) }));
       updatePatient(patientId, (p) => ({ ...p, move: { ...p.move!, status: 'Transport assigned', transportId: resourceId } }));
-      get().logEntry(EVAC.audit.assigned(patientName(patient), vehicle.name), patientName(patient), vehicle.name);
+      get().logEntry(t('EVAC.audit.assigned', { patient: patientName(patient), vehicle: vehicle.name }), patientName(patient), vehicle.name);
     },
 
     markDeparted: (patientId) => {
@@ -85,7 +86,7 @@ export const createEvacuationSlice: StateCreator<AppStore, [], [], EvacuationAct
       const transportId = patient.move.transportId;
       set((s) => ({ resources: adjustResource(s.resources, (r) => r.id === transportId, { reserved: -1, inUse: 1 }) }));
       updatePatient(patientId, (p) => ({ ...p, move: { ...p.move!, status: 'Departed' } }));
-      get().logEntry(EVAC.audit.departed(patientName(patient)), patientName(patient), nodeName(patient.move.destinationId));
+      get().logEntry(t('EVAC.audit.departed', { patient: patientName(patient) }), patientName(patient), nodeName(patient.move.destinationId));
     },
 
     markArrived: (patientId) => {
@@ -94,14 +95,14 @@ export const createEvacuationSlice: StateCreator<AppStore, [], [], EvacuationAct
       const transportId = patient.move.transportId;
       set((s) => ({ resources: adjustResource(s.resources, (r) => r.id === transportId, { inUse: -1, available: 1 }) }));
       updatePatient(patientId, (p) => ({ ...p, move: { ...p.move!, status: 'Arrived' } }));
-      get().logEntry(EVAC.audit.arrived(patientName(patient), nodeName(patient.move.destinationId)), patientName(patient), nodeName(patient.move.destinationId));
+      get().logEntry(t('EVAC.audit.arrived', { patient: patientName(patient), node: nodeName(patient.move.destinationId) }), patientName(patient), nodeName(patient.move.destinationId));
     },
 
     markHandedOver: (patientId) => {
       const patient = patientById(patientId);
       if (!patient?.move || patient.move.status !== 'Arrived') return;
       updatePatient(patientId, (p) => ({ ...p, move: { ...p.move!, status: 'Handed over' } }));
-      get().logEntry(EVAC.audit.handedOver(patientName(patient), nodeName(patient.move.destinationId)), patientName(patient), nodeName(patient.move.destinationId));
+      get().logEntry(t('EVAC.audit.handedOver', { patient: patientName(patient), node: nodeName(patient.move.destinationId) }), patientName(patient), nodeName(patient.move.destinationId));
     },
 
     cancelMove: (patientId) => {
@@ -116,7 +117,7 @@ export const createEvacuationSlice: StateCreator<AppStore, [], [], EvacuationAct
         return { nodes: adjustDestination(s.nodes, move.destinationId, patient, 1), resources };
       });
       updatePatient(patientId, (p) => ({ ...p, move: undefined }));
-      get().logEntry(EVAC.audit.cancelled(patientName(patient)), patientName(patient), nodeName(move.destinationId));
+      get().logEntry(t('EVAC.audit.cancelled', { patient: patientName(patient) }), patientName(patient), nodeName(move.destinationId));
     },
 
     suggestPlan: (site) => {
@@ -129,7 +130,7 @@ export const createEvacuationSlice: StateCreator<AppStore, [], [], EvacuationAct
           return dest ? { ...p, move: { destinationId: dest, status: 'Planned', suggested: true } } : p;
         }),
       }));
-      logEntry(EVAC.audit.suggested(result.suggestions.length), EVAC.title, EVAC.audit.suggestedDetail(result.unplaced.length), SYSTEM_ACTOR);
+      logEntry(t('EVAC.audit.suggested', { n: result.suggestions.length }), t('EVAC.title'), t('EVAC.audit.suggestedDetail', { n: result.unplaced.length }), SYSTEM_ACTOR);
       return { suggested: result.suggestions.length, unplaced: result.unplaced.length };
     },
 
@@ -145,14 +146,14 @@ export const createEvacuationSlice: StateCreator<AppStore, [], [], EvacuationAct
       const patient = patientById(patientId);
       if (!patient?.move?.suggested) return;
       updatePatient(patientId, (p) => ({ ...p, move: undefined }));
-      get().logEntry(EVAC.audit.rejected(patientName(patient)), patientName(patient), nodeName(patient.move.destinationId));
+      get().logEntry(t('EVAC.audit.rejected', { patient: patientName(patient) }), patientName(patient), nodeName(patient.move.destinationId));
     },
 
     clearSuggestions: (site) => {
       const suggested = get().patients.filter((p) => p.nodeId === site && p.move?.suggested);
       if (suggested.length === 0) return;
       set((s) => ({ patients: s.patients.map((p) => (p.nodeId === site && p.move?.suggested ? { ...p, move: undefined } : p)) }));
-      get().logEntry(EVAC.audit.cleared, EVAC.title, EVAC.audit.clearedDetail(suggested.length));
+      get().logEntry(t('EVAC.audit.cleared'), t('EVAC.title'), t('EVAC.audit.clearedDetail', { n: suggested.length }));
     },
   };
 };

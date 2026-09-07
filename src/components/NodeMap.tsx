@@ -2,11 +2,11 @@ import { useEffect } from 'react';
 import { Circle, CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { CareNode } from '@/data/types';
-import { EVAC, NODE_STATUS_COLOURS, NODE_STATUS_LABELS } from '@/data/vocab';
+import { NODE_STATUS_COLOURS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt } from '@/lib/format';
+import { cssColor, useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
-
-const PRIMARY = '#186CE9';
 
 interface NodeMapProps {
   nodes: CareNode[];
@@ -46,13 +46,17 @@ function FitBounds({ nodes, center, zoom }: { nodes: CareNode[]; center?: [numbe
  * with the short name; ASIH as a soft 25 km circle centred on Stockholm with its label at the top.
  */
 export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, onSelect }: NodeMapProps) {
+  // Leaflet paints SVG paths with literal colours: resolve the tokens for the current theme.
+  useTheme((s) => s.theme);
+  const PRIMARY = cssColor('--color-primary');
+  const statusColour = (status: CareNode['status']) => cssColor(NODE_STATUS_COLOURS[status]);
   const markers = nodes.filter((n) => !n.noMarker && n.radiusKm === undefined);
   const areas = nodes.filter((n) => n.radiusKm !== undefined);
   const selected = nodes.find((n) => n.id === selectedId);
   const from = nodes.find((n) => n.id === lineFrom);
   return (
     <MapContainer center={center ?? [59.35, 18.0]} zoom={zoom ?? 9} scrollWheelZoom={false} className={cn('h-full w-full', className)} attributionControl>
-      <TileLayer attribution={EVAC.map.attribution} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <TileLayer attribution={t('EVAC.map.attribution')} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <FitBounds nodes={markers} center={center} zoom={zoom} />
       {areas.map((n) => {
         const isSelected = n.id === selectedId;
@@ -88,8 +92,8 @@ export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, 
             center={[n.lat, n.lng]}
             radius={10}
             pathOptions={{
-              color: isSelected ? PRIMARY : NODE_STATUS_COLOURS[n.status],
-              fillColor: isSelected ? PRIMARY : NODE_STATUS_COLOURS[n.status],
+              color: isSelected ? PRIMARY : statusColour(n.status),
+              fillColor: isSelected ? PRIMARY : statusColour(n.status),
               fillOpacity: 0.9,
               weight: 2,
             }}
@@ -101,7 +105,7 @@ export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, 
             <Popup>
               <span className="font-medium">{n.name}</span>
               <br />
-              {free !== undefined && free !== null ? EVAC.map.freePlaces(fmt(free)) : NODE_STATUS_LABELS[n.status]}
+              {free !== undefined && free !== null ? t('EVAC.map.freePlaces', { n: fmt(free) }) : tm('NODE_STATUS_LABELS')[n.status]}
             </Popup>
           </CircleMarker>
         );

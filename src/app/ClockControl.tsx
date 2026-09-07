@@ -1,7 +1,7 @@
 import { PauseIcon, PlayIcon, RotateCcwIcon, SkipForwardIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { tickMinutes, useStore } from '@/data/store';
-import { CLOCK, SCENARIO, SCENARIO_NAMES } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt, fmtDec } from '@/lib/format';
 import { DAY_MIN, dayOf, formatClock } from '@/lib/time';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ function IconButton({ label, onClick, primary, children }: { label: string; onCl
           type="button"
           aria-label={label}
           onClick={onClick}
-          className={cn('flex size-8 items-center justify-center rounded-md hover:bg-bg-muted', primary ? 'bg-primary text-white hover:bg-primary-hover' : 'text-text')}
+          className={cn('flex size-8 items-center justify-center rounded-md hover:bg-bg-muted', primary ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-text')}
         >
           {children}
         </button>
@@ -39,40 +39,37 @@ export function ClockControl() {
   const day = dayOf(clock);
 
   const chip = scenario
-    ? SCENARIO.chip(
-        SCENARIO_NAMES[scenario.key],
-        scenario.key === 'masskada'
-          ? SCENARIO.chipDetail.masskada(fmt(Number(scenario.params.skadade)))
+    ? t('SCENARIO.chip', { name: tm('SCENARIO_NAMES')[scenario.key], detail: scenario.key === 'masskada'
+          ? t('SCENARIO.chipDetail.masskada', { n: fmt(Number(scenario.params.skadade)) })
           : scenario.key === 'tryck'
-            ? SCENARIO.chipDetail.tryck(fmtDec(Number(scenario.params.faktor)))
+            ? t('SCENARIO.chipDetail.tryck', { f: fmtDec(Number(scenario.params.faktor)) })
             : scenario.key === 'journalbortfall'
-              ? SCENARIO.chipDetail.journalbortfall(fmt(Number(scenario.params.timmar)))
+              ? t('SCENARIO.chipDetail.journalbortfall', { h: fmt(Number(scenario.params.timmar)) })
               : scenario.key === 'mottagande'
-                ? SCENARIO.chipDetail.mottagande(fmt(Number(scenario.params.patienter)))
+                ? t('SCENARIO.chipDetail.mottagande', { n: fmt(Number(scenario.params.patienter)) })
                 : scenario.key === 'pandemi'
-                  ? SCENARIO.chipDetail.pandemi(fmt(Number(scenario.params.dygn)))
-                  : SCENARIO.chipDetail.siteevac(fmt(Number(scenario.params.patienter))),
-      )
+                  ? t('SCENARIO.chipDetail.pandemi', { d: fmt(Number(scenario.params.dygn)) })
+                  : t('SCENARIO.chipDetail.siteevac', { n: fmt(Number(scenario.params.patienter)) }) })
     : null;
 
   return (
     <div className="flex items-center gap-1">
       {chip ? <Chip tone="blue">{chip}</Chip> : null}
-      <span className="mx-1 text-body font-medium tabular" aria-label={CLOCK.ariaClock(formatClock(clock))}>
+      <span className="mx-1 text-body font-medium tabular" aria-label={t('CLOCK.ariaClock', { hhmm: formatClock(clock) })}>
         {formatClock(clock)}
-        {day > 1 ? <span className="ml-1 font-normal text-text-secondary">{CLOCK.day(day)}</span> : null}
+        {day > 1 ? <span className="ml-1 font-normal text-text-secondary">{t('CLOCK.day', { n: day })}</span> : null}
       </span>
-      <IconButton label={running ? CLOCK.pause : CLOCK.play} onClick={() => setClockRunning(!running)} primary={running}>
+      <IconButton label={running ? t('CLOCK.pause') : t('CLOCK.play')} onClick={() => setClockRunning(!running)} primary={running}>
         {running ? <PauseIcon className="size-5" strokeWidth={1.5} aria-hidden /> : <PlayIcon className="size-5" strokeWidth={1.5} aria-hidden />}
       </IconButton>
-      <IconButton label={dayTicks ? CLOCK.stepDay : CLOCK.step} onClick={stepClock}>
+      <IconButton label={dayTicks ? t('CLOCK.stepDay') : t('CLOCK.step')} onClick={stepClock}>
         <SkipForwardIcon className="size-5" strokeWidth={1.5} aria-hidden />
       </IconButton>
       <IconButton
-        label={CLOCK.reset}
+        label={t('CLOCK.reset')}
         onClick={() => {
           resetClock();
-          toast(CLOCK.clockReset);
+          toast(t('CLOCK.clockReset'));
         }}
       >
         <RotateCcwIcon className="size-5" strokeWidth={1.5} aria-hidden />

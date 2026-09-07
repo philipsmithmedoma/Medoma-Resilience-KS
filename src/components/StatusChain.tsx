@@ -21,7 +21,7 @@ export function StatusChain({ steps, labels, current, label }: StatusChainProps)
             <span
               className={cn(
                 'flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular',
-                done ? 'bg-green text-white' : active ? 'bg-primary text-white' : 'border border-border-input text-text-muted',
+                done ? 'bg-green text-primary-foreground' : active ? 'bg-primary text-primary-foreground' : 'border border-border-input text-text-muted',
               )}
               aria-hidden
             >

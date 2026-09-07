@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { ChevronDownIcon } from 'lucide-react';
 import type { Resource, SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { DATA_SOURCE_LABELS, INVENTORY_STATUS_LABELS, INVENTORY_STATUS_OUT_OF_SERVICE, LABELS, RES, RESOURCE_CATEGORIES, RESOURCE_CATEGORY_LABELS, SUPPLY_STATUSES } from '@/data/vocab';
+import { INVENTORY_STATUS_OUT_OF_SERVICE, RESOURCE_CATEGORIES, SUPPLY_STATUSES } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt } from '@/lib/format';
 import { inventoryStatus, sumColumns } from '@/lib/inventory';
-import { isRegion, sitesInScope } from '@/lib/scope';
+import { isRegion, nodeLabel, sitesInScope } from '@/lib/scope';
 import { isStale } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { StatusChip } from '@/components/Chip';
@@ -22,7 +23,7 @@ function HeaderFilter({ label, values, labels, selected, onToggle }: { label: st
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className={cn('inline-flex items-center gap-1 hover:text-text', active && 'text-primary')} aria-label={LABELS.ariaFilter(label)}>
+        <button type="button" className={cn('inline-flex items-center gap-1 hover:text-text', active && 'text-primary-text')} aria-label={t('LABELS.ariaFilter', { label })}>
           {label}
           <ChevronDownIcon className="size-4" strokeWidth={1.5} aria-hidden />
         </button>
@@ -40,7 +41,7 @@ function HeaderFilter({ label, values, labels, selected, onToggle }: { label: st
 
 function SortHeader({ label, active, direction, onClick, className }: { label: string; active: boolean; direction: 'asc' | 'desc'; onClick: () => void; className?: string }) {
   return (
-    <button type="button" onClick={onClick} className={cn('inline-flex items-center gap-1 hover:text-text', active && 'text-text', className)} aria-label={LABELS.ariaSortBy(label)}>
+    <button type="button" onClick={onClick} className={cn('inline-flex items-center gap-1 hover:text-text', active && 'text-text', className)} aria-label={t('LABELS.ariaSortBy', { label })}>
       {label}
       <span aria-hidden className="text-[10px]">
         {active ? (direction === 'asc' ? '▲' : '▼') : ''}
@@ -66,7 +67,10 @@ export function InventoryTab() {
     else next.add(v);
     setter(next.size === all.length ? new Set() : next);
   };
-  const nodeName = (id: string) => nodes.find((n) => n.id === id)?.name ?? id;
+  const nodeName = (id: string) => {
+    const node = nodes.find((n) => n.id === id);
+    return node ? nodeLabel(node) : id;
+  };
   const shared = (r: Resource) => (nodes.find((n) => n.id === r.nodeId)?.sharing ?? 'Full') === 'Full';
   const sites = sitesInScope(scope);
 
@@ -94,27 +98,27 @@ export function InventoryTab() {
       <TableHeader>
         <TableRow>
           <TableHead>
-            <SortHeader label={RES.columns.resource} active={sort.key === 'name'} direction={sort.direction} onClick={() => toggleSort('name')} />
+            <SortHeader label={t('RES.columns.resource')} active={sort.key === 'name'} direction={sort.direction} onClick={() => toggleSort('name')} />
           </TableHead>
           <TableHead>
-            <HeaderFilter label={RES.columns.node} values={nodeValues} selected={nodeFilter} onToggle={toggle(nodeFilter, nodeValues, setNodeFilter)} />
+            <HeaderFilter label={t('RES.columns.node')} values={nodeValues} selected={nodeFilter} onToggle={toggle(nodeFilter, nodeValues, setNodeFilter)} />
           </TableHead>
           <TableHead>
-            <HeaderFilter label={RES.columns.category} values={RESOURCE_CATEGORIES} labels={RESOURCE_CATEGORY_LABELS} selected={categoryFilter} onToggle={toggle(categoryFilter, RESOURCE_CATEGORIES, setCategoryFilter)} />
+            <HeaderFilter label={t('RES.columns.category')} values={RESOURCE_CATEGORIES} labels={tm('RESOURCE_CATEGORY_LABELS')} selected={categoryFilter} onToggle={toggle(categoryFilter, RESOURCE_CATEGORIES, setCategoryFilter)} />
           </TableHead>
-          <TableHead className="text-right">{RES.columns.total}</TableHead>
+          <TableHead className="text-right">{t('RES.columns.total')}</TableHead>
           <TableHead className="text-right">
-            <SortHeader label={RES.columns.available} active={sort.key === 'available'} direction={sort.direction} onClick={() => toggleSort('available')} />
+            <SortHeader label={t('RES.columns.available')} active={sort.key === 'available'} direction={sort.direction} onClick={() => toggleSort('available')} />
           </TableHead>
-          <TableHead className="text-right">{RES.columns.inUse}</TableHead>
-          <TableHead className="text-right">{RES.columns.reserved}</TableHead>
-          <TableHead className="text-right">{RES.columns.outOfService}</TableHead>
-          <TableHead className="text-right">{RES.columns.notInService}</TableHead>
-          <TableHead className="text-right">{RES.columns.inTransit}</TableHead>
+          <TableHead className="text-right">{t('RES.columns.inUse')}</TableHead>
+          <TableHead className="text-right">{t('RES.columns.reserved')}</TableHead>
+          <TableHead className="text-right">{t('RES.columns.outOfService')}</TableHead>
+          <TableHead className="text-right">{t('RES.columns.notInService')}</TableHead>
+          <TableHead className="text-right">{t('RES.columns.inTransit')}</TableHead>
           <TableHead>
-            <HeaderFilter label={RES.columns.status} values={STATUS_VALUES} labels={INVENTORY_STATUS_LABELS} selected={statusFilter} onToggle={toggle(statusFilter, STATUS_VALUES, setStatusFilter)} />
+            <HeaderFilter label={t('RES.columns.status')} values={STATUS_VALUES} labels={tm('INVENTORY_STATUS_LABELS')} selected={statusFilter} onToggle={toggle(statusFilter, STATUS_VALUES, setStatusFilter)} />
           </TableHead>
-          <TableHead>{RES.columns.lastConfirmed}</TableHead>
+          <TableHead>{t('RES.columns.lastConfirmed')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -137,19 +141,19 @@ export function InventoryTab() {
                 )}
               </TableCell>
               <TableCell>{nodeName(r.nodeId)}</TableCell>
-              <TableCell>{RESOURCE_CATEGORY_LABELS[r.category]}</TableCell>
+              <TableCell>{tm('RESOURCE_CATEGORY_LABELS')[r.category]}</TableCell>
               <TableCell className="text-right tabular">{visible ? fmt(r.total) : dash}</TableCell>
-              <TableCell className="text-right tabular">{visible ? fmt(r.available) : <StatusChip status="Not shared" label={LABELS.notShared} />}</TableCell>
+              <TableCell className="text-right tabular">{visible ? fmt(r.available) : <StatusChip status="Not shared" label={t('LABELS.notShared')} />}</TableCell>
               <TableCell className="text-right tabular">{visible ? fmt(r.inUse) : dash}</TableCell>
               <TableCell className="text-right tabular">{visible ? fmt(r.reserved) : dash}</TableCell>
               <TableCell className="text-right tabular">{visible ? fmt(r.outOfService) : dash}</TableCell>
               <TableCell className="text-right tabular">{visible ? fmt(r.notInService) : dash}</TableCell>
               <TableCell className="text-right tabular">{visible ? fmt(r.inTransit) : dash}</TableCell>
-              <TableCell>{visible ? <StatusChip status={status} label={INVENTORY_STATUS_LABELS[status]} /> : dash}</TableCell>
+              <TableCell>{visible ? <StatusChip status={status} label={tm('INVENTORY_STATUS_LABELS')[status]} /> : dash}</TableCell>
               <TableCell>
                 {visible ? (
                   <>
-                    <TimeStamp time={r.lastConfirmed} stale={isStale(clock, r.lastConfirmed)} /> <span className="text-small text-text-muted">({DATA_SOURCE_LABELS[r.dataSource]})</span>
+                    <TimeStamp time={r.lastConfirmed} stale={isStale(clock, r.lastConfirmed)} /> <span className="text-small text-text-muted">({tm('DATA_SOURCE_LABELS')[r.dataSource]})</span>
                   </>
                 ) : (
                   dash
@@ -161,7 +165,7 @@ export function InventoryTab() {
       </TableBody>
       <TableFooter>
         <TableRow className="font-medium hover:bg-transparent">
-          <TableCell colSpan={3}>{RES.columns.sum}</TableCell>
+          <TableCell colSpan={3}>{t('RES.columns.sum')}</TableCell>
           <TableCell className="text-right tabular">{fmt(sums.total)}</TableCell>
           <TableCell className="text-right tabular">{fmt(sums.available)}</TableCell>
           <TableCell className="text-right tabular">{fmt(sums.inUse)}</TableCell>

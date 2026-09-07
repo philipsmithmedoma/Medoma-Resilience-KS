@@ -1,5 +1,5 @@
 import { useStore } from '@/data/store';
-import { RES } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { scopeName } from '@/lib/scope';
 import { PageTitle } from '@/components/PageTitle';
 import { SubTabs } from '@/components/SubTabs';
@@ -17,14 +17,14 @@ export function ResourcesPage({ tab }: { tab: ResourcesTab }) {
   const nodes = useStore((s) => s.nodes);
   const open = requests.filter((r) => r.status !== 'Received' && r.status !== 'Rejected').length;
   const tabs = [
-    { key: 'requests', label: RES.tabs.requests(open), to: '/resurser' },
-    { key: 'inventory', label: RES.tabs.inventory, to: '/resurser/lager' },
-    { key: 'from-message', label: RES.tabs.fromMessage(messages.length), to: '/resurser/meddelanden' },
+    { key: 'requests', label: t('RES.tabs.requests', { open }), to: '/resurser' },
+    { key: 'inventory', label: t('RES.tabs.inventory'), to: '/resurser/lager' },
+    { key: 'from-message', label: t('RES.tabs.fromMessage', { n: messages.length }), to: '/resurser/meddelanden' },
   ];
   return (
     <div className="space-y-6">
-      <PageTitle title={RES.title} scope={tab === 'inventory' ? scopeName(scope, nodes) : undefined} />
-      <SubTabs tabs={tabs} active={tab} label={RES.title} />
+      <PageTitle title={t('RES.title')} scope={tab === 'inventory' ? scopeName(scope, nodes) : undefined} />
+      <SubTabs tabs={tabs} active={tab} label={t('RES.title')} />
       {tab === 'requests' ? <RequestsTab /> : null}
       {tab === 'inventory' ? <InventoryTab /> : null}
       {tab === 'from-message' ? <FromMessageTab /> : null}

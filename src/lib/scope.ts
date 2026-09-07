@@ -1,6 +1,7 @@
 // Scope helpers – SPEC.md § 2. Scope is Karolinska (both sites), one site, the region or a stood-up node.
 import type { CareNode, NodeId, SiteId } from '@/data/types';
-import { KAROLINSKA_ID, REGION_ID, SCOPE_LABELS } from '@/data/vocab';
+import { KAROLINSKA_ID, REGION_ID } from '@/data/vocab';
+import { getLocale, t, tm } from '@/lib/i18n';
 
 export const SITES: SiteId[] = ['solna', 'huddinge'];
 
@@ -29,14 +30,20 @@ export function sitesInScope(scope: NodeId): SiteId[] {
 }
 
 export function scopeName(scope: NodeId, nodes: CareNode[]): string {
-  if (isKarolinska(scope)) return SCOPE_LABELS.karolinska;
-  if (isRegion(scope)) return SCOPE_LABELS.region;
-  if (isSite(scope)) return SCOPE_LABELS[scope];
-  return nodes.find((n) => n.id === scope)?.name ?? SCOPE_LABELS.karolinska;
+  if (isKarolinska(scope)) return t('SCOPE_LABELS.karolinska');
+  if (isRegion(scope)) return t('SCOPE_LABELS.region');
+  if (isSite(scope)) return tm('SCOPE_LABELS')[scope];
+  const node = nodes.find((n) => n.id === scope);
+  return node ? nodeLabel(node) : t('SCOPE_LABELS.karolinska');
+}
+
+/** A node's display name: capacity classes and the transport node get their English descriptor in English mode (DESIGN-LANG.md § 4). */
+export function nodeLabel(node: Pick<CareNode, 'name' | 'descriptorEn'>): string {
+  return getLocale() === 'en' && node.descriptorEn ? `${node.name} (${node.descriptorEn})` : node.name;
 }
 
 export function siteName(site: SiteId): string {
-  return SCOPE_LABELS[site];
+  return tm('SCOPE_LABELS')[site];
 }
 
 /** The other Karolinska site. */

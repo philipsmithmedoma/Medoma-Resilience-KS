@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStore } from '@/data/store';
-import { CONFIDENCE_LABELS, LABELS, SOURCES } from '@/data/vocab';
+import { SOURCE_ANCHORS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt, fmtDec } from '@/lib/format';
 import { collectFigures, type FigureEntry } from '@/lib/sources';
 import { PageTitle, SectionHeading } from '@/components/PageTitle';
@@ -10,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 function valueText(e: FigureEntry): string {
   if (e.text) return e.text;
-  if (e.figure.value === null) return LABELS.unknown;
+  if (e.figure.value === null) return t('LABELS.unknown');
   return Number.isInteger(e.figure.value) ? fmt(e.figure.value) : fmtDec(e.figure.value);
 }
 
@@ -42,23 +43,23 @@ export function SourcesPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <PageTitle title={SOURCES.title} />
-        <p className="max-w-[900px]">{SOURCES.intro}</p>
+        <PageTitle title={t('SOURCES.title')} />
+        <p className="max-w-[900px]">{t('SOURCES.intro')}</p>
       </div>
 
       <section>
-        <SectionHeading>{SOURCES.verifiedTable}</SectionHeading>
+        <SectionHeading>{t('SOURCES.verifiedTable')}</SectionHeading>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{SOURCES.columns.figure}</TableHead>
-              <TableHead className="text-right">{SOURCES.columns.value}</TableHead>
-              <TableHead>{SOURCES.columns.confidence}</TableHead>
-              <TableHead>{SOURCES.columns.date}</TableHead>
-              <TableHead>{SOURCES.columns.link}</TableHead>
+              <TableHead>{t('SOURCES.columns.figure')}</TableHead>
+              <TableHead className="text-right">{t('SOURCES.columns.value')}</TableHead>
+              <TableHead>{t('SOURCES.columns.confidence')}</TableHead>
+              <TableHead>{t('SOURCES.columns.date')}</TableHead>
+              <TableHead>{t('SOURCES.columns.link')}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody lang="sv">
             {pack.sources.map((src) => {
               const rows = verified.filter((e) => e.figure.source === src.key);
               return (
@@ -70,18 +71,18 @@ export function SourcesPage() {
                     <TableCell className="whitespace-normal">{src.date}</TableCell>
                     <TableCell>
                       {src.url ? (
-                        <a href={src.url} target="_blank" rel="noreferrer" className="text-primary hover:text-primary-hover hover:underline">
-                          {SOURCES.open}
+                        <a href={src.url} target="_blank" rel="noreferrer" className="text-primary-text hover:text-primary-hover hover:underline">
+                          {t('SOURCES.open')}
                         </a>
                       ) : (
-                        <span className="text-text-muted">{SOURCES.noLink}</span>
+                        <span className="text-text-muted">{t('SOURCES.noLink')}</span>
                       )}
                     </TableCell>
                   </TableRow>
                   {rows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="whitespace-normal text-text-secondary">
-                        {SOURCES.noFigures}
+                        {t('SOURCES.noFigures')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -93,7 +94,7 @@ export function SourcesPage() {
                         </TableCell>
                         <TableCell className="text-right tabular whitespace-normal">{valueText(e)}</TableCell>
                         <TableCell>
-                          <StatusChip status={CONFIDENCE_LABELS[e.figure.confidence]} label={CONFIDENCE_LABELS[e.figure.confidence]} />
+                          <StatusChip status={tm('CONFIDENCE_LABELS')[e.figure.confidence]} label={tm('CONFIDENCE_LABELS')[e.figure.confidence]} />
                         </TableCell>
                         <TableCell>{e.figure.asOf ?? src.date}</TableCell>
                         <TableCell />
@@ -108,20 +109,20 @@ export function SourcesPage() {
       </section>
 
       <section>
-        <SectionHeading>{SOURCES.estimatesTable}</SectionHeading>
+        <SectionHeading>{t('SOURCES.estimatesTable')}</SectionHeading>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{SOURCES.columns.figure}</TableHead>
-              <TableHead className="text-right">{SOURCES.columns.value}</TableHead>
-              <TableHead>{SOURCES.columns.confidence}</TableHead>
-              <TableHead>{SOURCES.columns.basis}</TableHead>
+              <TableHead>{t('SOURCES.columns.figure')}</TableHead>
+              <TableHead className="text-right">{t('SOURCES.columns.value')}</TableHead>
+              <TableHead>{t('SOURCES.columns.confidence')}</TableHead>
+              <TableHead>{t('SOURCES.columns.basis')}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody lang="sv">
             {[
-              { id: SOURCES.anchors.estimate, label: CONFIDENCE_LABELS.estimate, groups: grouped(estimates) },
-              { id: SOURCES.anchors.illustrative, label: CONFIDENCE_LABELS.illustrative, groups: grouped(illustrative) },
+              { id: SOURCE_ANCHORS.estimate, label: t('CONFIDENCE_LABELS.estimate'), groups: grouped(estimates) },
+              { id: SOURCE_ANCHORS.illustrative, label: t('CONFIDENCE_LABELS.illustrative'), groups: grouped(illustrative) },
             ].map((block) => (
               <Fragment key={block.id}>
                 <TableRow id={block.id} className="scroll-mt-4 bg-bg-muted hover:bg-bg-muted">
@@ -141,7 +142,7 @@ export function SourcesPage() {
                         <TableCell className="whitespace-normal pl-6">{e.label}</TableCell>
                         <TableCell className="text-right tabular whitespace-normal">{valueText(e)}</TableCell>
                         <TableCell>
-                          <StatusChip status={CONFIDENCE_LABELS[e.figure.confidence]} label={CONFIDENCE_LABELS[e.figure.confidence]} />
+                          <StatusChip status={tm('CONFIDENCE_LABELS')[e.figure.confidence]} label={tm('CONFIDENCE_LABELS')[e.figure.confidence]} />
                         </TableCell>
                         <TableCell className="whitespace-normal text-text-secondary">
                           {e.figure.basis ?? ''}

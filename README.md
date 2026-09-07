@@ -34,6 +34,14 @@ Kräver Node 22. Minsta bredd 1280 px. Kartunderlaget hämtas från OpenStreetMa
 
 Klockan uppe till höger är enda tidskällan. Den startar 14:40, fredag 4 september 2026, går fram en minut per åtgärd och, när ett scenario spelas, 15 minuter per 2 sekunder (ett dygn per 2 sekunder i pandemiscenariot). Spela/pausa, Stega och Återställ klockan sitter bredvid tiden. Demo-knappen återställer hela demon.
 
+## Mörkt läge
+
+Knappen med måne/sol i navigationsfältet växlar mellan ljust och mörkt läge. Valet sparas i webbläsaren (`localStorage`, nyckeln `theme`) och ljust läge är standard. Kartan får ett inverteringsfilter i mörkt läge; markörer och ASIH-cirkeln påverkas inte.
+
+## Språk
+
+Knappen "EN" i navigationsfältet växlar till engelska, "SV" tillbaka till svenska. Valet sparas i webbläsaren (`localStorage`, nyckeln `locale`) och svenska är standard. Egennamn, avdelningsnamn, förkortningar, beredskapslägena (med svensk term i parentes) och citerade meddelanden översätts inte; på engelska visas en ordlista under ingressen på startsidan. Alla strängar finns i `src/data/vocab.ts` som två tabeller (`sv`, `en`) med identiska nycklar, och datapaketets spelböcker och scenarier bär `{ sv, en }`-texter.
+
 ## Presentatörsmanus
 
 Startsidan (logotypen) har fem kapitel. Varje kapitel återställer demon, sätter omfattning och sida och startar vid behov ett scenario, så kapitlen kan visas i valfri ordning.

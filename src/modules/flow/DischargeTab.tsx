@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { DischargeReady, SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { FLOW, LABELS, SITE_LABELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { GERIATRIK_MIN_AGE } from '@/lib/evacuation';
 import { sumMetric } from '@/lib/flow';
 import { fmt } from '@/lib/format';
@@ -44,10 +44,10 @@ export function DischargeTab({ sites }: { sites: SiteId[] }) {
     if (!pending) return;
     if (pending.kind === 'asih') {
       sendToAsih(pending.d.id);
-      toast(FLOW.discharge.toasts.asihSent);
+      toast(t('FLOW.discharge.toasts.asihSent'));
     } else {
       sendToGeriatrik(pending.d.id);
-      toast(FLOW.discharge.toasts.geriatrikSent);
+      toast(t('FLOW.discharge.toasts.geriatrikSent'));
     }
     setPending(null);
   };
@@ -56,23 +56,24 @@ export function DischargeTab({ sites }: { sites: SiteId[] }) {
     <div className="space-y-6">
       <KpiStrip
         items={[
-          { label: FLOW.discharge.kpi.ready, value: fmt(total) },
-          { label: FLOW.discharge.kpi.bedsBound, value: fmt(total) },
-          { label: FLOW.discharge.kpi.asih, value: fmt(asih) },
+          { label: t('FLOW.discharge.kpi.ready'), value: fmt(total) },
+          { label: t('FLOW.discharge.kpi.bedsBound'), value: fmt(total) },
+          { label: t('FLOW.discharge.kpi.asih'), value: fmt(asih) },
         ]}
       />
+      <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
       {rows.length === 0 ? (
-        <p className="text-text-secondary">{FLOW.discharge.empty}</p>
+        <p className="text-text-secondary">{t('FLOW.discharge.empty')}</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{FLOW.discharge.columns.patient}</TableHead>
-              <TableHead>{FLOW.discharge.columns.ward}</TableHead>
-              <TableHead className="text-right">{FLOW.discharge.columns.waited}</TableHead>
-              <TableHead>{FLOW.discharge.columns.waitingFor}</TableHead>
-              <TableHead>{FLOW.discharge.columns.status}</TableHead>
-              <TableHead>{FLOW.discharge.columns.action}</TableHead>
+              <TableHead>{t('FLOW.discharge.columns.patient')}</TableHead>
+              <TableHead>{t('FLOW.discharge.columns.ward')}</TableHead>
+              <TableHead className="text-right">{t('FLOW.discharge.columns.waited')}</TableHead>
+              <TableHead>{t('FLOW.discharge.columns.waitingFor')}</TableHead>
+              <TableHead>{t('FLOW.discharge.columns.status')}</TableHead>
+              <TableHead>{t('FLOW.discharge.columns.action')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -86,34 +87,34 @@ export function DischargeTab({ sites }: { sites: SiteId[] }) {
                   </TableCell>
                   <TableCell>
                     {wardName(d.wardId)}
-                    {sites.length > 1 ? <span className="ml-2 text-small text-text-muted">{SITE_LABELS[d.site]}</span> : null}
+                    {sites.length > 1 ? <span className="ml-2 text-small text-text-muted">{tm('SITE_LABELS')[d.site]}</span> : null}
                   </TableCell>
                   <TableCell className="text-right tabular">{fmt(d.daysWaiting)}</TableCell>
                   <TableCell>{d.waitingFor}</TableCell>
                   <TableCell>
-                    <StatusChip status={d.status} />
+                    <StatusChip status={d.status} label={tm('DISCHARGE_STATUS_LABELS')[d.status]} />
                   </TableCell>
                   <TableCell>
                     {open ? (
                       <span className="flex items-center gap-3">
                         {d.asihEligible ? (
                           <Button size="sm" onClick={() => setPending({ d, kind: 'asih' })}>
-                            {FLOW.discharge.toAsih}
+                            {t('FLOW.discharge.toAsih')}
                           </Button>
                         ) : null}
                         {geriatrik ? (
                           <Button size="sm" onClick={() => setPending({ d, kind: 'geriatrik' })}>
-                            {FLOW.discharge.toGeriatrik}
+                            {t('FLOW.discharge.toGeriatrik')}
                           </Button>
                         ) : null}
                         <Button
                           variant="link"
                           onClick={() => {
                             waitDischarge(d.id);
-                            toast(FLOW.discharge.toasts.waited);
+                            toast(t('FLOW.discharge.toasts.waited'));
                           }}
                         >
-                          {FLOW.discharge.wait}
+                          {t('FLOW.discharge.wait')}
                         </Button>
                       </span>
                     ) : null}
@@ -124,19 +125,19 @@ export function DischargeTab({ sites }: { sites: SiteId[] }) {
           </TableBody>
         </Table>
       )}
-      {more > 0 ? <p className="text-text-secondary">{FLOW.discharge.more(fmt(more))}</p> : null}
+      {more > 0 ? <p className="text-text-secondary">{t('FLOW.discharge.more', { n: fmt(more) })}</p> : null}
 
       <Dialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{pending ? (pending.kind === 'asih' ? FLOW.discharge.confirmAsih(pending.d.patient) : FLOW.discharge.confirmGeriatrik(pending.d.patient)) : ''}</DialogTitle>
-            <DialogDescription>{FLOW.discharge.confirmBody}</DialogDescription>
+            <DialogTitle>{pending ? (pending.kind === 'asih' ? t('FLOW.discharge.confirmAsih', { patient: pending.d.patient }) : t('FLOW.discharge.confirmGeriatrik', { patient: pending.d.patient })) : ''}</DialogTitle>
+            <DialogDescription>{t('FLOW.discharge.confirmBody')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setPending(null)}>
-              {LABELS.cancel}
+              {t('LABELS.cancel')}
             </Button>
-            <Button onClick={confirm}>{FLOW.discharge.send}</Button>
+            <Button onClick={confirm}>{t('FLOW.discharge.send')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

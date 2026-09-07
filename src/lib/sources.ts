@@ -1,7 +1,8 @@
 // Collects every Figure of the pack with its label and DATA.md section for the Källor page (SPEC.md § 6.10).
 import type { DataPack, Figure } from '@/data/types';
 import { REGION_FIGURES } from '@/data/packs/karolinska';
-import { SCOPE_LABELS, SOURCES } from '@/data/vocab';
+import type { Vocab } from '@/data/vocab';
+import { lt, tm } from '@/lib/i18n';
 
 export interface FigureEntry {
   label: string;
@@ -12,7 +13,7 @@ export interface FigureEntry {
 
 export function collectFigures(pack: DataPack): FigureEntry[] {
   const out: FigureEntry[] = [];
-  const s = SOURCES.sections;
+  const s = tm('SOURCES.sections');
   const h = pack.hospital;
   out.push({ label: 'Medarbetare', figure: h.employees, section: s.org });
   out.push({ label: 'Öppenvårdsbesök 2025', figure: h.outpatientVisits, section: s.org });
@@ -23,8 +24,8 @@ export function collectFigures(pack: DataPack): FigureEntry[] {
   for (const c of h.staffCategories) out.push({ label: c.label, figure: c.figure, section: s.org });
 
   for (const [scope, steps] of Object.entries(pack.ladders)) {
-    const name = SCOPE_LABELS[scope as keyof typeof SCOPE_LABELS] ?? scope;
-    for (const step of steps) out.push({ label: `${step.label}, ${name}`, figure: step.figure, section: s.ladder });
+    const name = tm('SCOPE_LABELS')[scope as keyof Vocab['SCOPE_LABELS']] ?? scope;
+    for (const step of steps) out.push({ label: `${lt(step.label)}, ${name}`, figure: step.figure, section: s.ladder });
   }
 
   for (const n of pack.nodes) {
@@ -41,11 +42,11 @@ export function collectFigures(pack: DataPack): FigureEntry[] {
   }
 
   for (const [site, rooms] of Object.entries(pack.edRooms)) {
-    out.push({ label: `Akutrum, ${SCOPE_LABELS[site as 'solna' | 'huddinge']}`, figure: rooms.akutrum, section: s.nodes });
-    out.push({ label: `Övervakningsplatser akuten, ${SCOPE_LABELS[site as 'solna' | 'huddinge']}`, figure: rooms.overvakning, section: s.nodes });
-    out.push({ label: `Behandlingsrum akuten, ${SCOPE_LABELS[site as 'solna' | 'huddinge']}`, figure: rooms.behandlingsrum, section: s.nodes });
+    out.push({ label: `Akutrum, ${tm('SCOPE_LABELS')[site as 'solna' | 'huddinge']}`, figure: rooms.akutrum, section: s.nodes });
+    out.push({ label: `Övervakningsplatser akuten, ${tm('SCOPE_LABELS')[site as 'solna' | 'huddinge']}`, figure: rooms.overvakning, section: s.nodes });
+    out.push({ label: `Behandlingsrum akuten, ${tm('SCOPE_LABELS')[site as 'solna' | 'huddinge']}`, figure: rooms.behandlingsrum, section: s.nodes });
   }
-  for (const m of pack.flowMetrics) out.push({ label: `${m.label}, ${SCOPE_LABELS[m.site]}`, figure: m.value, section: s.flow });
+  for (const m of pack.flowMetrics) out.push({ label: `${lt(m.label)}, ${tm('SCOPE_LABELS')[m.site]}`, figure: m.value, section: s.flow });
 
   for (const c of pack.capabilities) {
     for (const comp of c.components) {

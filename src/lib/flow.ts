@@ -1,6 +1,6 @@
 // Läget nu: live site values, block statuses and row definitions – SPEC.md § 6.1. Pure.
 import type { BedRequest, CareNode, Figure, FlowBlock, FlowMetric, SiteId, Ward } from '@/data/types';
-import { FLOW, FLOW_LABELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { viewFigure, weakest, withValue, type OutageView } from './figure';
 import { fmt, fmtDuration, fmtPct } from './format';
 import { isImaWard } from './placement';
@@ -125,7 +125,7 @@ export type RowAggregate = 'sum' | 'none' | 'ratio';
 
 export interface FlowRow {
   key: string;
-  label: string;
+  labelKey?: string; // FLOW_LABELS key when it differs from the metric key (composite rows)
   format: RowFormat;
   aggregate: RowAggregate; // how the Karolinska column is built
   qualifierKey?: string; // metric whose value is shown as qualifier, e.g. "varav 5 ASIH-kandidater"
@@ -133,51 +133,57 @@ export interface FlowRow {
   unlock?: 'placement' | 'discharge' | 'surgery' | 'ct' | 'intensive' | 'staffing';
 }
 
+/** Row label in the current locale. */
+export function rowLabel(row: Pick<FlowRow, 'key' | 'labelKey'>): string {
+  const labels = tm('FLOW_LABELS');
+  return labels[row.labelKey ?? row.key] ?? row.key;
+}
+
 export const FLOW_ROWS: Record<FlowBlock, FlowRow[]> = {
   akuten: [
-    { key: 'akuten.patients', label: FLOW_LABELS['akuten.patients'], format: 'number', aggregate: 'sum' },
-    { key: 'akuten.waitingBed', label: FLOW_LABELS['akuten.waitingBed'], format: 'number', aggregate: 'sum', unlock: 'placement' },
-    { key: 'akuten.longestWait', label: FLOW_LABELS['akuten.longestWait'], format: 'duration', aggregate: 'none' },
-    { key: 'akuten.over4h', label: FLOW_LABELS['akuten.over4h'], format: 'pct', aggregate: 'none' },
-    { key: 'akuten.timeToDoctor', label: FLOW_LABELS['akuten.timeToDoctor'], format: 'minutes', aggregate: 'none' },
-    { key: 'akuten.trauma', label: FLOW_LABELS['akuten.trauma'], format: 'number', aggregate: 'sum' },
+    { key: 'akuten.patients', format: 'number', aggregate: 'sum' },
+    { key: 'akuten.waitingBed', format: 'number', aggregate: 'sum', unlock: 'placement' },
+    { key: 'akuten.longestWait', format: 'duration', aggregate: 'none' },
+    { key: 'akuten.over4h', format: 'pct', aggregate: 'none' },
+    { key: 'akuten.timeToDoctor', format: 'minutes', aggregate: 'none' },
+    { key: 'akuten.trauma', format: 'number', aggregate: 'sum' },
   ],
   vardplatser: [
-    { key: 'beds.disponibla', label: FLOW_LABELS['beds.disponibla'], format: 'number', aggregate: 'sum' },
-    { key: 'beds.belagda', label: FLOW_LABELS['beds.belagda'], format: 'number', aggregate: 'sum' },
-    { key: 'beds.belaggning', label: FLOW_LABELS['beds.belaggning'], format: 'pct', aggregate: 'ratio' },
-    { key: 'beds.lediga', label: FLOW_LABELS['beds.lediga'], format: 'number', aggregate: 'sum' },
-    { key: 'beds.overbelaggning', label: FLOW_LABELS['beds.overbelaggning'], format: 'number', aggregate: 'sum' },
-    { key: 'beds.utlokaliserade', label: FLOW_LABELS['beds.utlokaliserade'], format: 'number', aggregate: 'sum' },
-    { key: 'beds.utskrivningsklara', label: FLOW_LABELS['beds.utskrivningsklara'], format: 'number', aggregate: 'sum', qualifierKey: 'beds.asihEligible', unlock: 'discharge' },
+    { key: 'beds.disponibla', format: 'number', aggregate: 'sum' },
+    { key: 'beds.belagda', format: 'number', aggregate: 'sum' },
+    { key: 'beds.belaggning', format: 'pct', aggregate: 'ratio' },
+    { key: 'beds.lediga', format: 'number', aggregate: 'sum' },
+    { key: 'beds.overbelaggning', format: 'number', aggregate: 'sum' },
+    { key: 'beds.utlokaliserade', format: 'number', aggregate: 'sum' },
+    { key: 'beds.utskrivningsklara', format: 'number', aggregate: 'sum', qualifierKey: 'beds.asihEligible', unlock: 'discharge' },
   ],
   operation: [
-    { key: 'op.program', label: FLOW_LABELS['op.program'], format: 'number', aggregate: 'sum' },
-    { key: 'op.done', label: FLOW_LABELS['op.done'], format: 'number', aggregate: 'sum' },
-    { key: 'op.cancelled', label: FLOW_LABELS['op.cancelled'], format: 'number', aggregate: 'sum', unlock: 'surgery' },
-    { key: 'op.waiting90', label: FLOW_LABELS['op.waiting90'], format: 'number', aggregate: 'sum' },
+    { key: 'op.program', format: 'number', aggregate: 'sum' },
+    { key: 'op.done', format: 'number', aggregate: 'sum' },
+    { key: 'op.cancelled', format: 'number', aggregate: 'sum', unlock: 'surgery' },
+    { key: 'op.waiting90', format: 'number', aggregate: 'sum' },
   ],
   bild: [
-    { key: 'ct.waiting', label: FLOW_LABELS['ct.waiting'], format: 'number', aggregate: 'sum', unlock: 'ct' },
-    { key: 'ct.median', label: FLOW_LABELS['ct.median'], format: 'minutes', aggregate: 'none' },
-    { key: 'ct.down', label: FLOW_LABELS['ct.down'], format: 'number', aggregate: 'sum', composite: ['ct.down', 'ct.total'] },
-    { key: 'mr.waiting', label: FLOW_LABELS['mr.waiting'], format: 'number', aggregate: 'sum' },
+    { key: 'ct.waiting', format: 'number', aggregate: 'sum', unlock: 'ct' },
+    { key: 'ct.median', format: 'minutes', aggregate: 'none' },
+    { key: 'ct.down', format: 'number', aggregate: 'sum', composite: ['ct.down', 'ct.total'] },
+    { key: 'mr.waiting', format: 'number', aggregate: 'sum' },
   ],
   iva: [
-    { key: 'iva.total', label: 'IVA-platser / belagda / lediga', format: 'number', aggregate: 'sum', composite: ['iva.total', 'iva.occupied', 'iva.free'], unlock: 'intensive' },
-    { key: 'iva.waiting', label: FLOW_LABELS['iva.waiting'], format: 'number', aggregate: 'sum' },
-    { key: 'iva.stepdown', label: FLOW_LABELS['iva.stepdown'], format: 'number', aggregate: 'sum' },
-    { key: 'ima.total', label: 'IMA-platser / belagda', format: 'number', aggregate: 'sum', composite: ['ima.total', 'ima.occupied'] },
+    { key: 'iva.total', labelKey: 'iva.composite', format: 'number', aggregate: 'sum', composite: ['iva.total', 'iva.occupied', 'iva.free'], unlock: 'intensive' },
+    { key: 'iva.waiting', format: 'number', aggregate: 'sum' },
+    { key: 'iva.stepdown', format: 'number', aggregate: 'sum' },
+    { key: 'ima.total', labelKey: 'ima.composite', format: 'number', aggregate: 'sum', composite: ['ima.total', 'ima.occupied'] },
   ],
   bemanning: [
-    { key: 'staff.vacant', label: FLOW_LABELS['staff.vacant'], format: 'number', aggregate: 'sum', unlock: 'staffing' },
-    { key: 'staff.agency', label: FLOW_LABELS['staff.agency'], format: 'number', aggregate: 'sum' },
-    { key: 'staff.sick', label: FLOW_LABELS['staff.sick'], format: 'pct', aggregate: 'none' },
+    { key: 'staff.vacant', format: 'number', aggregate: 'sum', unlock: 'staffing' },
+    { key: 'staff.agency', format: 'number', aggregate: 'sum' },
+    { key: 'staff.sick', format: 'pct', aggregate: 'none' },
   ],
 };
 
 export function formatRowValue(format: RowFormat, value: number | null): string {
-  if (value === null) return FLOW.status.Normalt && 'Okänt';
+  if (value === null) return t('LABELS.unknown');
   switch (format) {
     case 'pct':
       return fmtPct(value);

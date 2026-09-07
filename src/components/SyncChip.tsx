@@ -1,5 +1,5 @@
 import type { CareNode } from '@/data/types';
-import { LABELS, SYNC_LABELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { displaySyncState, type OutageView } from '@/lib/figure';
 import { Chip, StatusChip } from './Chip';
 
@@ -17,16 +17,16 @@ interface SyncChipProps {
  */
 export function SyncChip({ node, clock, outage, ehrScope = false }: SyncChipProps) {
   if (ehrScope && outage.ehrOutage) {
-    return <Chip tone="red">{LABELS.ehrOffline(outage.ehrOutageSince ?? '')}</Chip>;
+    return <Chip tone="red">{t('LABELS.ehrOffline', { since: outage.ehrOutageSince ?? '' })}</Chip>;
   }
   const state = displaySyncState(node, clock);
   if (state === 'Delayed') {
     return (
       <span className="flex items-center gap-2">
-        <StatusChip status="Delayed" label={SYNC_LABELS.Delayed} />
+        <StatusChip status="Delayed" label={t('SYNC_LABELS.Delayed')} />
         <span className="text-small text-text-muted">Senaste synk {node.lastSync}</span>
       </span>
     );
   }
-  return <StatusChip status={state} label={`${SYNC_LABELS[state]} ${node.lastSync}`} />;
+  return <StatusChip status={state} label={`${tm('SYNC_LABELS')[state]} ${node.lastSync}`} />;
 }

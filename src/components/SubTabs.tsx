@@ -22,7 +22,7 @@ export function SubTabs({ tabs, active, onChange, label }: SubTabsProps) {
         const isActive = t.key === active;
         const className = cn(
           '-mb-px border-b-2 px-0.5 py-3 text-nav',
-          isActive ? 'border-primary text-primary' : 'border-transparent text-text hover:text-primary',
+          isActive ? 'border-primary-text text-primary-text' : 'border-transparent text-text hover:text-primary-text',
         );
         if (t.to) {
           return (

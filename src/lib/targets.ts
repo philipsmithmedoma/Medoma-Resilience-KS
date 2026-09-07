@@ -25,7 +25,7 @@ export const MEASURE_TASKS: Partial<Record<TargetMeasure, string>> = {
 
 function taskDone(incident: Incident | null, measure: TargetMeasure): boolean {
   const title = MEASURE_TASKS[measure];
-  return Boolean(title && incident?.tasks.some((t) => t.title === title && t.status === 'Done'));
+  return Boolean(title && incident?.tasks.some((task) => task.title.sv === title && task.status === 'Done'));
 }
 
 function applied(scenario: ScenarioState | null, key: string): boolean {

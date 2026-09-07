@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { BeredskapsLage, Playbook } from '@/data/types';
 import { useStore } from '@/data/store';
-import { CURRENT_USER, INCIDENT, LABELS, LAGEN } from '@/data/vocab';
+import { CURRENT_USER, LAGEN } from '@/data/vocab';
+import { lt, t, tm } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -37,7 +38,7 @@ export function ActivateDialog({ playbook, onOpenChange }: ActivateDialogProps) 
     if (!playbook) return;
     activatePlaybook(playbook.id, commander, lage, note);
     onOpenChange(false);
-    toast(INCIDENT.incidentActivated);
+    toast(t('INCIDENT.incidentActivated'));
     if (playbook.navigateTo) {
       setScope('huddinge');
       navigate(playbook.navigateTo);
@@ -50,16 +51,16 @@ export function ActivateDialog({ playbook, onOpenChange }: ActivateDialogProps) 
         {playbook ? (
           <>
             <DialogHeader>
-              <DialogTitle>{INCIDENT.activateTitle(playbook.name)}</DialogTitle>
-              <DialogDescription>{INCIDENT.activateBody(playbook.roles.length, playbook.tasks.length, playbook.channels.length, playbook.targets.length)}</DialogDescription>
+              <DialogTitle>{t('INCIDENT.activateTitle', { name: lt(playbook.name) })}</DialogTitle>
+              <DialogDescription>{t('INCIDENT.activateBody', { roles: playbook.roles.length, tasks: playbook.tasks.length, channels: playbook.channels.length, targets: playbook.targets.length })}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1">
-                <label htmlFor={ids.commander}>{INCIDENT.fields.commander}</label>
+                <label htmlFor={ids.commander}>{t('INCIDENT.fields.commander')}</label>
                 <StaffSelect id={ids.commander} value={commander} onChange={setCommander} />
               </div>
               <div className="space-y-1">
-                <label htmlFor={ids.lage}>{INCIDENT.fields.lage}</label>
+                <label htmlFor={ids.lage}>{t('INCIDENT.fields.lage')}</label>
                 <Select value={lage} onValueChange={(v) => setLage(v as BeredskapsLage)}>
                   <SelectTrigger id={ids.lage} className="w-64">
                     <SelectValue />
@@ -67,22 +68,22 @@ export function ActivateDialog({ playbook, onOpenChange }: ActivateDialogProps) 
                   <SelectContent>
                     {LAGEN.filter((l) => l !== 'Normalläge').map((l) => (
                       <SelectItem key={l} value={l}>
-                        {l}
+                        {tm('LAGE_LABELS')[l]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <label htmlFor={ids.note}>{INCIDENT.fields.note}</label>
+                <label htmlFor={ids.note}>{t('INCIDENT.fields.note')}</label>
                 <Textarea id={ids.note} value={note} onChange={(e) => setNote(e.target.value)} />
               </div>
             </div>
             <DialogFooter>
               <Button variant="secondary" onClick={() => onOpenChange(false)}>
-                {LABELS.cancel}
+                {t('LABELS.cancel')}
               </Button>
-              <Button onClick={activate}>{INCIDENT.activateIncident}</Button>
+              <Button onClick={activate}>{t('INCIDENT.activateIncident')}</Button>
             </DialogFooter>
           </>
         ) : null}

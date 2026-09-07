@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { BedRequest, SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { FLOW, LABELS, SITE_LABELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt, fmtDuration } from '@/lib/format';
 import { isImaWard, placeableWards, suggestWard } from '@/lib/placement';
 import { INITIAL_CLOCK } from '@/lib/time';
@@ -37,32 +37,33 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
 
   const onPlace = (r: BedRequest, wardId: string, relocate: boolean) => {
     placePatient(r.id, wardId, relocate);
-    toast(relocate ? FLOW.placement.toasts.relocated : FLOW.placement.toasts.placed);
+    toast(relocate ? t('FLOW.placement.toasts.relocated') : t('FLOW.placement.toasts.placed'));
   };
 
   return (
     <div className="space-y-6">
       <KpiStrip
         items={[
-          { label: FLOW.waiting, value: fmt(requests.length) },
-          { label: FLOW.longestWait, value: fmtDuration(longest) },
-          { label: FLOW.freeBeds, value: fmt(freeBeds) },
-          { label: FLOW.kpiWaitingBed, value: fmt(sumMetric('akuten.waitingBed', values)) },
+          { label: t('FLOW.waiting'), value: fmt(requests.length) },
+          { label: t('FLOW.longestWait'), value: fmtDuration(longest) },
+          { label: t('FLOW.freeBeds'), value: fmt(freeBeds) },
+          { label: t('FLOW.kpiWaitingBed'), value: fmt(sumMetric('akuten.waitingBed', values)) },
         ]}
       />
+      <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
       <div className="grid grid-cols-[minmax(0,1fr)_300px] gap-8">
         {requests.length === 0 ? (
-          <p className="text-text-secondary">{FLOW.placement.empty}</p>
+          <p className="text-text-secondary">{t('FLOW.placement.empty')}</p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{FLOW.placement.columns.from}</TableHead>
-                <TableHead>{FLOW.placement.columns.patient}</TableHead>
-                <TableHead>{FLOW.placement.columns.needs}</TableHead>
-                <TableHead className="text-right">{FLOW.placement.columns.waited}</TableHead>
-                <TableHead>{FLOW.placement.columns.suggested}</TableHead>
-                <TableHead>{FLOW.placement.columns.action}</TableHead>
+                <TableHead>{t('FLOW.placement.columns.from')}</TableHead>
+                <TableHead>{t('FLOW.placement.columns.patient')}</TableHead>
+                <TableHead>{t('FLOW.placement.columns.needs')}</TableHead>
+                <TableHead className="text-right">{t('FLOW.placement.columns.waited')}</TableHead>
+                <TableHead>{t('FLOW.placement.columns.suggested')}</TableHead>
+                <TableHead>{t('FLOW.placement.columns.action')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,7 +77,7 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
                   <TableRow key={r.id}>
                     <TableCell className="whitespace-normal">
                       {r.from}
-                      {sites.length > 1 ? <span className="block text-small text-text-muted">{SITE_LABELS[r.site]}</span> : null}
+                      {sites.length > 1 ? <span className="block text-small text-text-muted">{tm('SITE_LABELS')[r.site]}</span> : null}
                     </TableCell>
                     <TableCell>
                       {r.patient} <span className="text-text-secondary tabular">{r.age}</span>
@@ -97,18 +98,18 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
                       ) : (
                         <span className="flex items-center gap-2">
                           <Select value={chosenId ?? ''} onValueChange={(v) => setChosen((c) => ({ ...c, [r.id]: v }))}>
-                            <SelectTrigger size="sm" className="w-64" aria-label={`${FLOW.placement.selectWard}, ${r.patient}`}>
-                              <SelectValue placeholder={FLOW.placement.selectWard} />
+                            <SelectTrigger size="sm" className="w-64" aria-label={`${t('FLOW.placement.selectWard')}, ${r.patient}`}>
+                              <SelectValue placeholder={t('FLOW.placement.selectWard')} />
                             </SelectTrigger>
                             <SelectContent>
                               {options.map((w) => (
                                 <SelectItem key={w.id} value={w.id}>
-                                  {w.name} <span className="text-small text-text-muted">{FLOW.placement.freeOf(fmt(w.free), fmt(w.total))}</span>
+                                  {w.name} <span className="text-small text-text-muted">{t('FLOW.placement.freeOf', { free: fmt(w.free), total: fmt(w.total) })}</span>
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          {relocate ? <StatusChip status="Utlokalisering" label={FLOW.placement.relocation} /> : null}
+                          {relocate ? <StatusChip status="Utlokalisering" label={t('FLOW.placement.relocation')} /> : null}
                         </span>
                       )}
                     </TableCell>
@@ -116,12 +117,12 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
                       <span className="flex items-center gap-3">
                         {chosenWard && !relocate ? (
                           <Button size="sm" onClick={() => onPlace(r, chosenWard.id, false)}>
-                            {FLOW.placement.place}
+                            {t('FLOW.placement.place')}
                           </Button>
                         ) : null}
                         {chosenWard && relocate ? (
                           <Button size="sm" variant="secondary" onClick={() => onPlace(r, chosenWard.id, true)}>
-                            {FLOW.placement.relocate}
+                            {t('FLOW.placement.relocate')}
                           </Button>
                         ) : null}
                         <Button
@@ -131,7 +132,7 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
                             setReason('');
                           }}
                         >
-                          {FLOW.placement.reject}
+                          {t('FLOW.placement.reject')}
                         </Button>
                       </span>
                     </TableCell>
@@ -142,11 +143,11 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
           </Table>
         )}
 
-        <aside className="rounded-lg border border-border bg-white p-5 shadow-card">
-          <h2 className="mb-3 text-[18px] leading-7">{FLOW.placement.wards}</h2>
+        <aside className="rounded-lg border border-border bg-surface p-5 shadow-card">
+          <h2 className="mb-3 text-[18px] leading-7">{t('FLOW.placement.wards')}</h2>
           {sites.map((site) => (
             <div key={site} className="mb-4 last:mb-0">
-              {sites.length > 1 ? <h3 className="mb-1 text-small text-text-secondary">{SITE_LABELS[site]}</h3> : null}
+              {sites.length > 1 ? <h3 className="mb-1 text-small text-text-secondary">{tm('SITE_LABELS')[site]}</h3> : null}
               <ul className="divide-y divide-border">
                 {scopeWards
                   .filter((w) => w.site === site)
@@ -167,16 +168,16 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
       <Dialog open={rejecting !== null} onOpenChange={(open) => !open && setRejecting(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{rejecting ? FLOW.placement.rejectTitle(rejecting.patient) : ''}</DialogTitle>
-            <DialogDescription>{FLOW.placement.rejectBody}</DialogDescription>
+            <DialogTitle>{rejecting ? t('FLOW.placement.rejectTitle', { patient: rejecting.patient }) : ''}</DialogTitle>
+            <DialogDescription>{t('FLOW.placement.rejectBody')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-1">
-            <label htmlFor={reasonId}>{FLOW.placement.reason}</label>
+            <label htmlFor={reasonId}>{t('FLOW.placement.reason')}</label>
             <Input id={reasonId} value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setRejecting(null)}>
-              {LABELS.cancel}
+              {t('LABELS.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -184,10 +185,10 @@ export function PlacementTab({ sites }: { sites: SiteId[] }) {
               onClick={() => {
                 if (rejecting) rejectPlacement(rejecting.id, reason);
                 setRejecting(null);
-                toast(FLOW.placement.toasts.rejected);
+                toast(t('FLOW.placement.toasts.rejected'));
               }}
             >
-              {FLOW.placement.confirmReject}
+              {t('FLOW.placement.confirmReject')}
             </Button>
           </DialogFooter>
         </DialogContent>

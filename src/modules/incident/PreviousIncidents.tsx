@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ClosedIncident } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT, LABELS } from '@/data/vocab';
+import { lt, t, tm } from '@/lib/i18n';
 import { taskCounts } from '@/lib/incident';
 import { SectionHeading } from '@/components/PageTitle';
 import { LogDrawer } from '@/components/LogDrawer';
@@ -14,15 +14,15 @@ export function PreviousIncidents() {
   if (closed.length === 0) return null;
   return (
     <section>
-      <SectionHeading>{INCIDENT.previous}</SectionHeading>
+      <SectionHeading>{t('INCIDENT.previous')}</SectionHeading>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{INCIDENT.columns.name}</TableHead>
-            <TableHead>{INCIDENT.columns.lage}</TableHead>
-            <TableHead>{INCIDENT.columns.activated}</TableHead>
-            <TableHead>{INCIDENT.columns.closed}</TableHead>
-            <TableHead>{INCIDENT.columns.tasksDone}</TableHead>
+            <TableHead>{t('INCIDENT.columns.name')}</TableHead>
+            <TableHead>{t('INCIDENT.columns.lage')}</TableHead>
+            <TableHead>{t('INCIDENT.columns.activated')}</TableHead>
+            <TableHead>{t('INCIDENT.columns.closed')}</TableHead>
+            <TableHead>{t('INCIDENT.columns.tasksDone')}</TableHead>
             <TableHead className="w-28" />
           </TableRow>
         </TableHeader>
@@ -31,16 +31,16 @@ export function PreviousIncidents() {
             const counts = taskCounts(c.incident.tasks);
             return (
               <TableRow key={`${c.incident.activatedAt}-${i}`}>
-                <TableCell className="font-medium">{c.incident.name}</TableCell>
-                <TableCell>{c.incident.lage}</TableCell>
+                <TableCell className="font-medium">{lt(c.incident.name)}</TableCell>
+                <TableCell>{tm('LAGE_LABELS')[c.incident.lage]}</TableCell>
                 <TableCell className="tabular">{c.incident.activatedAt}</TableCell>
                 <TableCell className="tabular">{c.closedAt}</TableCell>
                 <TableCell className="tabular">
                   {counts.done} / {counts.total}
                 </TableCell>
                 <TableCell className="text-right">
-                  <button type="button" className="text-primary hover:text-primary-hover hover:underline" onClick={() => setShowing(c)}>
-                    {LABELS.showLog}
+                  <button type="button" className="text-primary-text hover:text-primary-hover hover:underline" onClick={() => setShowing(c)}>
+                    {t('LABELS.showLog')}
                   </button>
                 </TableCell>
               </TableRow>
@@ -48,7 +48,7 @@ export function PreviousIncidents() {
           })}
         </TableBody>
       </Table>
-      <LogDrawer open={showing !== null} onOpenChange={(open) => !open && setShowing(null)} entries={showing?.log ?? []} title={showing ? `${LABELS.auditLog}: ${showing.incident.name}` : LABELS.auditLog} />
+      <LogDrawer open={showing !== null} onOpenChange={(open) => !open && setShowing(null)} entries={showing?.log ?? []} title={showing ? `${t('LABELS.auditLog')}: ${lt(showing.incident.name)}` : t('LABELS.auditLog')} />
     </section>
   );
 }

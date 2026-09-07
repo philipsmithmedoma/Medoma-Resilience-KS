@@ -2,7 +2,7 @@ import { Card } from '@/components/Card';
 import { ConfidenceChip } from '@/components/ConfidenceChip';
 import { LastConfirmed } from '@/components/FigureLines';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { LABELS } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { fmt } from '@/lib/format';
 import type { CardModel } from './cards';
 
@@ -16,15 +16,15 @@ interface CapacityCardProps {
 /** DESIGN.md § 4 capacity card: figure 32/600 with unit 15/400, confidence chip on the title row, last confirmed, "Visa detalj". */
 export function CapacityCard({ card, clock, onShowDetail, format }: CapacityCardProps) {
   const figure = card.figure;
-  const value = figure ? (figure.value === null ? LABELS.unknown : format ? format(figure.value) : fmt(figure.value)) : LABELS.unknown;
+  const value = figure ? (figure.value === null ? t('LABELS.unknown') : format ? format(figure.value) : fmt(figure.value)) : t('LABELS.unknown');
 
   let action: React.ReactNode = null;
   if (card.detail?.kind === 'popover') {
     action = (
       <Popover>
         <PopoverTrigger asChild>
-          <button type="button" className="text-primary hover:text-primary-hover hover:underline">
-            {LABELS.showDetail}
+          <button type="button" className="text-primary-text hover:text-primary-hover hover:underline">
+            {t('LABELS.showDetail')}
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-auto max-w-sm text-body">
@@ -34,8 +34,8 @@ export function CapacityCard({ card, clock, onShowDetail, format }: CapacityCard
     );
   } else if (card.detail && onShowDetail) {
     action = (
-      <button type="button" className="text-primary hover:text-primary-hover hover:underline" onClick={() => onShowDetail(card)}>
-        {LABELS.showDetail}
+      <button type="button" className="text-primary-text hover:text-primary-hover hover:underline" onClick={() => onShowDetail(card)}>
+        {t('LABELS.showDetail')}
       </button>
     );
   }
@@ -43,7 +43,7 @@ export function CapacityCard({ card, clock, onShowDetail, format }: CapacityCard
   return (
     <Card title={card.title} subtitle={card.subtitle} tile={card.tile} titleRight={figure ? <ConfidenceChip figure={figure} showSource /> : null} action={card.notAvailable ? null : action}>
       {card.notAvailable ? (
-        <p className="text-text-secondary">{LABELS.notAvailableAtNode}</p>
+        <p className="text-text-secondary">{t('LABELS.notAvailableAtNode')}</p>
       ) : (
         <div>
           <div className="flex items-baseline gap-2">

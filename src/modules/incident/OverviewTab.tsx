@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type { Incident } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT, LABELS } from '@/data/vocab';
+import { key, lt, t } from '@/lib/i18n';
 import { fmt } from '@/lib/format';
 import { measureTarget, targetProgress } from '@/lib/targets';
-import { taskCounts } from '@/lib/incident';
+import { roleLabel, taskCounts } from '@/lib/incident';
 import { SectionHeading } from '@/components/PageTitle';
 import { KeyValueTable } from '@/components/KeyValueTable';
 import { RolePill } from '@/components/RolePill';
@@ -12,49 +12,58 @@ import { StaffSelect } from '@/components/StaffSelect';
 import { Progress } from '@/components/ui/progress';
 import { useTargetInputs } from '@/modules/capacity/useTargetInputs';
 
+/** Target units are the pack's Swedish unit words; translated through INCIDENT.targetUnits when a label exists. */
+export function targetUnit(unit: string): string {
+  const translated = t(`INCIDENT.targetUnits.${unit}`);
+  return translated === `INCIDENT.targetUnits.${unit}` ? unit : translated;
+}
+
 /** Översikt: targets as progress rows, roles table with Ändra, task summary line. */
 export function OverviewTab({ incident }: { incident: Incident }) {
   const staff = useStore((s) => s.staff);
+  const playbooks = useStore((s) => s.playbooks);
   const assignRole = useStore((s) => s.assignRole);
   const [editing, setEditing] = useState<string | null>(null);
   const inputs = useTargetInputs();
   const counts = taskCounts(incident.tasks);
+  const playbook = playbooks.find((p) => p.id === incident.playbookId);
 
   return (
     <div className="grid grid-cols-2 gap-8">
       <section>
-        <SectionHeading>{INCIDENT.targets}</SectionHeading>
+        <SectionHeading>{t('INCIDENT.targets')}</SectionHeading>
         <ul className="space-y-4">
-          {incident.targets.map((t) => {
-            const current = measureTarget(t.measure, inputs);
-            const due = t.withinUnit === 'dygn' ? INCIDENT.dueDay(fmt(10)) : INCIDENT.due(t.dueAt);
+          {incident.targets.map((target) => {
+            const current = measureTarget(target.measure, inputs);
+            const due = target.withinUnit === 'dygn' ? t('INCIDENT.dueDay', { d: fmt(10) }) : t('INCIDENT.due', { at: target.dueAt });
             return (
-              <li key={t.label}>
+              <li key={key(target.label)}>
                 <div className="mb-1 flex items-baseline justify-between gap-4">
-                  <span>{t.label}</span>
+                  <span>{lt(target.label)}</span>
                   <span className="tabular text-text-secondary">
-                    {fmt(current)} / {fmt(t.target)} {t.unit}, {due.toLowerCase()}
+                    {fmt(current)} / {fmt(target.target)} {targetUnit(target.unit)}, {due.toLowerCase()}
                   </span>
                 </div>
-                <Progress value={targetProgress(current, t.target)} aria-label={LABELS.ariaProgress(t.label)} />
+                <Progress value={targetProgress(current, target.target)} aria-label={t('LABELS.ariaProgress', { label: lt(target.label) })} />
               </li>
             );
           })}
         </ul>
-        <p className="mt-6 text-text-secondary">{INCIDENT.summary(counts.notStarted, counts.inProgress, counts.done)}</p>
+        <p className="mt-6 text-text-secondary">{t('INCIDENT.summary', { notStarted: counts.notStarted, inProgress: counts.inProgress, done: counts.done })}</p>
       </section>
       <section>
-        <SectionHeading>{INCIDENT.roles}</SectionHeading>
+        <SectionHeading>{t('INCIDENT.roles')}</SectionHeading>
         <KeyValueTable
           rows={Object.entries(incident.roles).map(([role, person]) => {
             const member = staff.find((s) => s.name === person);
+            const label = roleLabel(playbook, role);
             return {
-              label: role,
+              label,
               value:
                 editing === role ? (
                   <StaffSelect
                     value={person}
-                    ariaLabel={`${INCIDENT.assign} ${role}`}
+                    ariaLabel={`${t('INCIDENT.assign')} ${label}`}
                     autoOpen
                     onChange={(name) => {
                       assignRole(role, name);
@@ -67,12 +76,12 @@ export function OverviewTab({ incident }: { incident: Incident }) {
                     {member ? <RolePill profession={member.profession} /> : null}
                   </span>
                 ) : (
-                  <span className="text-text-muted">{INCIDENT.unassigned}</span>
+                  <span className="text-text-muted">{t('INCIDENT.unassigned')}</span>
                 ),
               action:
                 editing === role ? null : (
-                  <button type="button" className="text-primary hover:text-primary-hover hover:underline" onClick={() => setEditing(role)}>
-                    {LABELS.change}
+                  <button type="button" className="text-primary-text hover:text-primary-hover hover:underline" onClick={() => setEditing(role)}>
+                    {t('LABELS.change')}
                   </button>
                 ),
             };

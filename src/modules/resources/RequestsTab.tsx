@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import type { ResourceRequest } from '@/data/types';
 import { useStore } from '@/data/store';
-import { LABELS, REQUEST_STATUSES, REQUEST_STATUS_LABELS, RES } from '@/data/vocab';
+import { ICON_TINTS, REQUEST_STATUSES } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt } from '@/lib/format';
 import { IconTile } from '@/components/Card';
 import { StatusChip } from '@/components/Chip';
@@ -25,14 +26,14 @@ export function RequestsTab() {
     <div className="space-y-8">
       <div className="flex items-center justify-end">
         <Button variant="tertiary" onClick={() => setCreating(true)}>
-          {RES.newRequest}
+          {t('RES.newRequest')}
         </Button>
       </div>
       {openCount === 0 ? (
         <div className="space-y-2">
-          <p>{RES.noOpenRequests}</p>
+          <p>{t('RES.noOpenRequests')}</p>
           <Button variant="tertiary" onClick={() => setCreating(true)}>
-            {RES.newRequest}
+            {t('RES.newRequest')}
           </Button>
         </div>
       ) : null}
@@ -42,7 +43,7 @@ export function RequestsTab() {
         return (
           <section key={status}>
             <h2 className="mb-2 text-heading">
-              {REQUEST_STATUS_LABELS[status]} <span className="font-normal text-text-secondary">({group.length})</span>
+              {tm('REQUEST_STATUS_LABELS')[status]} <span className="font-normal text-text-secondary">({group.length})</span>
             </h2>
             <ul className="divide-y divide-border border-y border-border">
               {group.map((r) => (
@@ -62,20 +63,20 @@ export function RequestsTab() {
 
 function RequestRow({ request: r, from, to, onClick }: { request: ResourceRequest; from?: string; to: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="flex w-full items-center gap-4 py-2 text-left hover:bg-bg-muted" aria-label={LABELS.ariaOpen(`${r.resourceName} × ${r.quantity}`)}>
-      <IconTile icon={ArrowLeftRightIcon} iconClass="text-teal" tileClass="bg-indigo-light" />
+    <button type="button" onClick={onClick} className="flex w-full items-center gap-4 py-2 text-left hover:bg-bg-muted" aria-label={t('LABELS.ariaOpen', { name: `${r.resourceName} × ${r.quantity}` })}>
+      <IconTile icon={ArrowLeftRightIcon} iconClass={ICON_TINTS.transport.icon} tileClass={ICON_TINTS.transport.tile} />
       <span className="w-16 shrink-0">
         <PriorityText priority={r.priority} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-medium">{RES.quantityUnit(r.resourceName, fmt(r.quantity), r.unit)}</span>
+        <span className="block font-medium">{t('RES.quantityUnit', { name: r.resourceName, qty: fmt(r.quantity), unit: r.unit })}</span>
         <span className="block text-small text-text-secondary">
-          {from ?? <span className="text-text-muted">{RES.notAllocated}</span>} till {to}
+          {from ?? <span className="text-text-muted">{t('RES.notAllocated')}</span>} till {to}
         </span>
       </span>
-      <span className="text-small text-text-secondary">{RES.requestedBy(r.requestedBy, r.requestedAt)}</span>
-      {r.eta ? <span className="w-44 text-small tabular text-text-secondary">{RES.eta(r.eta)}</span> : null}
-      {r.incident ? <StatusChip status="Incident" label={RES.incident} /> : null}
+      <span className="text-small text-text-secondary">{t('RES.requestedBy', { by: r.requestedBy, at: r.requestedAt })}</span>
+      {r.eta ? <span className="w-44 text-small tabular text-text-secondary">{t('RES.eta', { at: r.eta })}</span> : null}
+      {r.incident ? <StatusChip status="Incident" label={t('RES.incident')} /> : null}
     </button>
   );
 }

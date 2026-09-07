@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '@/data/store';
-import { FLOW } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { isHospitalScope, scopeName, sitesInScope } from '@/lib/scope';
 import { PageTitle } from '@/components/PageTitle';
 import { SubTabs } from '@/components/SubTabs';
@@ -22,10 +22,10 @@ export function FlowPage({ tab }: { tab: FlowTab }) {
   if (!isHospitalScope(scope)) {
     return (
       <div className="space-y-4">
-        <PageTitle title={FLOW.title} scope={scopeName(scope, nodes)} />
-        <p>{FLOW.notForScope}</p>
-        <Link to="/kapacitet" className="text-primary hover:text-primary-hover hover:underline">
-          {FLOW.goToCapacity}
+        <PageTitle title={t('FLOW.title')} scope={scopeName(scope, nodes)} />
+        <p>{t('FLOW.notForScope')}</p>
+        <Link to="/kapacitet" className="text-primary-text hover:text-primary-hover hover:underline">
+          {t('FLOW.goToCapacity')}
         </Link>
       </div>
     );
@@ -34,16 +34,16 @@ export function FlowPage({ tab }: { tab: FlowTab }) {
   const placementCount = bedRequests.filter((r) => sites.includes(r.site)).length;
   const dischargeCount = dischargeReady.filter((d) => sites.includes(d.site) && d.status !== 'Utskriven').length;
   const tabs = [
-    { key: 'overview', label: FLOW.tabs.overview, to: '/laget-nu' },
-    { key: 'placement', label: FLOW.tabs.placement(placementCount), to: '/laget-nu/placering' },
-    { key: 'forecast', label: FLOW.tabs.forecast, to: '/laget-nu/prognos' },
-    { key: 'discharge', label: FLOW.tabs.discharge(dischargeCount), to: '/laget-nu/utskrivningsklara' },
+    { key: 'overview', label: t('FLOW.tabs.overview'), to: '/laget-nu' },
+    { key: 'placement', label: t('FLOW.tabs.placement', { n: placementCount }), to: '/laget-nu/placering' },
+    { key: 'forecast', label: t('FLOW.tabs.forecast'), to: '/laget-nu/prognos' },
+    { key: 'discharge', label: t('FLOW.tabs.discharge', { n: dischargeCount }), to: '/laget-nu/utskrivningsklara' },
   ];
 
   return (
     <div className="space-y-6">
-      <PageTitle title={FLOW.title} scope={scopeName(scope, nodes)} />
-      <SubTabs tabs={tabs} active={tab} label={FLOW.title} />
+      <PageTitle title={t('FLOW.title')} scope={scopeName(scope, nodes)} />
+      <SubTabs tabs={tabs} active={tab} label={t('FLOW.title')} />
       {tab === 'overview' ? <OverviewTab sites={sites} /> : null}
       {tab === 'placement' ? <PlacementTab sites={sites} /> : null}
       {tab === 'forecast' ? <ForecastTab sites={sites} /> : null}

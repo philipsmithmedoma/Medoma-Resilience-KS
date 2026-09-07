@@ -3,7 +3,8 @@
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
 import type { ScenarioInputs, ScenarioKey, ScenarioState, SiteId, TickResult } from './types';
-import { AMBULANCE_NODE_ID, ASIH_ID, CURRENT_USER, SCENARIO, SCENARIO_NAMES, SYSTEM_ACTOR, VEHICLES } from './vocab';
+import { AMBULANCE_NODE_ID, ASIH_ID, CURRENT_USER, SYSTEM_ACTOR, VEHICLES } from './vocab';
+import { t, tm } from '@/lib/i18n';
 import { computeCapacity } from '@/lib/capacity';
 import { addToFigure, withValue } from '@/lib/figure';
 import { isImaWard } from '@/lib/placement';
@@ -99,7 +100,7 @@ export const createScenarioSlice: StateCreator<AppStore, [], [], ScenarioActions
         // No simulation: open Evakuering with the target (PB4) at the chosen site.
         set({ scope: String(merged.site) });
         if (!s.incident) s.activatePlaybook('pb4', CURRENT_USER.name, 'Förstärkningsläge');
-        s.logEntry(SCENARIO.started(SCENARIO_NAMES.siteevac), SCENARIO.eventObject, `${merged.patienter} patienter, ${merged.site}`);
+        s.logEntry(t('SCENARIO.started', { name: t('SCENARIO_NAMES.siteevac') }), t('SCENARIO.eventObject'), `${merged.patienter} patienter, ${merged.site}`);
         return;
       }
       const { tickMin, horizonTicks } = horizonFor(preset, merged);
@@ -120,10 +121,10 @@ export const createScenarioSlice: StateCreator<AppStore, [], [], ScenarioActions
       };
       const sc = resimulate(base);
       set({ scenario: sc, clockRunning: running, scenarioPanel: { open: s.scenarioPanel.open, key } });
-      get().logEntry(SCENARIO.started(SCENARIO_NAMES[key]), SCENARIO.eventObject, Object.entries(merged).map(([k, v]) => `${k} ${v}`).join(', '));
+      get().logEntry(t('SCENARIO.started', { name: tm('SCENARIO_NAMES')[key] }), t('SCENARIO.eventObject'), Object.entries(merged).map(([k, v]) => `${k} ${v}`).join(', '));
       if (key === 'journalbortfall') {
         if (!get().incident) get().activatePlaybook('pb2', CURRENT_USER.name, 'Stabsläge');
-        else get().setEhrOutage(true, SCENARIO_NAMES.journalbortfall);
+        else get().setEhrOutage(true, t('SCENARIO_NAMES.journalbortfall'));
       }
     },
 
@@ -131,7 +132,7 @@ export const createScenarioSlice: StateCreator<AppStore, [], [], ScenarioActions
       const { scenario, logEntry } = get();
       if (!scenario) return;
       set({ scenario: null, clockRunning: false });
-      logEntry(SCENARIO.stopped(SCENARIO_NAMES[scenario.key]), SCENARIO.eventObject);
+      logEntry(t('SCENARIO.stopped', { name: tm('SCENARIO_NAMES')[scenario.key] }), t('SCENARIO.eventObject'));
     },
 
     advanceScenario: () => {
@@ -145,16 +146,16 @@ export const createScenarioSlice: StateCreator<AppStore, [], [], ScenarioActions
         const hub = get().nodes.find((n) => n.id === sc.hubNodeId);
         if (hub && hub.status === 'Standing up') {
           s.setNodeStatus(hub.id, 'Operational');
-          set((st) => ({ scenario: st.scenario ? { ...st.scenario, events: [...st.scenario.events, { tick, text: `${offset(st.scenario, tick)}: ${SCENARIO.eventText.vardhubbOpen(hub.name)}` }] } : st.scenario }));
+          set((st) => ({ scenario: st.scenario ? { ...st.scenario, events: [...st.scenario.events, { tick, text: `${offset(st.scenario, tick)}: ${t('SCENARIO.eventText.vardhubbOpen', { name: hub.name })}` }] } : st.scenario }));
         }
       }
       overlay(next, next.series.find((r) => r.tick === tick));
       // Scenario events reaching this tick are logged as System.
-      for (const e of sc.events.filter((x) => x.tick === tick)) s.logEntry(e.text, SCENARIO.eventObject, SCENARIO_NAMES[sc.key], SYSTEM_ACTOR, undefined, { advance: false });
+      for (const e of sc.events.filter((x) => x.tick === tick)) s.logEntry(e.text, t('SCENARIO.eventObject'), tm('SCENARIO_NAMES')[sc.key], SYSTEM_ACTOR, undefined, { advance: false });
       if (tick >= sc.inputs.horizonTicks) {
         set((st) => ({ scenario: st.scenario ? { ...st.scenario, running: false } : null, clockRunning: false }));
-        if (sc.key === 'journalbortfall') get().setEhrOutage(false, SCENARIO_NAMES.journalbortfall);
-        get().logEntry(SCENARIO.horizonReached(SCENARIO_NAMES[sc.key]), SCENARIO.eventObject, undefined, SYSTEM_ACTOR, undefined, { advance: false });
+        if (sc.key === 'journalbortfall') get().setEhrOutage(false, t('SCENARIO_NAMES.journalbortfall'));
+        get().logEntry(t('SCENARIO.horizonReached', { name: tm('SCENARIO_NAMES')[sc.key] }), t('SCENARIO.eventObject'), undefined, SYSTEM_ACTOR, undefined, { advance: false });
       }
     },
 
@@ -162,7 +163,7 @@ export const createScenarioSlice: StateCreator<AppStore, [], [], ScenarioActions
       const s = get();
       const sc = s.scenario;
       if (!sc || sc.appliedAt[key] !== undefined) return;
-      const r = SCENARIO.recs[key];
+      const r = tm('SCENARIO.recs')[key];
       if (!r) return;
       const tick = sc.tick;
       const primar = (sc.params.primar as SiteId) ?? 'solna';
@@ -227,14 +228,14 @@ export const createScenarioSlice: StateCreator<AppStore, [], [], ScenarioActions
       const current = get().scenario;
       if (!current) return;
       const updated = resimulate({ ...current, hubNodeId, applied: [...current.applied, key], appliedAt: { ...current.appliedAt, [key]: tick } });
-      updated.events = [...updated.events, { tick, text: `${offset(updated, tick)}: ${SCENARIO.eventText.applied(r.label)}` }].sort((a, b) => a.tick - b.tick);
+      updated.events = [...updated.events, { tick, text: `${offset(updated, tick)}: ${t('SCENARIO.eventText.applied', { label: r.label })}` }].sort((a, b) => a.tick - b.tick);
       set({ scenario: updated });
-      get().logEntry(SCENARIO.authorised(r.label), SCENARIO.eventObject, r.effect, CURRENT_USER.name);
+      get().logEntry(t('SCENARIO.authorised', { label: r.label }), t('SCENARIO.eventObject'), r.effect, CURRENT_USER.name);
       overlay(updated, updated.series.find((x) => x.tick === tick));
     },
   };
 };
 
 function offset(sc: ScenarioState, tick: number): string {
-  return sc.key === 'pandemi' ? SCENARIO.offsetDay(tick) : `+${tick * sc.inputs.tickMin} min`;
+  return sc.key === 'pandemi' ? t('SCENARIO.offsetDay', { d: tick }) : `+${tick * sc.inputs.tickMin} min`;
 }

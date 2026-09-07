@@ -24,7 +24,8 @@ import type {
   Ward,
 } from './types';
 import { loadPack } from './packs/karolinska';
-import { AUDIT, CURRENT_USER, DEFAULT_SCOPE, SCENARIO, SCENARIO_NAMES, SYSTEM_ACTOR } from './vocab';
+import { CURRENT_USER, DEFAULT_SCOPE, SYSTEM_ACTOR } from './vocab';
+import { t, tm } from '@/lib/i18n';
 import { DAY_MIN, INITIAL_CLOCK, TICK_MIN, formatClock } from '@/lib/time';
 import { createIncidentSlice, type IncidentActions } from './store-incident';
 import { createEvacuationSlice, type EvacuationActions } from './store-evacuation';
@@ -163,10 +164,10 @@ export const useStore = create<AppStore>()((set, get, api) => ({
     if (on === ehrOutage) return;
     if (on) {
       set({ ehrOutage: true, ehrOutageSince: formatClock(clock) });
-      logEntry(AUDIT.ehrLost, AUDIT.ehrObject, detail, SYSTEM_ACTOR);
+      logEntry(t('AUDIT.ehrLost'), t('AUDIT.ehrObject'), detail, SYSTEM_ACTOR);
     } else {
       set({ ehrOutage: false, ehrOutageSince: null });
-      logEntry(AUDIT.ehrRestored, AUDIT.ehrObject, detail, SYSTEM_ACTOR);
+      logEntry(t('AUDIT.ehrRestored'), t('AUDIT.ehrObject'), detail, SYSTEM_ACTOR);
     }
   },
 
@@ -194,7 +195,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
   resetClock: () => {
     const { logEntry, scenario } = get();
     set({ clock: INITIAL_CLOCK, clockRunning: false, scenario: null, freedByScenario: 0 });
-    logEntry(AUDIT.clockReset, AUDIT.clockObject, scenario ? SCENARIO.stopped(SCENARIO_NAMES[scenario.key]) : undefined, SYSTEM_ACTOR);
+    logEntry(t('AUDIT.clockReset'), t('AUDIT.clockObject'), scenario ? t('SCENARIO.stopped', { name: tm('SCENARIO_NAMES')[scenario.key] }) : undefined, SYSTEM_ACTOR);
     set({ clock: INITIAL_CLOCK });
   },
 
