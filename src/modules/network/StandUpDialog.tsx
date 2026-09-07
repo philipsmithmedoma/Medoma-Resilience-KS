@@ -1,9 +1,8 @@
 import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import type { NodeType, SharingLevel } from '@/data/types';
-import { SITES } from '@/data/mock';
 import { useStore } from '@/data/store';
-import { CURRENT_USER, LABELS, NET, SHARING_LEVELS } from '@/data/vocab';
+import { CURRENT_USER, LABELS, NET, NODE_TYPE_LABELS, SHARING_LABELS, SHARING_LEVELS } from '@/data/vocab';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -13,14 +12,16 @@ import { StaffSelect } from '@/components/StaffSelect';
 interface StandUpDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreated?: (nodeId: string) => void;
 }
 
-/** SPEC.md § 6.5 – Stand up dialog: Name, Type, Site, Planned beds (20), Lead, Sharing (Full). */
-export function StandUpDialog({ open, onOpenChange }: StandUpDialogProps) {
+/** SPEC.md § 6.9 – Etablera nod: Namn, Typ, Plats (DATA.md § 2.7 presets), Planerade platser, Ansvarig, Delning. */
+export function StandUpDialog({ open, onOpenChange, onCreated }: StandUpDialogProps) {
   const standUpNode = useStore((s) => s.standUpNode);
+  const sites = useStore((s) => s.pack.presetSites);
   const [name, setName] = useState('');
   const [type, setType] = useState<NodeType>('Care hub');
-  const [siteName, setSiteName] = useState(SITES[0].name);
+  const [siteName, setSiteName] = useState(sites[0].name);
   const [plannedBeds, setPlannedBeds] = useState('20');
   const [lead, setLead] = useState<string>(CURRENT_USER.name);
   const [sharing, setSharing] = useState<SharingLevel>('Full');
@@ -28,22 +29,23 @@ export function StandUpDialog({ open, onOpenChange }: StandUpDialogProps) {
 
   useEffect(() => {
     if (open) {
-      setName('');
+      setName(sites[0].name);
       setType('Care hub');
-      setSiteName(SITES[0].name);
+      setSiteName(sites[0].name);
       setPlannedBeds('20');
       setLead(CURRENT_USER.name);
       setSharing('Full');
     }
-  }, [open]);
+  }, [open, sites]);
 
-  const site = SITES.find((s) => s.name === siteName) ?? SITES[0];
+  const site = sites.find((s) => s.name === siteName) ?? sites[0];
   const valid = name.trim().length > 0 && Number(plannedBeds) > 0;
   const submit = () => {
     if (!valid) return;
-    standUpNode({ name, type, site, plannedBeds: Number(plannedBeds), lead, sharing });
+    const id = standUpNode({ name, type, site, plannedBeds: Number(plannedBeds), lead, sharing });
     onOpenChange(false);
     toast(NET.nodeCreated);
+    onCreated?.(id);
   };
 
   return (
@@ -53,6 +55,28 @@ export function StandUpDialog({ open, onOpenChange }: StandUpDialogProps) {
           <DialogTitle>{NET.standUp}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <div className="space-y-1">
+            <label htmlFor={ids.site}>{NET.fields.site}</label>
+            <Select
+              value={siteName}
+              onValueChange={(v) => {
+                setSiteName(v);
+                if (!name.trim() || sites.some((s) => s.name === name)) setName(v);
+                setType(v.startsWith('Fältsjukhus') ? 'Field hospital' : 'Care hub');
+              }}
+            >
+              <SelectTrigger id={ids.site} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {sites.map((s) => (
+                  <SelectItem key={s.name} value={s.name}>
+                    {s.name}, {s.place}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1">
             <label htmlFor={ids.name}>{NET.fields.name}</label>
             <Input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} />
@@ -66,22 +90,7 @@ export function StandUpDialog({ open, onOpenChange }: StandUpDialogProps) {
               <SelectContent>
                 {NET.standUpTypes.map((t) => (
                   <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor={ids.site}>{NET.fields.site}</label>
-            <Select value={siteName} onValueChange={setSiteName}>
-              <SelectTrigger id={ids.site} className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SITES.map((s) => (
-                  <SelectItem key={s.name} value={s.name}>
-                    {s.name}, {s.place}
+                    {NODE_TYPE_LABELS[t]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -104,7 +113,7 @@ export function StandUpDialog({ open, onOpenChange }: StandUpDialogProps) {
               <SelectContent>
                 {SHARING_LEVELS.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {s}
+                    {SHARING_LABELS[s]}
                   </SelectItem>
                 ))}
               </SelectContent>

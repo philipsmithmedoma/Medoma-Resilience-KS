@@ -9,7 +9,7 @@ interface CloseIncidentDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** SPEC.md § 6.2.5 – close dialog, opened from the banner and from the active incident. */
+/** Close dialog, opened from the banner and from the active incident. */
 export function CloseIncidentDialog({ open, onOpenChange }: CloseIncidentDialogProps) {
   const closeIncident = useStore((s) => s.closeIncident);
   const close = () => {

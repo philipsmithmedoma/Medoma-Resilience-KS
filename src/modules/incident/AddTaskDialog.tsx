@@ -15,7 +15,7 @@ interface AddTaskDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** SPEC.md § 6.2.3 – "+ Add task": Title, Area, Owner role, Due in minutes (default 30). */
+/** "Lägg till uppgift": Titel, Område, Ansvarig roll, Klar inom minuter (default 30). */
 export function AddTaskDialog({ incident, open, onOpenChange }: AddTaskDialogProps) {
   const addTask = useStore((s) => s.addTask);
   const areas = areasOf(incident);

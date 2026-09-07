@@ -1,24 +1,37 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import type { SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { EVAC } from '@/data/vocab';
+import { EVAC, SITE_LABELS } from '@/data/vocab';
 import { isInTransit } from '@/lib/evacuation';
+import { fmt } from '@/lib/format';
+import { defaultEvacuationSite, isSite, siteName } from '@/lib/scope';
 import { measureTarget } from '@/lib/targets';
 import { PageTitle } from '@/components/PageTitle';
+import { SegmentedControl } from '@/components/SegmentedControl';
 import { Button } from '@/components/ui/button';
+import { useTargetInputs } from '@/modules/capacity/useTargetInputs';
 import { PatientList } from './PatientList';
 import { PlanningPane } from './PlanningPane';
 import { EvacuationMap } from './EvacuationMap';
 
-/** SPEC.md § 6.3 – Evacuation from Vikby sjukhus: summary row, three panes and the map. */
+/** SPEC.md § 6.7 – Evakuering from the selected source site: summary row, three panes and the map. */
 export function EvacuationPage() {
-  const patients = useStore((s) => s.patients);
+  const scope = useStore((s) => s.scope);
+  const allPatients = useStore((s) => s.patients);
   const incident = useStore((s) => s.incident);
-  const capabilities = useStore((s) => s.capabilities);
-  const nodes = useStore((s) => s.nodes);
   const suggestPlan = useStore((s) => s.suggestPlan);
   const clearSuggestions = useStore((s) => s.clearSuggestions);
+  const [site, setSite] = useState<SiteId>(defaultEvacuationSite(scope));
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const inputs = useTargetInputs();
+
+  useEffect(() => {
+    setSite(defaultEvacuationSite(scope));
+    setSelectedId(null);
+  }, [scope]);
+
+  const patients = useMemo(() => allPatients.filter((p) => p.nodeId === site), [allPatients, site]);
   const selected = patients.find((p) => p.id === selectedId) ?? null;
 
   const counts = useMemo(() => {
@@ -32,15 +45,15 @@ export function EvacuationPage() {
     };
   }, [patients]);
   const hasSuggestions = patients.some((p) => p.move?.suggested);
-  const target = incident?.targets.find((t) => t.measure === 'acuteBedsFreed');
-  const freed = measureTarget('acuteBedsFreed', { incident, patients, capabilities, nodes });
+  const target = incident?.targets.find((t) => t.measure === 'patientsMoved');
+  const moved = measureTarget('patientsMoved', inputs);
 
   const onSuggest = () => {
-    const r = suggestPlan();
-    toast(EVAC.toasts.suggested(r.suggested, r.unplaced));
+    const r = suggestPlan(site);
+    toast(EVAC.toasts.suggested(fmt(r.suggested), fmt(r.unplaced)));
   };
   const onClear = () => {
-    clearSuggestions();
+    clearSuggestions(site);
     toast(EVAC.toasts.suggestionsCleared);
   };
 
@@ -48,11 +61,26 @@ export function EvacuationPage() {
     <div className="flex flex-col" style={{ height: incident ? 'calc(100vh - 136px)' : 'calc(100vh - 96px)' }}>
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <PageTitle title={EVAC.title} scope={EVAC.from} />
+          <PageTitle title={EVAC.title} scope={EVAC.from(siteName(site))}>
+            {!isSite(scope) ? (
+              <SegmentedControl
+                label={EVAC.siteSwitch}
+                value={site}
+                onChange={(v) => {
+                  setSite(v);
+                  setSelectedId(null);
+                }}
+                options={[
+                  { value: 'solna', label: SITE_LABELS.solna },
+                  { value: 'huddinge', label: SITE_LABELS.huddinge },
+                ]}
+              />
+            ) : null}
+          </PageTitle>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-body">
             <span>
-              {target ? EVAC.target(target.target) : EVAC.noTarget}
-              {target ? <span className="ml-2 text-text-secondary">{EVAC.freed(freed)}</span> : null}
+              {target ? EVAC.target(fmt(target.target)) : EVAC.noTarget}
+              {target ? <span className="ml-2 text-text-secondary">{EVAC.moved(fmt(moved))}</span> : null}
             </span>
             <span className="tabular">
               {EVAC.counts.planned} {counts.planned}
@@ -88,10 +116,10 @@ export function EvacuationPage() {
           <PatientList patients={patients} selectedId={selectedId} onSelect={setSelectedId} />
         </div>
         <div className="w-[320px] shrink-0 overflow-y-auto border-r border-border">
-          <PlanningPane patient={selected} />
+          <PlanningPane patient={selected} site={site} />
         </div>
         <div className="min-w-0 flex-1">
-          <EvacuationMap selected={selected} />
+          <EvacuationMap selected={selected} site={site} />
         </div>
       </div>
     </div>

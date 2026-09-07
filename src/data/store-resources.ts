@@ -1,8 +1,8 @@
-// Resource request actions with inventory side effects – SPEC.md § 6.4.1.
+// Resource request actions with inventory side effects – SPEC.md § 6.8.
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
 import type { NodeId, Priority, Resource, ResourceRequest } from './types';
-import { CURRENT_USER, RES } from './vocab';
+import { AMBULANCE_NODE_ID, CURRENT_USER, KAROLINSKA_ID, RES } from './vocab';
 import { formatClock } from '@/lib/time';
 
 export interface NewRequestInput {
@@ -11,6 +11,8 @@ export interface NewRequestInput {
   toNodeId: NodeId;
   priority: Priority;
   note?: string;
+  fromNodeId?: NodeId;
+  requestedBy?: string;
 }
 
 export interface ResourcesActions {
@@ -44,28 +46,31 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
   const update = (id: string, patch: Partial<ResourceRequest>) =>
     set((s) => ({ requests: s.requests.map((r) => (r.id === id ? { ...r, ...patch } : r)) }));
   const logTransition = (action: string, r: ResourceRequest, detail?: string) =>
-    get().logEntry(RES.audit.transition(action, r.resourceName, r.quantity, nodeName(r.toNodeId)), RES.audit.requested(r.resourceName, r.quantity), detail, CURRENT_USER.name, r.id);
+    get().logEntry(RES.audit.transition(RES.audit.actions[action] ?? action, r.resourceName, r.quantity, nodeName(r.toNodeId)), RES.audit.object(r.resourceName, r.quantity), detail, CURRENT_USER.name, r.id);
 
   return {
-    createRequest: ({ resourceName, quantity, toNodeId, priority, note }) => {
+    createRequest: ({ resourceName, quantity, toNodeId, priority, note, fromNodeId, requestedBy }) => {
       const { resources, clock, nextId, incident } = get();
       const template = resources.find((r) => r.name === resourceName);
       const id = nextId('req');
+      // Transport requests go to Ambulanssjukvården as "Från" (SPEC.md § 6.8).
+      const from = fromNodeId ?? (template?.category === 'Transport' ? AMBULANCE_NODE_ID : undefined);
       const req: ResourceRequest = {
         id,
         resourceName,
         quantity,
-        unit: template?.unit ?? 'units',
+        unit: template?.unit ?? 'st',
+        fromNodeId: from,
         toNodeId,
         priority,
         status: 'Requested',
-        requestedBy: CURRENT_USER.name,
+        requestedBy: requestedBy ?? CURRENT_USER.name,
         requestedAt: formatClock(clock),
         note: note?.trim() || undefined,
         incident: Boolean(incident),
       };
       set((s) => ({ requests: [...s.requests, req] }));
-      get().logEntry('Requested', RES.audit.requested(resourceName, quantity), RES.audit.toNode(nodeName(toNodeId)), CURRENT_USER.name, id);
+      get().logEntry(RES.audit.requested, RES.audit.object(resourceName, quantity), RES.audit.toNode(nodeName(toNodeId)), requestedBy ?? CURRENT_USER.name, id);
       return id;
     },
 
@@ -90,7 +95,7 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
       if (!source || source.available < r.quantity) return;
       set((s) => ({ resources: adjust(s.resources, (x) => x.id === source.id, { available: -r.quantity, reserved: r.quantity }) }));
       update(id, { status: 'Allocated', fromNodeId });
-      logTransition('Allocated', r, `From ${nodeName(fromNodeId)}`);
+      logTransition('Allocated', r, RES.audit.fromNode(nodeName(fromNodeId)));
     },
 
     dispatchRequest: (id, eta) => {
@@ -130,11 +135,12 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
               inUse: 0,
               reserved: 0,
               outOfService: 0,
+              notInService: 0,
               inTransit: 0,
               unknown: 0,
-              seats: template?.seats,
-              source: 'Manual',
+              dataSource: 'Manual',
               lastConfirmed: formatClock(clock),
+              confidence: 'illustrative',
             },
           ];
         }
@@ -148,9 +154,9 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
       const { clock, nextId } = get();
       if (!text.trim()) return;
       set((s) => ({
-        messagesFromNodes: [...s.messagesFromNodes, { id: nextId('msg'), author: CURRENT_USER.name, role: CURRENT_USER.role, at: formatClock(clock), text: text.trim(), nodeId: 'vikby' }],
+        messagesFromNodes: [...s.messagesFromNodes, { id: nextId('msg'), author: CURRENT_USER.name, role: CURRENT_USER.role, at: formatClock(clock), text: text.trim(), nodeId: KAROLINSKA_ID }],
       }));
-      get().logEntry('Sent message', RES.title, text.trim());
+      get().logEntry(RES.audit.sentMessage, RES.title, text.trim());
     },
   };
 };

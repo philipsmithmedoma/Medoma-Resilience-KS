@@ -7,7 +7,7 @@ import { parseMessage, type ParsedRequest } from '@/lib/parse';
 import { MessageThread } from '@/components/MessageThread';
 import { NewRequestDialog } from './NewRequestDialog';
 
-/** SPEC.md § 6.4.3 – the message thread of node messages; received messages carry "Create request". */
+/** Från meddelande – the thread of node messages; received messages carry "Skapa förfrågan". */
 export function FromMessageTab() {
   const messages = useStore((s) => s.messagesFromNodes);
   const addNodeMessage = useStore((s) => s.addNodeMessage);

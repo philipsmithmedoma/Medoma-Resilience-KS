@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Incident } from '@/data/types';
 import { useStore } from '@/data/store';
 import { INCIDENT, LABELS } from '@/data/vocab';
+import { fmt } from '@/lib/format';
 import { measureTarget, targetProgress } from '@/lib/targets';
 import { taskCounts } from '@/lib/incident';
 import { SectionHeading } from '@/components/PageTitle';
@@ -9,16 +10,14 @@ import { KeyValueTable } from '@/components/KeyValueTable';
 import { RolePill } from '@/components/RolePill';
 import { StaffSelect } from '@/components/StaffSelect';
 import { Progress } from '@/components/ui/progress';
+import { useTargetInputs } from '@/modules/capacity/useTargetInputs';
 
-/** SPEC.md § 6.2.3 Overview: targets as progress rows, roles table with Change, task summary line. */
+/** Översikt: targets as progress rows, roles table with Ändra, task summary line. */
 export function OverviewTab({ incident }: { incident: Incident }) {
-  const patients = useStore((s) => s.patients);
-  const capabilities = useStore((s) => s.capabilities);
-  const nodes = useStore((s) => s.nodes);
   const staff = useStore((s) => s.staff);
   const assignRole = useStore((s) => s.assignRole);
   const [editing, setEditing] = useState<string | null>(null);
-  const inputs = { incident, patients, capabilities, nodes };
+  const inputs = useTargetInputs();
   const counts = taskCounts(incident.tasks);
 
   return (
@@ -28,15 +27,16 @@ export function OverviewTab({ incident }: { incident: Incident }) {
         <ul className="space-y-4">
           {incident.targets.map((t) => {
             const current = measureTarget(t.measure, inputs);
+            const due = t.withinUnit === 'dygn' ? INCIDENT.dueDay(fmt(10)) : INCIDENT.due(t.dueAt);
             return (
               <li key={t.label}>
                 <div className="mb-1 flex items-baseline justify-between gap-4">
                   <span>{t.label}</span>
                   <span className="tabular text-text-secondary">
-                    {current} / {t.target} {t.unit}, {INCIDENT.due(t.dueAt).toLowerCase()}
+                    {fmt(current)} / {fmt(t.target)} {t.unit}, {due.toLowerCase()}
                   </span>
                 </div>
-                <Progress value={targetProgress(current, t.target)} aria-label={`${t.label} progress`} />
+                <Progress value={targetProgress(current, t.target)} aria-label={LABELS.ariaProgress(t.label)} />
               </li>
             );
           })}
@@ -54,7 +54,7 @@ export function OverviewTab({ incident }: { incident: Incident }) {
                 editing === role ? (
                   <StaffSelect
                     value={person}
-                    ariaLabel={`Assign ${role}`}
+                    ariaLabel={`${INCIDENT.assign} ${role}`}
                     autoOpen
                     onChange={(name) => {
                       assignRole(role, name);

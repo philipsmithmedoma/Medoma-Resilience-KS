@@ -7,10 +7,9 @@ import { INCIDENT } from '@/data/vocab';
 import { parseMessage, type ParsedRequest } from '@/lib/parse';
 import { PageTitle } from '@/components/PageTitle';
 import { MessageThread } from '@/components/MessageThread';
-import { StubPage } from '@/components/StubPage';
 import { NewRequestDialog } from '@/modules/resources/NewRequestDialog';
 
-/** SPEC.md § 6.2.3 – channel thread view; received messages carry "Create request" (§ 6.4.3). */
+/** SPEC.md § 6.6 – channel thread view; received messages carry "Skapa förfrågan". */
 export function ChannelPage() {
   const { channelId } = useParams();
   const incident = useStore((s) => s.incident);
@@ -20,7 +19,15 @@ export function ChannelPage() {
   const [creating, setCreating] = useState(false);
 
   if (!incident || !channel) {
-    return <StubPage title={INCIDENT.title} sentence={INCIDENT.noActive} linkTo="/incident" linkLabel={INCIDENT.backToIncident} />;
+    return (
+      <div className="space-y-4">
+        <PageTitle title={INCIDENT.title} />
+        <p>{INCIDENT.noActive}</p>
+        <Link to="/incident" className="text-primary hover:text-primary-hover hover:underline">
+          {INCIDENT.backToIncident}
+        </Link>
+      </div>
+    );
   }
 
   const onCreateRequest = (m: Message) => {

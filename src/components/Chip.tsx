@@ -29,11 +29,11 @@ export function Chip({ tone = 'grey', children, className, title }: ChipProps) {
   );
 }
 
-/** Chip whose tone is derived from its label via the vocab mapping. */
-export function StatusChip({ status, className, title, children }: { status: string; className?: string; title?: string; children?: ReactNode }) {
+/** Chip whose tone is derived from an enum key via the vocab mapping; the label is the Swedish text. */
+export function StatusChip({ status, label, className, title }: { status: string; label?: string; className?: string; title?: string }) {
   return (
     <Chip tone={toneOf(status)} className={className} title={title}>
-      {children ?? status}
+      {label ?? status}
     </Chip>
   );
 }

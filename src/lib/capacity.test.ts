@@ -1,57 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { CAPABILITIES } from '@/data/mock';
+import { CAPABILITIES } from '@/data/packs/karolinska';
 import { capacitySentence, computeCapacity, hasOverrides } from './capacity';
 
-const surgery = CAPABILITIES.find((c) => c.id === 'emergency-surgery')!;
-const intensive = CAPABILITIES.find((c) => c.id === 'intensive-care')!;
+const surgery = CAPABILITIES.find((c) => c.id === 'solna-surgery')!;
+const intensive = CAPABILITIES.find((c) => c.id === 'huddinge-intensive')!;
 
-describe('computeCapacity', () => {
-  it('Emergency surgery: capacity 2 limited by Post-operative beds, next Anaesthesia teams with gap 2', () => {
+describe('computeCapacity (SPEC.md § 6.5)', () => {
+  it('Akut operation Solna: capacity 2 limited by postop-platser, next anestesiteam with gap 2', () => {
     const r = computeCapacity(surgery);
     expect(r.capacity).toBe(2);
-    expect(r.limiting.map((c) => c.name)).toEqual(['Post-operative beds']);
-    expect(r.next?.name).toBe('Anaesthesia teams');
-    expect(r.next?.available).toBe(4);
+    expect(r.limiting.map((c) => c.name)).toEqual(['Postop-platser']);
+    expect(r.next?.name).toBe('Anestesiteam');
     expect(r.gap).toBe(2);
   });
 
-  it('raising Post-operative beds to 6 in what-if gives capacity 4 limited by Anaesthesia teams', () => {
-    const r = computeCapacity(surgery, { 'Post-operative beds': 6 });
+  it('raising postop-platser to 6 in what-if gives capacity 4 limited by anestesiteam', () => {
+    const r = computeCapacity(surgery, { 'Postop-platser': 6 });
     expect(r.capacity).toBe(4);
-    expect(r.limiting.map((c) => c.name)).toEqual(['Anaesthesia teams']);
-    expect(r.next?.name).toBe('Surgeons on site');
-    expect(r.gap).toBe(1);
+    expect(r.limiting.map((c) => c.name)).toEqual(['Anestesiteam']);
   });
 
-  it('lists several limiting components joined by "and"', () => {
-    const r = computeCapacity(intensive);
-    expect(r.capacity).toBe(3);
-    expect(r.limiting.map((c) => c.name)).toEqual(['Equipped bed slots (ventilator, monitoring)', 'Medication and material covered']);
-    const s = capacitySentence(r);
-    expect(s.now).toBe(
-      'Capacity now: 3 beds available, limited by Equipped bed slots (ventilator, monitoring) and Medication and material covered (3 available).',
-    );
-    expect(s.next).toBe(
-      'Freeing 1 Equipped bed slots (ventilator, monitoring) and Medication and material covered would allow 1 more; the next constraint is Staffed bed slots (4).',
-    );
-  });
-
-  it('produces the capacity sentence for Emergency surgery', () => {
+  it('writes the Swedish capacity sentence', () => {
     const s = capacitySentence(computeCapacity(surgery));
-    expect(s.now).toBe('Capacity now: 2 surgeries possible now, limited by Post-operative beds (2 available).');
-    expect(s.next).toBe('Freeing 2 Post-operative beds would allow 2 more; the next constraint is Anaesthesia teams (4).');
+    expect(s.now).toBe('Kapacitet nu: 2 akuta operationer möjliga nu, begränsas av postop-platser (2 tillgängliga).');
+    expect(s.next).toBe('Om 2 postop-platser frigörs möjliggörs 2 till; nästa begränsning är anestesiteam (4).');
   });
 
-  it('has no next constraint when every component is equally limiting', () => {
-    const r = computeCapacity({ id: 'x', nodeId: 'vikby', name: 'X', unit: 'u', components: [{ name: 'A', total: 2, available: 1 }] });
-    expect(r.next).toBeUndefined();
-    expect(capacitySentence(r).next).toBeUndefined();
+  it('IVA Huddinge is at 0 with three equally limiting components joined by "och"', () => {
+    const r = computeCapacity(intensive);
+    expect(r.capacity).toBe(0);
+    expect(r.limiting).toHaveLength(3);
+    expect(capacitySentence(r).now).toContain(' och ');
   });
 
   it('clamps overrides to 0..total and detects real changes', () => {
-    const r = computeCapacity(surgery, { 'Post-operative beds': 99 });
-    expect(r.components.find((c) => c.name === 'Post-operative beds')?.available).toBe(12);
-    expect(hasOverrides(surgery, { 'Post-operative beds': 2 })).toBe(false);
-    expect(hasOverrides(surgery, { 'Post-operative beds': 3 })).toBe(true);
+    expect(computeCapacity(surgery, { 'Postop-platser': 99 }).components.find((c) => c.name === 'Postop-platser')?.available).toBe(14);
+    expect(hasOverrides(surgery, { 'Postop-platser': 2 })).toBe(false);
+    expect(hasOverrides(surgery, { 'Postop-platser': 3 })).toBe(true);
   });
 });

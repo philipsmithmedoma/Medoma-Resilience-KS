@@ -11,14 +11,14 @@ interface LogDrawerProps {
   description?: string;
 }
 
-/** SPEC.md § 7.3 – the audit log in a side drawer. */
+/** The audit log in a side drawer. */
 export function LogDrawer({ open, onOpenChange, entries, title = LABELS.auditLog, description }: LogDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[640px] sm:max-w-[640px] overflow-y-auto">
+      <SheetContent className="w-[640px] overflow-y-auto sm:max-w-[640px]">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description ?? `${entries.length} entries, newest first.`}</SheetDescription>
+          <SheetDescription>{description ?? LABELS.entries(entries.length)}</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-4">
           <AuditTable entries={entries} />

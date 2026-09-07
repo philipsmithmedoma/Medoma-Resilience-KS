@@ -1,21 +1,22 @@
 import { Card } from '@/components/Card';
-import { StatusChip } from '@/components/Chip';
-import { ConfidenceLine, LastConfirmed } from '@/components/FigureLines';
+import { ConfidenceChip } from '@/components/ConfidenceChip';
+import { LastConfirmed } from '@/components/FigureLines';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { LABELS } from '@/data/vocab';
+import { fmt } from '@/lib/format';
 import type { CardModel } from './cards';
 
 interface CapacityCardProps {
   card: CardModel;
   clock: number;
   onShowDetail?: (card: CardModel) => void;
+  format?: (n: number) => string;
 }
 
-/** DESIGN.md § 4 capacity card: figure 32/600 with unit 15/400, confidence line, last confirmed, "Show detail". */
-export function CapacityCard({ card, clock, onShowDetail }: CapacityCardProps) {
+/** DESIGN.md § 4 capacity card: figure 32/600 with unit 15/400, confidence chip on the title row, last confirmed, "Visa detalj". */
+export function CapacityCard({ card, clock, onShowDetail, format }: CapacityCardProps) {
   const figure = card.figure;
-  const value = card.value ?? figure?.value;
-  const estimated = figure ? figure.estimated > 0 : false;
+  const value = figure ? (figure.value === null ? LABELS.unknown : format ? format(figure.value) : fmt(figure.value)) : LABELS.unknown;
 
   let action: React.ReactNode = null;
   if (card.detail?.kind === 'popover') {
@@ -40,17 +41,9 @@ export function CapacityCard({ card, clock, onShowDetail }: CapacityCardProps) {
   }
 
   return (
-    <Card
-      title={card.title}
-      subtitle={card.subtitle}
-      tile={card.tile}
-      titleRight={estimated ? <StatusChip status={LABELS.estimated} /> : card.notShared ? <StatusChip status={LABELS.notShared} /> : null}
-      action={card.notAvailable || card.notShared ? null : action}
-    >
+    <Card title={card.title} subtitle={card.subtitle} tile={card.tile} titleRight={figure ? <ConfidenceChip figure={figure} showSource /> : null} action={card.notAvailable ? null : action}>
       {card.notAvailable ? (
         <p className="text-text-secondary">{LABELS.notAvailableAtNode}</p>
-      ) : card.notShared ? (
-        <p className="text-text-secondary">{LABELS.notShared}</p>
       ) : (
         <div>
           <div className="flex items-baseline gap-2">
@@ -58,12 +51,8 @@ export function CapacityCard({ card, clock, onShowDetail }: CapacityCardProps) {
             {card.unit ? <span className="text-body text-text-secondary">{card.unit}</span> : null}
           </div>
           <div className="mt-1 text-small">
-            {card.confidence ? (
-              <div className="text-text-secondary">{card.confidence}</div>
-            ) : figure && estimated ? (
-              <ConfidenceLine figure={figure} />
-            ) : null}
-            {figure && figure.lastConfirmed ? <LastConfirmed figure={figure} clock={clock} /> : null}
+            {card.note ? <div className="text-text-secondary">{card.note}</div> : null}
+            {figure ? <LastConfirmed figure={figure} clock={clock} /> : null}
           </div>
         </div>
       )}

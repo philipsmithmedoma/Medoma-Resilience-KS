@@ -1,4 +1,4 @@
-// Inventory status and sums – SPEC.md § 3 (Resource comment) and § 6.4.2.
+// Inventory status and sums – SPEC.md § 6.8.
 import type { Resource } from '@/data/types';
 import { INVENTORY_STATUS_OUT_OF_SERVICE, type SupplyStatus } from '@/data/vocab';
 
@@ -9,13 +9,13 @@ export function supplyStatus(r: Pick<Resource, 'available' | 'criticalBelow' | '
   return 'Ok';
 }
 
-/** Status chip label for the inventory table. */
+/** Status key for the inventory table (label via INVENTORY_STATUS_LABELS). */
 export function inventoryStatus(r: Resource): string {
   if (r.category === 'Supply') return supplyStatus(r);
   return r.outOfService > 0 ? INVENTORY_STATUS_OUT_OF_SERVICE : 'Ok';
 }
 
-export const NUMERIC_COLUMNS = ['total', 'available', 'inUse', 'reserved', 'outOfService', 'inTransit', 'unknown'] as const;
+export const NUMERIC_COLUMNS = ['total', 'available', 'inUse', 'reserved', 'outOfService', 'notInService', 'inTransit', 'unknown'] as const;
 export type NumericColumn = (typeof NUMERIC_COLUMNS)[number];
 
 export function sumColumns(rows: Resource[]): Record<NumericColumn, number> {
@@ -24,7 +24,7 @@ export function sumColumns(rows: Resource[]): Record<NumericColumn, number> {
   return sums;
 }
 
-/** Distinct resource names across all nodes, alphabetically. */
+/** Distinct resource names across all nodes, alphabetically (Swedish collation). */
 export function distinctResourceNames(resources: Resource[]): string[] {
   return [...new Set(resources.map((r) => r.name))].sort((a, b) => a.localeCompare(b, 'sv'));
 }

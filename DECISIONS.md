@@ -192,3 +192,95 @@ Spec: SPEC.md § 6.5
 Decision: The prefilled dialog carries a "Suggested" chip and the line "Suggested from the message" until the person creates the request (§ 7.4); the same dialog is used from Requests, From message and channel threads. Messages in channels by anyone other than Eva Lind or System get the link; with the seeded data none exist, as the spec allows.
 Rejected: Auto-creating the request from the message – the system never executes a suggestion by itself.
 Spec: SPEC.md § 6.4.3, § 7.4
+
+## KS build
+
+## 2026-09-07 – Batch 1 – Domain types live in packs/types.ts; data/types.ts re-exports
+Decision: The whole domain model (SPEC.md § 4 delta plus the first prototype's entities) is defined in `src/data/packs/types.ts`; `src/data/types.ts` only re-exports it so the modules' imports stay unchanged. The old `Figure` fields `source`/`lastConfirmed` become `dataSource`/`lastConfirmed`, and `source` now means the DATA.md § 9 key.
+Rejected: Keeping two type files with overlapping definitions – two places to change when a pack field changes.
+Spec: SPEC.md § 1, § 4
+
+## 2026-09-07 – Batch 1 – Verified figures show a "Källa S5" link instead of a chip
+Decision: A verified figure renders no chip (DESIGN-KS.md § 4) but, where the popover is needed (cards, ladder, node tables), a 13 px muted text link "Källa {key}" that opens the same popover with "Verifierad uppgift", source, date, link and "Visa i Källor". Estimates and illustrative values without a source key link to the `estimat` and `illustrativt` anchors on Källor; reported figures link to S21.
+Rejected: A grey "Verifierad" chip – DESIGN-KS.md says none; no popover for verified figures – the spec requires a source popover on the Start key figures.
+Spec: DESIGN-KS.md § 4, SPEC.md § 6.0
+
+## 2026-09-07 – Batch 1 – IMA as placement wards
+Decision: The ward list carries two extra rows, "IMA Solna" 12/1 and "IMA Huddinge" 8/0 (tema PMI, from DATA.md § 4 IMA-platser/belagda), so that the IVA step-down requests br-6 and br-11 have a placement target. A request whose needs contain "IMA" matches only IMA wards and is never utlokaliserad; when the IMA is full the suggestion is "Ingen plats – överväg {other site}" as DATA.md § 5.2 describes for br-6.
+Rejected: A separate IMA counter outside the ward list – a second source of truth for the same beds.
+Spec: SPEC.md § 6.2, DATA.md § 5.1–5.2
+
+## 2026-09-07 – Batch 1 – Nodes without a single point have no marker
+Decision: The capacity classes (Geriatrik, Sluten palliativ vård, Specialiserad rehabilitering, Psykiatri) and Ambulanssjukvården are rendered in the Nätverk table only; ASIH is the 25 km circle centred on 59,33/18,07 with its label at the top. The map fits the point markers (the two sites and six hospitals).
+Rejected: Placing the classes at a Stockholm centre marker – a marker suggests a single location that does not exist.
+Spec: DESIGN-KS.md § 8, SPEC.md § 6.9
+
+## 2026-09-07 – Batch 1 – Region hospitals' IVA figures
+Decision: The six region hospitals carry `intensiveCare` with total `null` (verified S4b: "not public") and free `null`, except Capio S:t Göran with total 8 as an estimate ("forskningsunderlag, äldre uppgift") and free `null`. The Nätverk table shows "Okänt" or "– / 8"; in Evakuering a `null` free count makes the hospital incompatible for Kritisk with the reason "IVA-kapacitet okänd".
+Rejected: Omitting `intensiveCare` on those nodes – the table would show a dash that reads as "no IVA" rather than "unknown".
+Spec: SPEC.md § 6.7, DATA.md § 2.4
+
+## 2026-09-07 – Batch 1 – Channel member roles match on the area's first word
+Decision: As in the first build, LSSL has every role, other channels the Sjukvårdsledare plus the owner roles of tasks whose area matches the channel name – matched on the area's first word so that "Samverkan RSSL" picks up "Samverkan och kommunikation" and "Operation och IVA" its own area.
+Rejected: Exact area-in-channel-name matching – would give "Samverkan RSSL" no members beyond the Sjukvårdsledare.
+Spec: SPEC.md § 6.6
+
+## 2026-09-07 – Batch 1 – Old routes
+Decision: `/command-center` → `/kapacitet`, `/evacuation` → `/evakuering`, `/resources[/…]` → `/resurser[/…]`, `/network` → `/natverk`, `/network/:nodeId` and `/incident/channels/:id` → `/natverk` and `/incident` (the old ids do not exist), the five stub routes and any unknown route → `/`.
+Rejected: A "not found" page – the spec defines none.
+Spec: SPEC.md § 3
+
+## 2026-09-07 – Batch 1 – Läget nu carries a placeholder page until Batch 2
+Decision: Batch 1 ships `/laget-nu` and its three sub-routes as one page with the title, scope and a link to Kapacitet so the six-module nav has no dead tab; Batch 2 replaces it with § 6.1–6.4.
+Rejected: Redirecting `/laget-nu` to `/kapacitet` – would light the wrong nav tab.
+Spec: SPEC.md § 9 Batch 1 ("No stubs" refers to the five existing-module stubs)
+
+## 2026-09-07 – Batch 1 – Type-scale utilities registered with tailwind-merge
+Decision: `cn()` uses `extendTailwindMerge` with `text-title`, `text-heading`, `text-nav`, `text-body`, `text-small` and `text-figure` registered as font-size classes; without it tailwind-merge treated them as colours and dropped `text-nav` when `text-text` followed, rendering the nav at 15/400 instead of 16/500.
+Rejected: Replacing the utilities with explicit `text-[16px] leading-6 font-medium` everywhere – the DESIGN.md scale would no longer have one definition.
+Spec: DESIGN.md § 2, DESIGN-KS.md § 2
+
+## 2026-09-07 – Batch 1 – Kapacitet cards at Karolinska and region scope
+Decision: At Karolinska scope every card sums the two sites (weakest confidence); Operation and CT figures are illustrative because they are computed from the illustrative capability components; Personal i tjänst is illustrative per SPEC.md § 6.5. At region scope "Vårdplatser lediga (nätverk)" sums the eight hospitals' free beds, while IVA, Operation, CT, Akuten and Personal show Karolinska only with the subtitle "(Karolinska)" because the region hospitals do not share those figures.
+Rejected: Showing "Delas inte" for the region cards – hides the Karolinska figure the presenter wants to point at.
+Spec: SPEC.md § 6.5, § 7.1
+
+## 2026-09-07 – Batch 1 – Ladder belagda and lediga follow the live figures
+Decision: The ladder's first three steps come from the pack; "Belagda nu" and "Lediga nu" are computed from the live site free-bed figures (lediga = sum of `beds.free`, belagda = disponibla normalvecka − lediga), so placements, discharges and scenarios move the ladder. The DATA.md § 3 baselines are kept in the pack for the tests.
+Rejected: Static ladder values – the ladder would contradict the cards after the first action.
+Spec: SPEC.md § 6.5, DATA.md § 3
+
+## 2026-09-07 – Batch 1 – Hospital-wide key figures at site scope
+Decision: On Start at Solna or Huddinge scope, Medarbetare, Operationer 2025 and Slutenvårdstillfällen 2025 show the hospital-wide figure with the note "hela Karolinska" (no per-site figure is public). Fastställda, Disponibla and IVA come from the site. At region scope Nyckeltal shows Karolinska.
+Rejected: "Okänt" at site scope – three empty cards on the presenter's page.
+Spec: SPEC.md § 6.0
+
+## 2026-09-07 – Batch 1 – Källor page structure
+Decision: The first table is grouped by source key: one heading row per key (anchor id = key, with name, date and link) followed by every verified or reported figure citing it, or "Inga uppgifter i demon hänvisar till denna källa ännu." The second table has two blocks with anchors `estimat` and `illustrativt`, each grouped by DATA.md section. The figure list is collected by `src/lib/sources.ts` from the pack (hospital figures, ladders, nodes, flow metrics, capability components, region figures) plus one summary row each for the illustrative lists (inventory, requests, queues, patients, scenarios, people).
+Rejected: One row per illustrative resource line – hundreds of rows saying "illustrativt".
+Spec: SPEC.md § 6.10, DESIGN-KS.md § 9
+
+## 2026-09-07 – Batch 1 – Nätverk table has exactly the nine SPEC columns
+Decision: The Nätverk table shows Nod, Typ, Status, Disponibla/kapacitet, Lediga, IVA, Delning, Synk, Källa; the first prototype's Ansvarig and Plats columns moved to the node detail so the table fits 1280 px without scrolling. The Källa chip is that of the node's free figure (or its capacity when no free figure exists).
+Rejected: Keeping eleven columns – horizontal scroll at the minimum viewport.
+Spec: SPEC.md § 6.9
+
+## 2026-09-07 – Batch 1 – Further data choices
+Decision: (a) Personal i tjänst per site is illustrative (Solna 3 100, Huddinge 2 800, ASIH 640) with HR as data source. (b) Region hospitals' free beds are illustrative with data source Medoma and lastConfirmed 14:30; their disponibla is the verified v.33 figure. (c) Psykiatri's total is 1 100 (980 + 120) verified S4a; palliativ, rehab and psykiatri have `accepts: []` so they are never evacuation destinations. (d) Ambulanssjukvården's verified figures (fordon, stationer, anställda, i drift) are node extra figures with S12; its illustrative vehicle pools live in the inventory. (e) S20's läkare and undersköterskor are estimates with the verification flag in the basis. (f) Coordinates are extra figures (Huddinge and the region hospitals as estimates). (g) The discharge status list has a fourth value "Geriatrik-förfrågan skickad" for the geriatrik flow. (h) The initial log has seven entries: the five seeded requests, the CT outage at 13:50 and the 14:37 sync.
+Rejected: Inventing per-site staff or IVA figures for region hospitals as "reported" – nobody reported them.
+Spec: DATA.md § 2, § 6, § 9
+
+## 2026-09-07 – Batch 1 – Percent formatting uses a normal no-break space
+Decision: `fmtPct` replaces the narrow no-break space (U+202F) that ICU emits for sv-SE with U+00A0, so "95,6 %" uses the same space as the thousands separator.
+Rejected: Leaving U+202F – invisible in most fonts but breaks text searches for "95,6 %".
+Spec: DESIGN-KS.md § 1
+
+## 2026-09-07 – Batch 1 – Stand-up dialog prefilled from the preset
+Decision: "Etablera nod" preselects the first preset site, fills the name with the preset's name and picks the type from it (Fältsjukhus → Field hospital, else Care hub); the presenter can still edit all fields. Default planned beds 20, lead Eva Lind, sharing Full as before. The new node appears in the scope selector after a separator.
+Rejected: An empty name field – one more thing to type on stage.
+Spec: SPEC.md § 6.9, DATA.md § 2.7
+
+## 2026-09-07 – Batch 1 – Demo reset returns to Start; Återställ klockan is logged
+Decision: "Återställ demo" restores the pack, clears incident and scenario, sets 14:40, navigates to Start and toasts "Demon återställd". "Återställ klockan" sets 14:40, stops the scenario, keeps everything else and writes a System entry "Återställde klockan" stamped 14:40.
+Rejected: Staying on the current page after reset – the page may no longer make sense (an incident channel, a stood-up node).
+Spec: SPEC.md § 2, § 7.2

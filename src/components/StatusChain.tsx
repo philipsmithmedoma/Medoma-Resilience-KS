@@ -3,12 +3,13 @@ import { cn } from '@/lib/utils';
 
 interface StatusChainProps {
   steps: readonly string[];
+  labels: Record<string, string>;
   current: string; // the step reached
   label: string;
 }
 
 /** A numbered sequence of steps: done steps green, the current step primary, later steps muted. */
-export function StatusChain({ steps, current, label }: StatusChainProps) {
+export function StatusChain({ steps, labels, current, label }: StatusChainProps) {
   const currentIndex = steps.indexOf(current);
   return (
     <ol aria-label={label} className="space-y-1.5">
@@ -26,7 +27,7 @@ export function StatusChain({ steps, current, label }: StatusChainProps) {
             >
               {done ? <CheckIcon className="size-3" strokeWidth={2.5} /> : i + 1}
             </span>
-            <span className={cn(active ? 'font-medium text-text' : done ? 'text-text' : 'text-text-muted')}>{step}</span>
+            <span className={cn(active ? 'font-medium text-text' : done ? 'text-text' : 'text-text-muted')}>{labels[step] ?? step}</span>
           </li>
         );
       })}

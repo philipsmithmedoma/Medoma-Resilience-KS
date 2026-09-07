@@ -1,4 +1,5 @@
 import { useStore } from '@/data/store';
+import { LABELS } from '@/data/vocab';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RolePill } from './RolePill';
 
@@ -12,8 +13,8 @@ interface StaffSelectProps {
   autoOpen?: boolean;
 }
 
-/** Select listing all staff (SPEC.md § 5.1), showing the profession pill beside each name. */
-export function StaffSelect({ value, onChange, id, placeholder = 'Select person', className, ariaLabel, autoOpen }: StaffSelectProps) {
+/** Select listing all staff (DATA.md § 7), showing the profession pill beside each name. */
+export function StaffSelect({ value, onChange, id, placeholder = LABELS.selectPerson, className, ariaLabel, autoOpen }: StaffSelectProps) {
   const staff = useStore((s) => s.staff);
   return (
     <Select value={value} onValueChange={onChange} defaultOpen={autoOpen}>

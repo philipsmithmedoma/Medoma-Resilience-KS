@@ -1,5 +1,6 @@
-// Message → structured request prefill – SPEC.md § 6.4.3. Pure.
+// Message → structured request prefill – SPEC.md § 6.8, DATA.md § 6.3. Pure.
 import type { Message, NodeId, Priority } from '@/data/types';
+import { VEHICLES } from '@/data/vocab';
 
 export interface ParsedRequest {
   quantity?: number;
@@ -10,34 +11,40 @@ export interface ParsedRequest {
 }
 
 const NUMBER_WORDS: Record<string, number> = {
-  en: 1, ett: 1, två: 2, tre: 3, fyra: 4, fem: 5, sex: 6, sju: 7, åtta: 8, nio: 9, tio: 10,
+  en: 1, ett: 1, två: 2, tre: 3, fyra: 4, fem: 5, sex: 6, sju: 7, åtta: 8, nio: 9, tio: 10, tolv: 12, tjugo: 20,
   one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
 };
 
 // Synonym stems in the order they are tried; the match earliest in the text wins.
 const RESOURCE_STEMS: Array<{ stems: string[]; name: string; unless?: string }> = [
   { stems: ['ventilator'], name: 'Ventilator' },
-  { stems: ['syrgaskoncentrator', 'koncentrator'], name: 'Oxygen concentrator' },
-  { stems: ['rullstol'], name: 'Wheelchair' },
-  { stems: ['bår'], name: 'Stretcher' },
-  { stems: ['monitor'], name: 'Patient monitor' },
-  { stems: ['pump'], name: 'Infusion pump' },
-  { stems: ['syrgas'], name: 'Oxygen cylinder', unless: 'koncentrator' },
-  { stems: ['blod'], name: 'Blood products O-negative' },
-  { stems: ['ambulans'], name: 'Ambulance' },
+  { stems: ['syrgaskoncentrator', 'koncentrator'], name: 'Syrgaskoncentrator' },
+  { stems: ['rullstol'], name: 'Rullstol' },
+  { stems: ['bår'], name: 'Bår' },
+  { stems: ['monitor'], name: 'Patientmonitor' },
+  { stems: ['pump'], name: 'Infusionspump' },
+  { stems: ['syrgas'], name: 'Syrgas (flaskor)', unless: 'koncentrator' },
+  { stems: ['blod'], name: 'Blodprodukter O-negativ' },
+  { stems: ['transportambulans', 'liggande'], name: VEHICLES.transport },
+  { stems: ['iva-ambulans'], name: VEHICLES.iva },
+  { stems: ['ambulans'], name: VEHICLES.akut },
   { stems: ['defibrillator'], name: 'Defibrillator' },
-  { stems: ['team'], name: 'Mobile care team' },
+  { stems: ['ultraljud'], name: 'Mobil ultraljud' },
+  { stems: ['nacl', 'natriumklorid'], name: 'NaCl 1 000 ml' },
+  { stems: ['morfin'], name: 'Morfin 10 mg' },
+  { stems: ['tourniquet'], name: 'Tourniquet' },
+  { stems: ['skyddsutrustning', 'munskydd'], name: 'Skyddsutrustning' },
 ];
 
 const NODE_STEMS: Array<{ stems: string[]; nodeId: NodeId }> = [
-  { stems: ['ekhaga'], nodeId: 'ekhaga' },
-  { stems: ['alfa', 'fältsjukhus'], nodeId: 'falt-alfa' },
-  { stems: ['sjöberga'], nodeId: 'sjoberga' },
-  { stems: ['hemsjukvård'], nodeId: 'hemsjukvard' },
-  { stems: ['akuten', 'vikby'], nodeId: 'vikby' },
+  { stems: ['akuten huddinge', 'huddinge'], nodeId: 'huddinge' },
+  { stems: ['intensivakuten', 'solna'], nodeId: 'solna' },
+  { stems: ['södersjukhuset', 'sös'], nodeId: 'sos' },
+  { stems: ['danderyd'], nodeId: 'ds' },
+  { stems: ['ambulanssjukvården'], nodeId: 'ambulans' },
 ];
 
-const HIGH_PRIORITY_STEMS = ['akut', 'urgent', 'kritisk'];
+const HIGH_PRIORITY_STEMS = ['akut ', 'brådskande', 'urgent', 'kritisk', 'omedelbart'];
 
 interface NumberToken {
   value: number;
@@ -46,16 +53,14 @@ interface NumberToken {
 
 function numberTokens(text: string): NumberToken[] {
   const tokens: NumberToken[] = [];
-  const re = /\d+|[a-zåäö]+/gi;
-  for (const m of text.matchAll(re)) {
-    const raw = m[0];
-    if (/^\d+$/.test(raw)) tokens.push({ value: Number(raw), index: m.index ?? 0 });
-    else {
-      const n = NUMBER_WORDS[raw.toLowerCase()];
-      if (n !== undefined) tokens.push({ value: n, index: m.index ?? 0 });
-    }
+  const re = /\d+/g;
+  for (const m of text.matchAll(re)) tokens.push({ value: Number(m[0]), index: m.index ?? 0 });
+  const words = /[a-zåäö]+/gi;
+  for (const m of text.matchAll(words)) {
+    const n = NUMBER_WORDS[m[0].toLowerCase()];
+    if (n !== undefined) tokens.push({ value: n, index: m.index ?? 0 });
   }
-  return tokens;
+  return tokens.sort((a, b) => a.index - b.index);
 }
 
 function findResource(lower: string): { name: string; index: number } | undefined {
@@ -63,8 +68,8 @@ function findResource(lower: string): { name: string; index: number } | undefine
   for (const entry of RESOURCE_STEMS) {
     if (entry.unless && lower.includes(entry.unless)) continue;
     for (const stem of entry.stems) {
-      const i = lower.indexOf(stem);
-      if (i >= 0 && (!best || i < best.index)) best = { name: entry.name, index: i };
+      const idx = lower.indexOf(stem);
+      if (idx >= 0 && (!best || idx < best.index)) best = { name: entry.name, index: idx };
     }
   }
   return best;
@@ -74,16 +79,17 @@ function findNode(lower: string): NodeId | undefined {
   let best: { nodeId: NodeId; index: number } | undefined;
   for (const entry of NODE_STEMS) {
     for (const stem of entry.stems) {
-      const i = lower.indexOf(stem);
-      if (i >= 0 && (!best || i < best.index)) best = { nodeId: entry.nodeId, index: i };
+      const idx = lower.indexOf(stem);
+      if (idx >= 0 && (!best || idx < best.index)) best = { nodeId: entry.nodeId, index: idx };
     }
   }
   return best?.nodeId;
 }
 
 /**
- * Prefill a request from a message. Quantity is the number (integer or number word) closest before
- * the resource term, falling back to the first number in the text (see DECISIONS.md).
+ * Prefill a request from a message. Quantity is the number (integer or number word) closest before the
+ * resource term, falling back to the first number in the text; the node is the first node synonym in the
+ * text, otherwise the author's node (DATA.md § 6.3).
  */
 export function parseMessage(message: Pick<Message, 'text' | 'nodeId'>): ParsedRequest {
   const text = message.text;
@@ -97,7 +103,7 @@ export function parseMessage(message: Pick<Message, 'text' | 'nodeId'>): ParsedR
   } else {
     quantity = numbers[0]?.value;
   }
-  const toNodeId = findNode(lower) ?? message.nodeId ?? 'vikby';
+  const toNodeId = findNode(lower) ?? message.nodeId ?? 'huddinge';
   const priority: Priority = HIGH_PRIORITY_STEMS.some((s) => lower.includes(s)) ? 'High' : 'Normal';
   return { quantity, resourceName: resource?.name, toNodeId, priority, note: text };
 }
