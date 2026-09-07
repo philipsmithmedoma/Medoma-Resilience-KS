@@ -33,7 +33,7 @@ export function ScenarioPanel() {
   const scenario = useStore((s) => s.scenario);
   const nodes = useStore((s) => s.nodes);
   const clockRunning = useStore((s) => s.clockRunning);
-  const openScenarioPanel = useStore((s) => s.openScenarioPanel);
+  const closeScenarioPanel = useStore((s) => s.closeScenarioPanel);
   const startScenario = useStore((s) => s.startScenario);
   const stopScenario = useStore((s) => s.stopScenario);
   const setClockRunning = useStore((s) => s.setClockRunning);
@@ -70,13 +70,12 @@ export function ScenarioPanel() {
     startScenario(key, params, true);
     toast(SCENARIO.started(SCENARIO_NAMES[key]));
     if (key === 'siteevac') {
-      openScenarioPanel(null);
-      useStore.setState({ scenarioPanel: { open: false, key: null } });
+      closeScenarioPanel();
       navigate('/evakuering');
     }
   };
   const close = (open: boolean) => {
-    if (!open) useStore.setState({ scenarioPanel: { open: false, key: panel.key } });
+    if (!open) closeScenarioPanel();
   };
   const apply = (k: string) => {
     if (k === 'katastrof' && Number(scenario?.params.skadade ?? 0) <= KATASTROF_THRESHOLD) {

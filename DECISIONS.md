@@ -359,3 +359,23 @@ Spec: SPEC.md § 7.3 Mottagande, § 9 Batch 3
 Decision: `journalbortfall` activates PB2 when no incident is active (which turns the outage on) or turns the outage on directly, and the horizon (6 h = 24 ticks) turns it off and stops the clock. `tryck` only feeds the Prognos multiplier (1,3 for 6 h at Huddinge) and logs its event. `siteevac` sets the scope to the site, activates PB4 when no incident is active and navigates to Evakuering. Chapters reset the demo, set scope and route; chapters 2 and 4 start their scenario with the clock running, chapters 3 and 5 open the panel with the preset selected and the clock paused. "Återställ klockan" logs which scenario it stopped.
 Rejected: Auto-activating PB3 for mottagande – the spec ties only PB2 to a scenario start.
 Spec: SPEC.md § 7.3, § 8
+
+## 2026-09-07 – Batch 4 – Close labels of the shared dialog and sheet come from vocab
+Decision: The shadcn Dialog and Sheet primitives rendered the English "Close" (visible in `DialogFooter` and as screen-reader text on the X button). Both now render `LABELS.close` ("Stäng") from `vocab.ts`, and the evacuation destination reason for a non-operational node uses `NODE_STATUS_LABELS` instead of the raw enum value ("Degraded").
+Rejected: Hard-coding "Stäng" in the two components – CLAUDE.md requires every user-visible string to live in `vocab.ts`.
+Spec: CLAUDE.md "UI language is Swedish", SPEC.md § 9 Batch 4
+
+## 2026-09-07 – Batch 4 – The scenario panel closes through a store action
+Decision: `closeScenarioPanel` in the store replaces two direct `useStore.setState` calls in the panel; it keeps the selected preset so reopening the panel from Kapacitet or Nätverk shows the same scenario.
+Rejected: Clearing the preset on close – the presenter loses the chapter's preset when the panel is closed by mistake.
+Spec: SPEC.md § 6.5, § 8
+
+## 2026-09-07 – Batch 4 – Dead-link sweep method
+Decision: The sweep is a headless Chromium script over every route in SPEC.md § 4 (including the tab routes, node routes, `/kallor#S5`, an incident channel route opened by activating PB1, the first prototype's old routes and an unknown route). For each route it records where it lands, the page heading, the number of internal and external links, and console/page errors; internal links found on a page are queued and visited too. Map tile requests are ignored because OpenStreetMap is unreachable in the build sandbox. The table is pasted into the pull request as SPEC.md § 9 Batch 4 requires; the script is not part of the repository.
+Rejected: A static grep of `href` values – it cannot show that a route renders or that a redirect lands where SPEC.md § 4 says.
+Spec: SPEC.md § 4, § 9 Batch 4
+
+## 2026-09-07 – Batch 4 – README is the presenter script
+Decision: The README is written in Swedish and carries the whole presenter script: what each confidence chip means and the example figure to point at, the five chapters with what to click and the values to expect (occupancy, deficit time, +20 min, +1 h 30 min, 0 free at SÖS/DS/S:t Göran, the vårdhubb), and the demos outside the chapters (Evakuering, Från meddelande, Pandemi, Källor). Expected values are quoted from the pack so the presenter can check the app against the script.
+Rejected: A separate `PRESENTER.md` – one document is easier to keep in step with the pack.
+Spec: SPEC.md § 9 Batch 4

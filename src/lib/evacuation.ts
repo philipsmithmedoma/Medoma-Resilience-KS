@@ -1,6 +1,6 @@
 // Destination and transport compatibility for evacuation planning – SPEC.md § 6.7.
 import type { CareNode, MoveStatus, Patient, Resource, SiteId } from '@/data/types';
-import { ACCEPTS_FOR_CARE_LEVEL, AMBULANCE_NODE_ID, ASIH_ID, CARE_LEVEL_LABELS, EVAC, GERIATRIK_ID, TRANSPORT_COMPATIBILITY, TRANSPORT_LABELS, VEHICLES } from '@/data/vocab';
+import { ACCEPTS_FOR_CARE_LEVEL, AMBULANCE_NODE_ID, ASIH_ID, CARE_LEVEL_LABELS, EVAC, GERIATRIK_ID, NODE_STATUS_LABELS, TRANSPORT_COMPATIBILITY, TRANSPORT_LABELS, VEHICLES } from '@/data/vocab';
 
 export const GERIATRIK_MIN_AGE = 75;
 
@@ -35,7 +35,7 @@ export function destinationReason(patient: Patient, node: CareNode): string | un
     if (patient.stability !== 'Stable') return EVAC.reasons.doesNotAccept(CARE_LEVEL_LABELS[patient.careLevel]);
     if (patient.age < GERIATRIK_MIN_AGE) return EVAC.reasons.ageLimit;
   }
-  if (node.status !== 'Operational') return node.status;
+  if (node.status !== 'Operational') return NODE_STATUS_LABELS[node.status];
   const free = relevantFree(node, patient);
   if (!free) return EVAC.reasons.noFreePlaces;
   if (free.free === null) return patient.careLevel === 'Intensive' ? EVAC.reasons.ivaUnknown : EVAC.reasons.noFreePlaces;

@@ -81,6 +81,7 @@ export interface Actions {
   reset: () => void;
   /** Opens the scenario panel on Kapacitet with a preset selected (chapters 3 and 5). */
   openScenarioPanel: (key: ScenarioKey | null) => void;
+  closeScenarioPanel: () => void;
   /** Starts a scenario with its defaults for a chapter; `start` also runs the clock. */
   armScenario: (key: ScenarioKey, start: boolean) => void;
 }
@@ -200,6 +201,8 @@ export const useStore = create<AppStore>()((set, get, api) => ({
   reset: () => set({ ...initialData() }),
 
   openScenarioPanel: (key) => set({ scenarioPanel: { open: true, key } }),
+
+  closeScenarioPanel: () => set((s) => ({ scenarioPanel: { open: false, key: s.scenarioPanel.key } })),
 
   armScenario: (key, start) => {
     set({ scenarioPanel: { open: false, key } });
