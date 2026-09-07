@@ -5,7 +5,7 @@ import { PlaybooksTable } from './PlaybooksTable';
 import { PreviousIncidents } from './PreviousIncidents';
 import { ActiveIncident } from './ActiveIncident';
 
-/** SPEC.md § 6.2 – state decides whether the playbook list or the active incident is shown. */
+/** SPEC.md § 6.6 – state decides whether the playbook list or the active incident is shown. */
 export function IncidentPage() {
   const incident = useStore((s) => s.incident);
   if (incident) return <ActiveIncident incident={incident} />;

@@ -1,25 +1,25 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import type { Patient } from '@/data/types';
+import type { Patient, SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { EVAC, MOVE_STATUSES } from '@/data/vocab';
-import { canCancel, destinationReason, patientName, relevantFree, vehicleReason } from '@/lib/evacuation';
+import { CARE_LEVEL_LABELS, EVAC, MOVE_STATUSES, MOVE_STATUS_LABELS, NODE_STATUS_LABELS, NODE_TYPE_LABELS, TRANSPORT_LABELS } from '@/data/vocab';
+import { canCancel, destinationReason, evacuationDestinations, evacuationVehicles, patientName, relevantFree, vehicleReason } from '@/lib/evacuation';
 import { distanceKm } from '@/lib/figure';
+import { fmt } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { StatusChip, Chip } from '@/components/Chip';
+import { ConfidenceChip } from '@/components/ConfidenceChip';
 import { StatusChain } from '@/components/StatusChain';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const HOME = 'vikby';
-
-/** SPEC.md § 6.3 middle pane – Destinations, Transport and the Plan move panel. */
-export function PlanningPane({ patient }: { patient: Patient | null }) {
+/** Middle pane – Destinationer, Transport and the Planera flytt panel. */
+export function PlanningPane({ patient, site }: { patient: Patient | null; site: SiteId }) {
   const nodes = useStore((s) => s.nodes);
   const resources = useStore((s) => s.resources);
-  const vikby = nodes.find((n) => n.id === HOME)!;
-  const destinations = nodes.filter((n) => n.id !== HOME);
-  const vehicles = resources.filter((r) => r.nodeId === HOME && r.category === 'Transport' && r.name !== 'Helicopter');
+  const source = nodes.find((n) => n.id === site)!;
+  const destinations = evacuationDestinations(nodes, site);
+  const vehicles = evacuationVehicles(resources);
 
   return (
     <div className="divide-y divide-border">
@@ -28,22 +28,24 @@ export function PlanningPane({ patient }: { patient: Patient | null }) {
         <ul className="space-y-2">
           {destinations.map((n) => {
             const free = patient ? relevantFree(n, patient) : relevantFree(n, { careLevel: 'Ward' });
-            const reason = patient ? destinationReason(patient, n, resources) : undefined;
+            const reason = patient ? destinationReason(patient, n) : undefined;
+            const freeFigure = patient?.careLevel === 'Intensive' ? n.intensiveCare?.free : n.beds?.free;
             return (
               <li key={n.id} className={cn('rounded-md border border-border p-2 text-small', reason && 'opacity-50')} aria-disabled={Boolean(reason)}>
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-body font-medium">{n.name}</span>
-                  <StatusChip status={n.status} />
+                  <StatusChip status={n.status} label={NODE_STATUS_LABELS[n.status]} />
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
-                  <span>{n.type}</span>
-                  <span className="tabular">{free ? EVAC.freeOf(free.free, free.total) : EVAC.freeOf(0, 0)}</span>
-                  <span className="tabular">{EVAC.km(distanceKm(vikby, n))}</span>
+                  <span>{NODE_TYPE_LABELS[n.type]}</span>
+                  <span className="tabular">{free && free.free !== null ? EVAC.freeOf(fmt(free.free), fmt(free.total)) : EVAC.freeUnknown}</span>
+                  {freeFigure ? <ConfidenceChip figure={freeFigure} /> : null}
+                  {!n.radiusKm && !n.noMarker ? <span className="tabular">{EVAC.km(fmt(distanceKm(source, n)))}</span> : null}
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {n.accepts.map((a) => (
                     <Chip key={a} tone="grey">
-                      {a}
+                      {CARE_LEVEL_LABELS[a]}
                     </Chip>
                   ))}
                 </div>
@@ -62,20 +64,19 @@ export function PlanningPane({ patient }: { patient: Patient | null }) {
             return (
               <li key={v.id} className={cn('flex items-center gap-2 text-body', reason && 'text-text-muted')} title={reason}>
                 <span className="min-w-0 flex-1 truncate">{v.name}</span>
-                <span className="tabular text-text-secondary">{EVAC.available(v.available)}</span>
-                {v.seats ? <span className="text-small text-text-muted">{EVAC.seats(v.seats)}</span> : null}
+                <span className="tabular text-text-secondary">{EVAC.available(fmt(v.available))}</span>
               </li>
             );
           })}
         </ul>
       </section>
 
-      {patient ? <PlanMovePanel patient={patient} /> : null}
+      {patient ? <PlanMovePanel patient={patient} site={site} /> : null}
     </div>
   );
 }
 
-function PlanMovePanel({ patient }: { patient: Patient }) {
+function PlanMovePanel({ patient, site }: { patient: Patient; site: SiteId }) {
   const nodes = useStore((s) => s.nodes);
   const resources = useStore((s) => s.resources);
   const planMove = useStore((s) => s.planMove);
@@ -95,8 +96,8 @@ function PlanMovePanel({ patient }: { patient: Patient }) {
     setVehicle('');
   }, [patient.id]);
 
-  const destinations = nodes.filter((n) => n.id !== HOME);
-  const vehicles = resources.filter((r) => r.nodeId === HOME && r.category === 'Transport' && r.name !== 'Helicopter');
+  const destinations = evacuationDestinations(nodes, site);
+  const vehicles = evacuationVehicles(resources);
   const move = patient.move;
   const destName = (id: string) => nodes.find((n) => n.id === id)?.name ?? id;
   const name = patientName(patient);
@@ -105,7 +106,7 @@ function PlanMovePanel({ patient }: { patient: Patient }) {
     <section className="px-4 py-3">
       <h2 className="mb-1 text-heading">{EVAC.planMove}</h2>
       <p className="mb-3 text-small text-text-secondary">
-        {name}. {EVAC.needs(patient.transport)}
+        {name}. {EVAC.needs(TRANSPORT_LABELS[patient.transport])}
       </p>
 
       {!move ? (
@@ -118,7 +119,7 @@ function PlanMovePanel({ patient }: { patient: Patient }) {
               </SelectTrigger>
               <SelectContent>
                 {destinations.map((n) => {
-                  const reason = destinationReason(patient, n, resources);
+                  const reason = destinationReason(patient, n);
                   return (
                     <SelectItem key={n.id} value={n.id} disabled={Boolean(reason)}>
                       {n.name}
@@ -142,7 +143,7 @@ function PlanMovePanel({ patient }: { patient: Patient }) {
       ) : move.suggested ? (
         <div className="space-y-3">
           <p>
-            <StatusChip status={EVAC.suggested} /> <span className="ml-1">{destName(move.destinationId)}</span>
+            <StatusChip status="Suggested" label={EVAC.suggested} /> <span className="ml-1">{destName(move.destinationId)}</span>
           </p>
           <div className="flex items-center gap-4">
             <Button
@@ -170,7 +171,7 @@ function PlanMovePanel({ patient }: { patient: Patient }) {
             {EVAC.destination}: <span className="font-medium">{destName(move.destinationId)}</span>
             {move.transportId ? <span className="text-text-secondary">, {resources.find((r) => r.id === move.transportId)?.name}</span> : null}
           </p>
-          <StatusChain steps={MOVE_STATUSES} current={move.status} label="Move status" />
+          <StatusChain steps={MOVE_STATUSES} labels={MOVE_STATUS_LABELS} current={move.status} label={EVAC.moveStatusLabel} />
           {move.status === 'Accepted' ? (
             <div className="space-y-1">
               <label htmlFor="vehicle-select">{EVAC.transport}</label>
@@ -183,7 +184,7 @@ function PlanMovePanel({ patient }: { patient: Patient }) {
                     const reason = vehicleReason(patient, v);
                     return (
                       <SelectItem key={v.id} value={v.id} disabled={Boolean(reason)}>
-                        {v.name}: {EVAC.available(v.available)}
+                        {v.name}: {EVAC.available(fmt(v.available))}
                         {reason ? <span className="ml-2 text-small text-text-muted">{reason}</span> : null}
                       </SelectItem>
                     );

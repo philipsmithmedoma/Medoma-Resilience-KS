@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import type { Incident } from '@/data/types';
+import { toast } from 'sonner';
+import type { BeredskapsLage, Incident } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT, LABELS } from '@/data/vocab';
+import { INCIDENT, LABELS, LAGEN } from '@/data/vocab';
 import { taskCounts } from '@/lib/incident';
 import { PageTitle } from '@/components/PageTitle';
-import { StatusChip, Chip } from '@/components/Chip';
+import { StatusChip } from '@/components/Chip';
 import { SubTabs } from '@/components/SubTabs';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OverviewTab } from './OverviewTab';
 import { TasksTab } from './TasksTab';
 import { ChannelsTab } from './ChannelsTab';
@@ -16,12 +18,14 @@ import { CloseIncidentDialog } from './CloseIncidentDialog';
 
 type TabKey = 'overview' | 'tasks' | 'channels' | 'log';
 
-/** SPEC.md § 6.2.3 – header, chips and the four sub-tabs of the active incident. */
+/** SPEC.md § 6.6 – header with beredskapsläge chip and "Ändra", chips and the four sub-tabs. */
 export function ActiveIncident({ incident }: { incident: Incident }) {
   const log = useStore((s) => s.log);
+  const setLage = useStore((s) => s.setLage);
   const [tab, setTab] = useState<TabKey>('overview');
   const [addOpen, setAddOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [editingLage, setEditingLage] = useState(false);
   const counts = taskCounts(incident.tasks);
   const startIndex = incident.logStartId ? log.findIndex((e) => e.id === incident.logStartId) : 0;
   const incidentLog = log.slice(Math.max(0, startIndex));
@@ -38,8 +42,36 @@ export function ActiveIncident({ incident }: { incident: Incident }) {
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-4">
           <PageTitle title={incident.name}>
-            {incident.level ? <Chip tone="grey">{INCIDENT.level(incident.level)}</Chip> : null}
-            <StatusChip status={INCIDENT.active} />
+            {editingLage ? (
+              <Select
+                value={incident.lage}
+                defaultOpen
+                onValueChange={(v) => {
+                  setLage(v as BeredskapsLage);
+                  setEditingLage(false);
+                  toast(INCIDENT.lageChanged);
+                }}
+              >
+                <SelectTrigger className="w-56" aria-label={INCIDENT.lage} size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LAGEN.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <>
+                <StatusChip status={incident.lage} />
+                <button type="button" className="text-small text-primary hover:text-primary-hover hover:underline" onClick={() => setEditingLage(true)}>
+                  {LABELS.change}
+                </button>
+              </>
+            )}
+            <StatusChip status="Active" label={INCIDENT.active} />
           </PageTitle>
           <div className="flex items-center gap-4">
             <Button variant="tertiary" onClick={() => setAddOpen(true)}>
@@ -54,7 +86,7 @@ export function ActiveIncident({ incident }: { incident: Incident }) {
         {incident.note ? <p className="text-text-secondary">{incident.note}</p> : null}
       </div>
 
-      <SubTabs tabs={tabs} active={tab} onChange={(k) => setTab(k as TabKey)} label="Incident sections" />
+      <SubTabs tabs={tabs} active={tab} onChange={(k) => setTab(k as TabKey)} label={INCIDENT.title} />
 
       {tab === 'overview' ? <OverviewTab incident={incident} /> : null}
       {tab === 'tasks' ? <TasksTab incident={incident} /> : null}

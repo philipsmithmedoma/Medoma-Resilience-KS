@@ -143,3 +143,17 @@
   line-height: 40px;
   font-weight: 600;
 }
+
+/* Map labels for area nodes (ASIH circle): plain text, no tooltip box (DESIGN-KS.md § 8). */
+.leaflet-tooltip.node-map-label {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--color-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+}
+.leaflet-tooltip.node-map-label::before {
+  display: none;
+}

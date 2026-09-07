@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { Circle, CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { CareNode } from '@/data/types';
-import { EVAC, NODE_STATUS_COLOURS } from '@/data/vocab';
-import { relevantFree } from '@/lib/evacuation';
+import { EVAC, NODE_STATUS_COLOURS, NODE_STATUS_LABELS } from '@/data/vocab';
+import { fmt } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const PRIMARY = '#186CE9';
@@ -41,20 +41,35 @@ function FitBounds({ nodes, center, zoom }: { nodes: CareNode[]; center?: [numbe
   return null;
 }
 
-/** DESIGN.md § 4 maps: OpenStreetMap tiles, circle markers (radius 10) coloured by status, primary when selected. */
+/**
+ * DESIGN-KS.md § 8 maps: OpenStreetMap tiles, circle markers (radius 10) coloured by status and labelled
+ * with the short name; ASIH as a soft 25 km circle centred on Stockholm with its label at the top.
+ */
 export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, onSelect }: NodeMapProps) {
+  const markers = nodes.filter((n) => !n.noMarker && n.radiusKm === undefined);
+  const areas = nodes.filter((n) => n.radiusKm !== undefined);
   const selected = nodes.find((n) => n.id === selectedId);
   const from = nodes.find((n) => n.id === lineFrom);
   return (
-    <MapContainer
-      center={center ?? [59.5, 17.9]}
-      zoom={zoom ?? 10}
-      scrollWheelZoom={false}
-      className={cn('h-full w-full', className)}
-      attributionControl
-    >
+    <MapContainer center={center ?? [59.35, 18.0]} zoom={zoom ?? 9} scrollWheelZoom={false} className={cn('h-full w-full', className)} attributionControl>
       <TileLayer attribution={EVAC.map.attribution} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <FitBounds nodes={nodes} center={center} zoom={zoom} />
+      <FitBounds nodes={markers} center={center} zoom={zoom} />
+      {areas.map((n) => {
+        const isSelected = n.id === selectedId;
+        return (
+          <Circle
+            key={n.id}
+            center={[n.lat, n.lng]}
+            radius={(n.radiusKm ?? 0) * 1000}
+            pathOptions={{ color: PRIMARY, weight: isSelected ? 2 : 1, fillColor: PRIMARY, fillOpacity: isSelected ? 0.18 : 0.1 }}
+            eventHandlers={onSelect ? { click: () => onSelect(n.id) } : undefined}
+          >
+            <Tooltip permanent direction="top" offset={[0, -((n.radiusKm ?? 0) * 3)]} className="node-map-label">
+              {n.shortName}
+            </Tooltip>
+          </Circle>
+        );
+      })}
       {from && selected ? (
         <Polyline
           positions={[
@@ -64,9 +79,9 @@ export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, 
           pathOptions={{ color: PRIMARY, weight: 2 }}
         />
       ) : null}
-      {nodes.map((n) => {
+      {markers.map((n) => {
         const isSelected = n.id === selectedId;
-        const free = n.homeCarePlaces ? relevantFree(n, { careLevel: 'Ward' }) : relevantFree(n, { careLevel: 'Ward' });
+        const free = n.beds?.free.value;
         return (
           <CircleMarker
             key={n.id}
@@ -81,12 +96,12 @@ export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, 
             eventHandlers={onSelect ? { click: () => onSelect(n.id) } : undefined}
           >
             <Tooltip direction="top" offset={[0, -8]}>
-              {n.name}
+              {n.shortName}
             </Tooltip>
             <Popup>
               <span className="font-medium">{n.name}</span>
               <br />
-              {free ? EVAC.map.freePlaces(free.free) : n.status}
+              {free !== undefined && free !== null ? EVAC.map.freePlaces(fmt(free)) : NODE_STATUS_LABELS[n.status]}
             </Popup>
           </CircleMarker>
         );

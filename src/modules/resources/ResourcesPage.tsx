@@ -9,7 +9,7 @@ import { FromMessageTab } from './FromMessageTab';
 
 export type ResourcesTab = 'requests' | 'inventory' | 'from-message';
 
-/** SPEC.md § 6.4 – Resources with route-based sub-tabs. */
+/** SPEC.md § 6.8 – Resurser with route-based sub-tabs: Förfrågningar, Lager, Från meddelande. */
 export function ResourcesPage({ tab }: { tab: ResourcesTab }) {
   const requests = useStore((s) => s.requests);
   const messages = useStore((s) => s.messagesFromNodes);
@@ -17,14 +17,14 @@ export function ResourcesPage({ tab }: { tab: ResourcesTab }) {
   const nodes = useStore((s) => s.nodes);
   const open = requests.filter((r) => r.status !== 'Received' && r.status !== 'Rejected').length;
   const tabs = [
-    { key: 'requests', label: RES.tabs.requests(open), to: '/resources' },
-    { key: 'inventory', label: RES.tabs.inventory, to: '/resources/inventory' },
-    { key: 'from-message', label: RES.tabs.fromMessage(messages.length), to: '/resources/from-message' },
+    { key: 'requests', label: RES.tabs.requests(open), to: '/resurser' },
+    { key: 'inventory', label: RES.tabs.inventory, to: '/resurser/lager' },
+    { key: 'from-message', label: RES.tabs.fromMessage(messages.length), to: '/resurser/meddelanden' },
   ];
   return (
     <div className="space-y-6">
       <PageTitle title={RES.title} scope={tab === 'inventory' ? scopeName(scope, nodes) : undefined} />
-      <SubTabs tabs={tabs} active={tab} label="Resources sections" />
+      <SubTabs tabs={tabs} active={tab} label={RES.title} />
       {tab === 'requests' ? <RequestsTab /> : null}
       {tab === 'inventory' ? <InventoryTab /> : null}
       {tab === 'from-message' ? <FromMessageTab /> : null}

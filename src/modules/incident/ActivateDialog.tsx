@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import type { Playbook } from '@/data/types';
+import type { BeredskapsLage, Playbook } from '@/data/types';
 import { useStore } from '@/data/store';
-import { CURRENT_USER, INCIDENT, LABELS } from '@/data/vocab';
+import { CURRENT_USER, INCIDENT, LABELS, LAGEN } from '@/data/vocab';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { StaffSelect } from '@/components/StaffSelect';
 
@@ -14,28 +15,33 @@ interface ActivateDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** SPEC.md § 6.2.2 – "Activate {playbook}?" with commander select and optional note. */
+/** SPEC.md § 6.6 – "Aktivera {spelbok}?" with Sjukvårdsledare, Beredskapsläge and note. */
 export function ActivateDialog({ playbook, onOpenChange }: ActivateDialogProps) {
   const activatePlaybook = useStore((s) => s.activatePlaybook);
+  const setScope = useStore((s) => s.setScope);
   const navigate = useNavigate();
   const [commander, setCommander] = useState<string>(CURRENT_USER.name);
+  const [lage, setLage] = useState<BeredskapsLage>('Förstärkningsläge');
   const [note, setNote] = useState('');
-  const commanderId = useId();
-  const noteId = useId();
+  const ids = { commander: useId(), lage: useId(), note: useId() };
 
   useEffect(() => {
     if (playbook) {
       setCommander(CURRENT_USER.name);
+      setLage(playbook.defaultLage);
       setNote('');
     }
   }, [playbook]);
 
   const activate = () => {
     if (!playbook) return;
-    activatePlaybook(playbook.id, commander, note);
+    activatePlaybook(playbook.id, commander, lage, note);
     onOpenChange(false);
     toast(INCIDENT.incidentActivated);
-    navigate('/incident');
+    if (playbook.navigateTo) {
+      setScope('huddinge');
+      navigate(playbook.navigateTo);
+    } else navigate('/incident');
   };
 
   return (
@@ -45,18 +51,31 @@ export function ActivateDialog({ playbook, onOpenChange }: ActivateDialogProps) 
           <>
             <DialogHeader>
               <DialogTitle>{INCIDENT.activateTitle(playbook.name)}</DialogTitle>
-              <DialogDescription>
-                {INCIDENT.activateBody(playbook.roles.length, playbook.tasks.length, playbook.channels.length, playbook.targets.length)}
-              </DialogDescription>
+              <DialogDescription>{INCIDENT.activateBody(playbook.roles.length, playbook.tasks.length, playbook.channels.length, playbook.targets.length)}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1">
-                <label htmlFor={commanderId}>{INCIDENT.fields.commander}</label>
-                <StaffSelect id={commanderId} value={commander} onChange={setCommander} />
+                <label htmlFor={ids.commander}>{INCIDENT.fields.commander}</label>
+                <StaffSelect id={ids.commander} value={commander} onChange={setCommander} />
               </div>
               <div className="space-y-1">
-                <label htmlFor={noteId}>{INCIDENT.fields.note}</label>
-                <Textarea id={noteId} value={note} onChange={(e) => setNote(e.target.value)} />
+                <label htmlFor={ids.lage}>{INCIDENT.fields.lage}</label>
+                <Select value={lage} onValueChange={(v) => setLage(v as BeredskapsLage)}>
+                  <SelectTrigger id={ids.lage} className="w-64">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LAGEN.filter((l) => l !== 'Normalläge').map((l) => (
+                      <SelectItem key={l} value={l}>
+                        {l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label htmlFor={ids.note}>{INCIDENT.fields.note}</label>
+                <Textarea id={ids.note} value={note} onChange={(e) => setNote(e.target.value)} />
               </div>
             </div>
             <DialogFooter>

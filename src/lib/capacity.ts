@@ -1,5 +1,7 @@
-// Capacity maths – SPEC.md § 3 (Capability comment) and § 6.1.3.
+// Capacity maths – capability = min(available); limiting = components at the minimum; next = smallest above.
 import type { Capability, Component } from '@/data/types';
+import { CAP } from '@/data/vocab';
+import { fmt } from './format';
 
 export interface CapacityResult {
   capacity: number;
@@ -39,16 +41,16 @@ export function computeCapacity(capability: Capability, overrides?: Record<strin
 }
 
 function joinNames(components: Component[]): string {
-  const names = components.map((c) => c.name);
+  const names = components.map((c) => c.name.toLowerCase());
   if (names.length <= 1) return names[0] ?? '';
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return `${names.slice(0, -1).join(', ')} ${CAP.and} ${names[names.length - 1]}`;
 }
 
-/** The capacity sentence of SPEC.md § 6.1.3. */
+/** The capacity sentence shown under the dependency table, in Swedish. */
 export function capacitySentence(result: CapacityResult): { now: string; next?: string } {
-  const now = `Capacity now: ${result.capacity} ${result.unit}, limited by ${joinNames(result.limiting)} (${result.capacity} available).`;
+  const now = CAP.capacitySentence(fmt(result.capacity), result.unit, joinNames(result.limiting), fmt(result.capacity));
   if (!result.next || result.gap === undefined) return { now };
-  const next = `Freeing ${result.gap} ${joinNames(result.limiting)} would allow ${result.gap} more; the next constraint is ${result.next.name} (${result.next.available}).`;
+  const next = CAP.nextSentence(fmt(result.gap), joinNames(result.limiting), fmt(result.gap), result.next.name.toLowerCase(), fmt(result.next.available));
   return { now, next };
 }
 

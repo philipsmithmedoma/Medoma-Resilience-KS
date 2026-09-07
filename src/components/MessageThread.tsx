@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { SendIcon } from 'lucide-react';
 import type { Message } from '@/data/types';
 import { CURRENT_USER, INCIDENT, SYSTEM_ACTOR } from '@/data/vocab';
@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 interface MessageThreadProps {
   messages: Message[];
   onSend: (text: string) => void;
-  /** When set, received messages (not Eva Lind, not System) carry a "Create request" link. */
+  /** When set, received messages (not Eva Lind, not System) carry a "Skapa förfrågan" link. */
   onCreateRequest?: (message: Message) => void;
   emptyText?: string;
   className?: string;
@@ -15,10 +15,11 @@ interface MessageThreadProps {
 
 /**
  * DESIGN.md § 4 message thread: sent messages right-aligned in primary bubbles, received left-aligned
- * in border-colour bubbles, sender line "Name, Role, HH:MM" above each; bg-muted input area.
+ * in border-colour bubbles, sender line "Namn, Roll, HH:MM" above each; bg-muted input area.
  */
 export function MessageThread({ messages, onSend, onCreateRequest, emptyText = INCIDENT.noMessages, className }: MessageThreadProps) {
   const [text, setText] = useState('');
+  const inputId = useId();
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
@@ -49,11 +50,11 @@ export function MessageThread({ messages, onSend, onCreateRequest, emptyText = I
         })}
       </div>
       <form onSubmit={submit} className="flex items-center gap-2 border-t border-border bg-bg-muted p-3">
-        <label htmlFor="message-input" className="sr-only">
+        <label htmlFor={inputId} className="sr-only">
           {INCIDENT.messagePlaceholder}
         </label>
         <input
-          id="message-input"
+          id={inputId}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={INCIDENT.messagePlaceholder}

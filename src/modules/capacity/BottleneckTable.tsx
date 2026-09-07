@@ -1,5 +1,5 @@
 import type { Bottleneck, Capability, CareNode } from '@/data/types';
-import { CC } from '@/data/vocab';
+import { CAP, LABELS } from '@/data/vocab';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
@@ -11,19 +11,19 @@ interface BottleneckTableProps {
   onSelectCapability?: (capabilityId: string) => void;
 }
 
-/** SPEC.md § 6.1.2 – ranked bottlenecks; a row click selects the matching capability when one exists. */
+/** Ranked bottlenecks; a row click selects the matching capability when one exists. */
 export function BottleneckTable({ bottlenecks, capabilities, nodes, showNode = false, onSelectCapability }: BottleneckTableProps) {
-  const capabilityFor = (b: Bottleneck) => capabilities.find((c) => c.nodeId === b.nodeId && c.name === b.capacity);
+  const capabilityFor = (b: Bottleneck) => capabilities.find((c) => c.nodeId === b.nodeId && c.kind === b.capabilityKind);
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-16">{CC.columns.rank}</TableHead>
-          {showNode ? <TableHead>{CC.columns.node}</TableHead> : null}
-          <TableHead>{CC.columns.capacity}</TableHead>
-          <TableHead>{CC.columns.limitingResource}</TableHead>
-          <TableHead>{CC.columns.impact}</TableHead>
-          <TableHead>{CC.columns.wouldUnlock}</TableHead>
+          <TableHead className="w-16">{CAP.columns.rank}</TableHead>
+          {showNode ? <TableHead>{CAP.columns.node}</TableHead> : null}
+          <TableHead>{CAP.columns.capacity}</TableHead>
+          <TableHead>{CAP.columns.limitingResource}</TableHead>
+          <TableHead>{CAP.columns.impact}</TableHead>
+          <TableHead>{CAP.columns.wouldUnlock}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -37,7 +37,7 @@ export function BottleneckTable({ bottlenecks, capabilities, nodes, showNode = f
               className={cn(clickable && 'cursor-pointer')}
               tabIndex={clickable ? 0 : undefined}
               role={clickable ? 'button' : undefined}
-              aria-label={clickable ? `Show ${b.capacity}` : undefined}
+              aria-label={clickable ? LABELS.ariaExpand(b.capacity) : undefined}
               onClick={clickable ? select : undefined}
               onKeyDown={
                 clickable

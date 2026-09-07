@@ -7,7 +7,7 @@ import { SectionHeading } from '@/components/PageTitle';
 import { LogDrawer } from '@/components/LogDrawer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-/** SPEC.md § 6.2.1 – closed incidents this session; hidden when empty. */
+/** Tidigare incidenter – closed incidents this session; hidden when empty. */
 export function PreviousIncidents() {
   const closed = useStore((s) => s.closedIncidents);
   const [showing, setShowing] = useState<ClosedIncident | null>(null);
@@ -19,6 +19,7 @@ export function PreviousIncidents() {
         <TableHeader>
           <TableRow>
             <TableHead>{INCIDENT.columns.name}</TableHead>
+            <TableHead>{INCIDENT.columns.lage}</TableHead>
             <TableHead>{INCIDENT.columns.activated}</TableHead>
             <TableHead>{INCIDENT.columns.closed}</TableHead>
             <TableHead>{INCIDENT.columns.tasksDone}</TableHead>
@@ -31,6 +32,7 @@ export function PreviousIncidents() {
             return (
               <TableRow key={`${c.incident.activatedAt}-${i}`}>
                 <TableCell className="font-medium">{c.incident.name}</TableCell>
+                <TableCell>{c.incident.lage}</TableCell>
                 <TableCell className="tabular">{c.incident.activatedAt}</TableCell>
                 <TableCell className="tabular">{c.closedAt}</TableCell>
                 <TableCell className="tabular">
@@ -46,12 +48,7 @@ export function PreviousIncidents() {
           })}
         </TableBody>
       </Table>
-      <LogDrawer
-        open={showing !== null}
-        onOpenChange={(open) => !open && setShowing(null)}
-        entries={showing?.log ?? []}
-        title={showing ? `${LABELS.auditLog}: ${showing.incident.name}` : LABELS.auditLog}
-      />
+      <LogDrawer open={showing !== null} onOpenChange={(open) => !open && setShowing(null)} entries={showing?.log ?? []} title={showing ? `${LABELS.auditLog}: ${showing.incident.name}` : LABELS.auditLog} />
     </section>
   );
 }

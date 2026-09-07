@@ -2,7 +2,8 @@ import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import type { ResourceRequest } from '@/data/types';
 import { useStore } from '@/data/store';
-import { LABELS, REQUEST_CHAIN, RES } from '@/data/vocab';
+import { LABELS, REQUEST_CHAIN, REQUEST_STATUS_LABELS, RES } from '@/data/vocab';
+import { fmt } from '@/lib/format';
 import { formatClock, isValidClock } from '@/lib/time';
 import { KeyValueTable } from '@/components/KeyValueTable';
 import { StatusChain } from '@/components/StatusChain';
@@ -20,7 +21,7 @@ interface RequestDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** SPEC.md § 6.4.1 – request drawer: key–value table, status chain, audit entries and next-step actions. */
+/** Request drawer: key–value table, status chain, audit entries and next-step actions. */
 export function RequestDrawer({ request, onOpenChange }: RequestDrawerProps) {
   const nodes = useStore((s) => s.nodes);
   const resources = useStore((s) => s.resources);
@@ -59,18 +60,26 @@ export function RequestDrawer({ request, onOpenChange }: RequestDrawerProps) {
           {r ? (
             <>
               <SheetHeader>
-                <SheetTitle>{RES.drawerTitle(r.resourceName, r.quantity)}</SheetTitle>
+                <SheetTitle>{RES.drawerTitle(r.resourceName, fmt(r.quantity))}</SheetTitle>
                 <SheetDescription>{RES.requestedBy(r.requestedBy, r.requestedAt)}</SheetDescription>
               </SheetHeader>
               <div className="space-y-6 px-4 pb-6">
                 <KeyValueTable
                   rows={[
                     { label: RES.fields.resource, value: r.resourceName },
-                    { label: RES.fields.quantity, value: `${r.quantity} ${r.unit}` },
+                    { label: RES.fields.quantity, value: `${fmt(r.quantity)} ${r.unit}` },
                     { label: RES.fields.fromNode, value: r.fromNodeId ? nodeName(r.fromNodeId) : <span className="text-text-muted">{RES.notAllocated}</span> },
                     { label: RES.fields.toNode, value: nodeName(r.toNodeId) },
                     { label: RES.fields.priority, value: <PriorityText priority={r.priority} /> },
-                    { label: RES.fields.status, value: <span className="flex items-center gap-2"><StatusChip status={r.status} />{r.incident ? <StatusChip status={RES.incident} /> : null}</span> },
+                    {
+                      label: RES.fields.status,
+                      value: (
+                        <span className="flex items-center gap-2">
+                          <StatusChip status={r.status} label={REQUEST_STATUS_LABELS[r.status]} />
+                          {r.incident ? <StatusChip status="Incident" label={RES.incident} /> : null}
+                        </span>
+                      ),
+                    },
                     { label: RES.fields.requestedBy, value: r.requestedBy },
                     { label: RES.fields.requestedAt, value: r.requestedAt },
                     { label: RES.fields.eta, value: r.eta ?? LABELS.none },
@@ -81,7 +90,7 @@ export function RequestDrawer({ request, onOpenChange }: RequestDrawerProps) {
 
                 <section>
                   <h3 className="mb-2 text-body font-medium">{RES.statusChain}</h3>
-                  {r.status === 'Rejected' ? <StatusChip status="Rejected" /> : <StatusChain steps={REQUEST_CHAIN} current={r.status} label="Request status" />}
+                  {r.status === 'Rejected' ? <StatusChip status="Rejected" label={REQUEST_STATUS_LABELS.Rejected} /> : <StatusChain steps={REQUEST_CHAIN} labels={REQUEST_STATUS_LABELS} current={r.status} label={RES.statusChain} />}
                 </section>
 
                 {r.status === 'Accepted' ? (
@@ -96,8 +105,8 @@ export function RequestDrawer({ request, onOpenChange }: RequestDrawerProps) {
                           const enough = resource!.available >= r.quantity;
                           return (
                             <SelectItem key={node.id} value={node.id} disabled={!enough}>
-                              {RES.allocateOption(node.name, resource!.available)}
-                              {!enough ? <span className="ml-2 text-small text-text-muted">{RES.notEnough(resource!.available, r.quantity)}</span> : null}
+                              {RES.allocateOption(node.name, fmt(resource!.available))}
+                              {!enough ? <span className="ml-2 text-small text-text-muted">{RES.notEnough(fmt(resource!.available), fmt(r.quantity))}</span> : null}
                             </SelectItem>
                           );
                         })}
@@ -109,7 +118,7 @@ export function RequestDrawer({ request, onOpenChange }: RequestDrawerProps) {
                 {r.status === 'Allocated' ? (
                   <div className="space-y-1">
                     <label htmlFor={ids.eta}>{RES.fields.eta}</label>
-                    <Input id={ids.eta} value={eta} onChange={(e) => setEta(e.target.value)} placeholder="HH:MM" className="w-32" />
+                    <Input id={ids.eta} value={eta} onChange={(e) => setEta(e.target.value)} placeholder={RES.hhmm} className="w-32" />
                   </div>
                 ) : null}
 
@@ -165,7 +174,7 @@ export function RequestDrawer({ request, onOpenChange }: RequestDrawerProps) {
 
                 <section>
                   <h3 className="mb-2 text-body font-medium">{RES.auditEntries}</h3>
-                  {entries.length ? <AuditTable entries={entries} /> : <p className="text-text-secondary">{LABELS.none}</p>}
+                  {entries.length ? <AuditTable entries={entries} /> : <p className="text-text-secondary">{LABELS.nothing}</p>}
                 </section>
               </div>
             </>

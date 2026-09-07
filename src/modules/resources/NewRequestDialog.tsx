@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import type { Priority } from '@/data/types';
 import { useStore } from '@/data/store';
-import { LABELS, PRIORITIES, RES } from '@/data/vocab';
+import { LABELS, PRIORITIES, PRIORITY_LABELS, RES } from '@/data/vocab';
 import { distinctResourceNames } from '@/lib/inventory';
 import type { ParsedRequest } from '@/lib/parse';
 import { StatusChip } from '@/components/Chip';
@@ -15,15 +15,16 @@ import { Textarea } from '@/components/ui/textarea';
 interface NewRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  prefill?: ParsedRequest | null; // from the message parser (§ 6.4.3); labelled Suggested until created
+  prefill?: ParsedRequest | null; // from the message parser; labelled Föreslagen until created
 }
 
-/** SPEC.md § 6.4.1 – "+ New request": Resource, Quantity, To node, Priority (default Normal), Note. */
+/** "Ny förfrågan": Resurs, Antal, Till nod, Prioritet (default Normal), Not. */
 export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDialogProps) {
   const resources = useStore((s) => s.resources);
   const nodes = useStore((s) => s.nodes);
   const createRequest = useStore((s) => s.createRequest);
   const names = distinctResourceNames(resources);
+  const targets = nodes.filter((n) => n.type !== 'Capacity class');
   const [resourceName, setResourceName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [toNodeId, setToNodeId] = useState('');
@@ -54,7 +55,7 @@ export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDial
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {RES.newRequest}
-            {prefill ? <StatusChip status="Suggested" /> : null}
+            {prefill ? <StatusChip status="Suggested" label={RES.suggestedPrefill} /> : null}
           </DialogTitle>
           {prefill ? <DialogDescription>{RES.suggestedPrefill}</DialogDescription> : null}
         </DialogHeader>
@@ -85,7 +86,7 @@ export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDial
                 <SelectValue placeholder={RES.fields.toNode} />
               </SelectTrigger>
               <SelectContent>
-                {nodes.map((n) => (
+                {targets.map((n) => (
                   <SelectItem key={n.id} value={n.id}>
                     {n.name}
                   </SelectItem>
@@ -102,7 +103,7 @@ export function NewRequestDialog({ open, onOpenChange, prefill }: NewRequestDial
               <SelectContent>
                 {PRIORITIES.map((p) => (
                   <SelectItem key={p} value={p}>
-                    {p}
+                    {PRIORITY_LABELS[p]}
                   </SelectItem>
                 ))}
               </SelectContent>

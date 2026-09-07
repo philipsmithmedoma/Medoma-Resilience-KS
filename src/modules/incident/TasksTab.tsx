@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Incident, TaskStatus } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT, TASK_STATUSES } from '@/data/vocab';
+import { INCIDENT, TASK_STATUSES, TASK_STATUS_LABELS } from '@/data/vocab';
 import { areasOf } from '@/lib/incident';
 import { StatusGlyph } from '@/components/StatusGlyph';
 import { RolePill, TextPill } from '@/components/RolePill';
@@ -12,7 +12,7 @@ function nextTaskStatus(status: TaskStatus): TaskStatus {
   return TASK_STATUSES[(i + 1) % TASK_STATUSES.length];
 }
 
-/** SPEC.md § 6.2.3 Tasks: grouped by area in playbook order; status glyph cycles; Assign opens a staff select. */
+/** Uppgifter: grouped by area in playbook order; status glyph cycles; Tilldela opens a staff select. */
 export function TasksTab({ incident }: { incident: Incident }) {
   const staff = useStore((s) => s.staff);
   const setTaskStatus = useStore((s) => s.setTaskStatus);
@@ -36,14 +36,17 @@ export function TasksTab({ incident }: { incident: Incident }) {
                   <li key={t.id} className="flex min-h-10 items-center gap-3 py-1.5">
                     <button
                       type="button"
-                      aria-label={`${t.title}: ${t.status}. Change status`}
-                      title={t.status}
+                      aria-label={`${t.title}: ${TASK_STATUS_LABELS[t.status]}. ${INCIDENT.changeStatus}`}
+                      title={TASK_STATUS_LABELS[t.status]}
                       onClick={() => setTaskStatus(t.id, nextTaskStatus(t.status))}
                       className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-bg-muted"
                     >
                       <StatusGlyph status={t.status} />
                     </button>
-                    <span className="min-w-0 flex-1">{t.title}</span>
+                    <span className="min-w-0 flex-1">
+                      {t.title}
+                      {t.note ? <span className="block text-small text-text-muted">{t.note}</span> : null}
+                    </span>
                     <TextPill>{t.ownerRole}</TextPill>
                     {owner ? (
                       <span className="flex items-center gap-2 text-small text-text-secondary">
@@ -58,7 +61,7 @@ export function TasksTab({ incident }: { incident: Incident }) {
                       <StaffSelect
                         className="w-56"
                         value={t.owner}
-                        ariaLabel={`Assign ${t.title}`}
+                        ariaLabel={`${INCIDENT.assign} ${t.title}`}
                         autoOpen
                         onChange={(name) => {
                           assignTask(t.id, name);
@@ -66,7 +69,7 @@ export function TasksTab({ incident }: { incident: Incident }) {
                         }}
                       />
                     ) : (
-                      <button type="button" className="w-14 text-right text-primary hover:text-primary-hover hover:underline" onClick={() => setAssigning(t.id)}>
+                      <button type="button" className="w-16 text-right text-primary hover:text-primary-hover hover:underline" onClick={() => setAssigning(t.id)}>
                         {INCIDENT.assign}
                       </button>
                     )}
