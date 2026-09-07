@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { Circle, CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { CareNode } from '@/data/types';
-import { EVAC, NODE_STATUS_COLOURS, NODE_STATUS_LABELS } from '@/data/vocab';
+import { NODE_STATUS_COLOURS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt } from '@/lib/format';
 import { cssColor, useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
@@ -55,7 +56,7 @@ export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, 
   const from = nodes.find((n) => n.id === lineFrom);
   return (
     <MapContainer center={center ?? [59.35, 18.0]} zoom={zoom ?? 9} scrollWheelZoom={false} className={cn('h-full w-full', className)} attributionControl>
-      <TileLayer attribution={EVAC.map.attribution} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <TileLayer attribution={t('EVAC.map.attribution')} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <FitBounds nodes={markers} center={center} zoom={zoom} />
       {areas.map((n) => {
         const isSelected = n.id === selectedId;
@@ -104,7 +105,7 @@ export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, 
             <Popup>
               <span className="font-medium">{n.name}</span>
               <br />
-              {free !== undefined && free !== null ? EVAC.map.freePlaces(fmt(free)) : NODE_STATUS_LABELS[n.status]}
+              {free !== undefined && free !== null ? t('EVAC.map.freePlaces', { n: fmt(free) }) : tm('NODE_STATUS_LABELS')[n.status]}
             </Popup>
           </CircleMarker>
         );

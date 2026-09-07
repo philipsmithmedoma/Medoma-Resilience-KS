@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { CareNode } from '@/data/types';
-import { LABELS, NET, NODE_STATUS_LABELS, NODE_TYPE_LABELS, SHARING_LABELS, SYNC_LABELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
+import { nodeLabel } from '@/lib/scope';
 import { displaySyncState, viewFigure, type OutageView } from '@/lib/figure';
 import { fmt } from '@/lib/format';
 import { isStale } from '@/lib/time';
@@ -23,19 +24,19 @@ export function NodesTable({ nodes, clock, outage, extended = false }: NodesTabl
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>{NET.columns.node}</TableHead>
-          <TableHead>{NET.columns.type}</TableHead>
-          <TableHead>{NET.columns.status}</TableHead>
-          <TableHead className="text-right">{NET.columns.capacity}</TableHead>
-          <TableHead className="text-right">{NET.columns.free}</TableHead>
-          <TableHead className="text-right">{NET.columns.iva}</TableHead>
-          <TableHead>{NET.columns.sharing}</TableHead>
-          <TableHead>{NET.columns.sync}</TableHead>
-          <TableHead>{NET.columns.source}</TableHead>
+          <TableHead>{t('NET.columns.node')}</TableHead>
+          <TableHead>{t('NET.columns.type')}</TableHead>
+          <TableHead>{t('NET.columns.status')}</TableHead>
+          <TableHead className="text-right">{t('NET.columns.capacity')}</TableHead>
+          <TableHead className="text-right">{t('NET.columns.free')}</TableHead>
+          <TableHead className="text-right">{t('NET.columns.iva')}</TableHead>
+          <TableHead>{t('NET.columns.sharing')}</TableHead>
+          <TableHead>{t('NET.columns.sync')}</TableHead>
+          <TableHead>{t('NET.columns.source')}</TableHead>
           {extended ? (
             <>
-              <TableHead>{NET.columns.lead}</TableHead>
-              <TableHead>{NET.columns.place}</TableHead>
+              <TableHead>{t('NET.columns.lead')}</TableHead>
+              <TableHead>{t('NET.columns.place')}</TableHead>
             </>
           ) : null}
         </TableRow>
@@ -54,7 +55,7 @@ export function NodesTable({ nodes, clock, outage, extended = false }: NodesTabl
               key={n.id}
               tabIndex={0}
               role="link"
-              aria-label={LABELS.ariaOpen(n.name)}
+              aria-label={t('LABELS.ariaOpen', { name: nodeLabel(n) })}
               className="cursor-pointer"
               onClick={() => navigate(`/natverk/${n.id}`)}
               onKeyDown={(e) => {
@@ -64,20 +65,20 @@ export function NodesTable({ nodes, clock, outage, extended = false }: NodesTabl
                 }
               }}
             >
-              <TableCell className="font-medium">{n.name}</TableCell>
-              <TableCell>{NODE_TYPE_LABELS[n.type]}</TableCell>
+              <TableCell className="font-medium">{nodeLabel(n)}</TableCell>
+              <TableCell>{tm('NODE_TYPE_LABELS')[n.type]}</TableCell>
               <TableCell>
-                <StatusChip status={n.status} label={NODE_STATUS_LABELS[n.status]} />
+                <StatusChip status={n.status} label={tm('NODE_STATUS_LABELS')[n.status]} />
               </TableCell>
               <TableCell className="text-right tabular">{total ? fmt(total.value) : '–'}</TableCell>
-              <TableCell className="text-right tabular">{free && shared ? fmt(free.value) : free ? LABELS.notShared : '–'}</TableCell>
+              <TableCell className="text-right tabular">{free && shared ? fmt(free.value) : free ? t('LABELS.notShared') : '–'}</TableCell>
               <TableCell className="text-right tabular">
-                {icuTotal ? (icu && icu.value !== null && shared ? `${fmt(icu.value)} / ${fmt(icuTotal.value)}` : icuTotal.value === null ? LABELS.unknown : `– / ${fmt(icuTotal.value)}`) : '–'}
+                {icuTotal ? (icu && icu.value !== null && shared ? `${fmt(icu.value)} / ${fmt(icuTotal.value)}` : icuTotal.value === null ? t('LABELS.unknown') : `– / ${fmt(icuTotal.value)}`) : '–'}
               </TableCell>
-              <TableCell>{SHARING_LABELS[n.sharing]}</TableCell>
+              <TableCell>{tm('SHARING_LABELS')[n.sharing]}</TableCell>
               <TableCell>
                 <span className="flex items-center gap-2">
-                  <StatusChip status={sync} label={SYNC_LABELS[sync]} />
+                  <StatusChip status={sync} label={tm('SYNC_LABELS')[sync]} />
                   <TimeStamp time={n.lastSync} stale={isStale(clock, n.lastSync)} />
                 </span>
               </TableCell>

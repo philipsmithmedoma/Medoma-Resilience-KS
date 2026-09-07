@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { EVAC, SITE_LABELS } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { isInTransit } from '@/lib/evacuation';
 import { fmt } from '@/lib/format';
 import { defaultEvacuationSite, isSite, siteName } from '@/lib/scope';
@@ -50,63 +50,63 @@ export function EvacuationPage() {
 
   const onSuggest = () => {
     const r = suggestPlan(site);
-    toast(EVAC.toasts.suggested(fmt(r.suggested), fmt(r.unplaced)));
+    toast(t('EVAC.toasts.suggested', { n: fmt(r.suggested), m: fmt(r.unplaced) }));
   };
   const onClear = () => {
     clearSuggestions(site);
-    toast(EVAC.toasts.suggestionsCleared);
+    toast(t('EVAC.toasts.suggestionsCleared'));
   };
 
   return (
     <div className="flex flex-col" style={{ height: incident ? 'calc(100vh - 136px)' : 'calc(100vh - 96px)' }}>
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="space-y-2">
-          <PageTitle title={EVAC.title} scope={EVAC.from(siteName(site))}>
+          <PageTitle title={t('EVAC.title')} scope={t('EVAC.from', { site: siteName(site) })}>
             {!isSite(scope) ? (
               <SegmentedControl
-                label={EVAC.siteSwitch}
+                label={t('EVAC.siteSwitch')}
                 value={site}
                 onChange={(v) => {
                   setSite(v);
                   setSelectedId(null);
                 }}
                 options={[
-                  { value: 'solna', label: SITE_LABELS.solna },
-                  { value: 'huddinge', label: SITE_LABELS.huddinge },
+                  { value: 'solna', label: t('SITE_LABELS.solna') },
+                  { value: 'huddinge', label: t('SITE_LABELS.huddinge') },
                 ]}
               />
             ) : null}
           </PageTitle>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-body">
             <span>
-              {target ? EVAC.target(fmt(target.target)) : EVAC.noTarget}
-              {target ? <span className="ml-2 text-text-secondary">{EVAC.moved(fmt(moved))}</span> : null}
+              {target ? t('EVAC.target', { n: fmt(target.target) }) : t('EVAC.noTarget')}
+              {target ? <span className="ml-2 text-text-secondary">{t('EVAC.moved', { n: fmt(moved) })}</span> : null}
             </span>
             <span className="tabular">
-              {EVAC.counts.planned} {counts.planned}
+              {t('EVAC.counts.planned')} {counts.planned}
             </span>
             <span className="tabular">
-              {EVAC.counts.accepted} {counts.accepted}
+              {t('EVAC.counts.accepted')} {counts.accepted}
             </span>
             <span className="tabular">
-              {EVAC.counts.inTransit} {counts.inTransit}
+              {t('EVAC.counts.inTransit')} {counts.inTransit}
             </span>
             <span className="tabular">
-              {EVAC.counts.arrived} {counts.arrived}
+              {t('EVAC.counts.arrived')} {counts.arrived}
             </span>
             <span className="tabular">
-              {EVAC.counts.handedOver} {counts.handedOver}
+              {t('EVAC.counts.handedOver')} {counts.handedOver}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-4">
           {hasSuggestions ? (
             <Button variant="link" onClick={onClear}>
-              {EVAC.clearSuggestions}
+              {t('EVAC.clearSuggestions')}
             </Button>
           ) : null}
           <Button variant="secondary" onClick={onSuggest}>
-            {EVAC.suggestPlan}
+            {t('EVAC.suggestPlan')}
           </Button>
         </div>
       </div>

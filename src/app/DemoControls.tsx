@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { useStore } from '@/data/store';
-import { CUSTOMER_NAME, LABELS } from '@/data/vocab';
+import { CUSTOMER_NAME } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { formatClock } from '@/lib/time';
 
 /** SPEC.md § 2 – the Demo popover: outage switch, reset, demo clock line. */
@@ -21,12 +22,12 @@ export function DemoControls() {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="secondary" size="sm">
-          {LABELS.demo}
+          {t('LABELS.demo')}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <label htmlFor={switchId}>{LABELS.simulateEhrOutage}</label>
+          <label htmlFor={switchId}>{t('LABELS.simulateEhrOutage')}</label>
           <Switch id={switchId} checked={ehrOutage} onCheckedChange={(on) => setEhrOutage(on, CUSTOMER_NAME)} />
         </div>
         <Button
@@ -34,12 +35,12 @@ export function DemoControls() {
           onClick={() => {
             reset();
             navigate('/');
-            toast(LABELS.demoReset);
+            toast(t('LABELS.demoReset'));
           }}
         >
-          {LABELS.resetDemo}
+          {t('LABELS.resetDemo')}
         </Button>
-        <p className="text-small text-text-secondary">{LABELS.demoClock(formatClock(clock))}</p>
+        <p className="text-small text-text-secondary">{t('LABELS.demoClock', { hhmm: formatClock(clock), date: t('LABELS.demoDate') })}</p>
       </PopoverContent>
     </Popover>
   );

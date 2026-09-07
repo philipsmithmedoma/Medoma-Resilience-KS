@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { Capability, Figure } from '@/data/types';
-import { CAP, SITE_LABELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { capacitySentence, computeCapacity, hasOverrides } from '@/lib/capacity';
 import { fmt } from '@/lib/format';
 import { isSite } from '@/lib/scope';
@@ -26,7 +26,7 @@ interface WhatLimitsWhatProps {
 }
 
 export function capabilityLabel(c: Capability, withSite: boolean): string {
-  return withSite && isSite(c.nodeId) ? `${c.name} ${SITE_LABELS[c.nodeId]}` : c.name;
+  return withSite && isSite(c.nodeId) ? `${c.name} ${tm('SITE_LABELS')[c.nodeId]}` : c.name;
 }
 
 /** SPEC.md § 6.5 "Vad begränsar vad" – dependency table with confidence, capacity sentence, ladder, what-if and note. */
@@ -38,8 +38,8 @@ export function WhatLimitsWhat(props: WhatLimitsWhatProps) {
   if (!capability) {
     return (
       <section id={headingId}>
-        <SectionHeading>{CAP.whatLimitsWhat}</SectionHeading>
-        <p className="text-text-secondary">{CAP.noCapabilities}</p>
+        <SectionHeading>{t('CAP.whatLimitsWhat')}</SectionHeading>
+        <p className="text-text-secondary">{t('CAP.noCapabilities')}</p>
       </section>
     );
   }
@@ -57,41 +57,41 @@ export function WhatLimitsWhat(props: WhatLimitsWhatProps) {
       <SectionHeading
         right={
           <div className="flex items-center gap-3">
-            {dirty ? <StatusChip status="Estimat" label={CAP.whatIfNotSaved} /> : null}
+            {dirty ? <StatusChip status="Estimat" label={t('CAP.whatIfNotSaved')} /> : null}
             <label htmlFor={switchId} className="text-body">
-              {CAP.whatIf}
+              {t('CAP.whatIf')}
             </label>
             <Switch id={switchId} checked={whatIfOn} onCheckedChange={onWhatIfToggle} />
             {whatIfOn ? (
               <Button variant="link" onClick={onResetWhatIf} disabled={!dirty}>
-                {CAP.reset}
+                {t('CAP.reset')}
               </Button>
             ) : null}
           </div>
         }
       >
-        {CAP.whatLimitsWhat}
+        {t('CAP.whatLimitsWhat')}
       </SectionHeading>
 
-      <SegmentedControl label={CAP.capabilitySwitch} value={capability.id} onChange={onSelect} options={capabilities.map((c) => ({ value: c.id, label: capabilityLabel(c, withSite) }))} />
+      <SegmentedControl label={t('CAP.capabilitySwitch')} value={capability.id} onChange={onSelect} options={capabilities.map((c) => ({ value: c.id, label: capabilityLabel(c, withSite) }))} />
 
       <div className="mt-4 grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-8">
         <div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{CAP.columns.component}</TableHead>
+                <TableHead>{t('CAP.columns.component')}</TableHead>
                 <TableHead className="w-28 text-right">
                   <span className="inline-flex items-center gap-2">
-                    {CAP.columns.total}
+                    {t('CAP.columns.total')}
                     {uniform ? <ConfidenceChip figure={componentFigure(capability.components[0])} /> : null}
                   </span>
                 </TableHead>
-                <TableHead className="w-32 text-right">{CAP.columns.available}</TableHead>
+                <TableHead className="w-32 text-right">{t('CAP.columns.available')}</TableHead>
                 <TableHead className="w-28" />
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody lang="sv">
               {result.components.map((c) => (
                 <TableRow key={c.name}>
                   <TableCell className="whitespace-normal">{c.name}</TableCell>
@@ -108,7 +108,7 @@ export function WhatLimitsWhat(props: WhatLimitsWhatProps) {
                         min={0}
                         max={c.total}
                         value={c.available}
-                        aria-label={`${c.name} ${CAP.columns.available.toLowerCase()}`}
+                        aria-label={`${c.name} ${t('CAP.columns.available').toLowerCase()}`}
                         onChange={(e) => onOverride(c.name, Number(e.target.value))}
                         className="ml-auto h-8 w-24 text-right"
                       />
@@ -116,12 +116,12 @@ export function WhatLimitsWhat(props: WhatLimitsWhatProps) {
                       fmt(c.available)
                     )}
                   </TableCell>
-                  <TableCell>{limitingNames.has(c.name) ? <StatusChip status="Limiting" label={CAP.limiting} /> : null}</TableCell>
+                  <TableCell>{limitingNames.has(c.name) ? <StatusChip status="Limiting" label={t('CAP.limiting')} /> : null}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          <p className="mt-4">
+          <p className="mt-4" lang="sv">
             {sentence.now}
             {sentence.next ? ` ${sentence.next}` : ''}
           </p>
@@ -130,7 +130,7 @@ export function WhatLimitsWhat(props: WhatLimitsWhatProps) {
 
         {capability.ladder ? (
           <div>
-            <h3 className="mb-2 text-text-secondary">{CAP.ladderLabel}</h3>
+            <h3 className="mb-2 text-text-secondary">{t('CAP.ladderLabel')}</h3>
             <ol className="space-y-2">
               {capability.ladder.map((step) => (
                 <li key={step.label} className="grid grid-cols-[180px_minmax(0,1fr)_48px] items-center gap-3 text-small">

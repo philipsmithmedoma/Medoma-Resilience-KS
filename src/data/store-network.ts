@@ -2,7 +2,7 @@
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
 import type { CareNode, NodeStatus, NodeType, SharingLevel, Site } from './types';
-import { NET, NODE_STATUS_LABELS, NODE_TYPE_LABELS, SHARING_LABELS } from './vocab';
+import { t, tm } from '@/lib/i18n';
 import { formatClock } from '@/lib/time';
 import { fmt } from '@/lib/format';
 
@@ -48,7 +48,7 @@ export const createNetworkSlice: StateCreator<AppStore, [], [], NetworkActions> 
       accepts: ['Ward'],
     };
     set((s) => ({ nodes: [...s.nodes, node] }));
-    logEntry(NET.audit.stoodUp(node.name), node.name, NET.audit.detail(NODE_TYPE_LABELS[type], site.name, fmt(plannedBeds)));
+    logEntry(t('NET.audit.stoodUp', { name: node.name }), node.name, t('NET.audit.detail', { type: tm('NODE_TYPE_LABELS')[type], site: site.name, beds: fmt(plannedBeds) }));
     return id;
   },
 
@@ -71,7 +71,7 @@ export const createNetworkSlice: StateCreator<AppStore, [], [], NetworkActions> 
       };
     }
     set((s) => ({ nodes: s.nodes.map((n) => (n.id === nodeId ? next : n)) }));
-    logEntry(NET.audit.changedStatus(node.name, NODE_STATUS_LABELS[status]), node.name, NODE_STATUS_LABELS[status]);
+    logEntry(t('NET.audit.changedStatus', { node: node.name, value: tm('NODE_STATUS_LABELS')[status] }), node.name, tm('NODE_STATUS_LABELS')[status]);
   },
 
   setNodeSharing: (nodeId, sharing) => {
@@ -79,6 +79,6 @@ export const createNetworkSlice: StateCreator<AppStore, [], [], NetworkActions> 
     const node = nodes.find((n) => n.id === nodeId);
     if (!node || node.sharing === sharing) return;
     set((s) => ({ nodes: s.nodes.map((n) => (n.id === nodeId ? { ...n, sharing } : n)) }));
-    logEntry(NET.audit.changedSharing(node.name, SHARING_LABELS[sharing]), node.name, SHARING_LABELS[sharing]);
+    logEntry(t('NET.audit.changedSharing', { node: node.name, value: tm('SHARING_LABELS')[sharing] }), node.name, tm('SHARING_LABELS')[sharing]);
   },
 });

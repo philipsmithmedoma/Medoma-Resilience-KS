@@ -1,5 +1,5 @@
 import type { Figure } from '@/data/types';
-import { DATA_SOURCE_LABELS, LABELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { fmt } from '@/lib/format';
 import { isStale } from '@/lib/time';
 import { cn } from '@/lib/utils';
@@ -34,14 +34,14 @@ export function LastConfirmed({ figure, clock }: { figure: Figure; clock: number
   const stale = isStale(clock, figure.lastConfirmed);
   return (
     <div className="text-text-muted">
-      {LABELS.lastConfirmedLabel} <TimeStamp time={figure.lastConfirmed} stale={stale} /> ({DATA_SOURCE_LABELS[figure.dataSource]})
+      {t('LABELS.lastConfirmedLabel')} <TimeStamp time={figure.lastConfirmed} stale={stale} /> ({tm('DATA_SOURCE_LABELS')[figure.dataSource]})
     </div>
   );
 }
 
 export function TimeStamp({ time, stale }: { time: string; stale: boolean }) {
   return (
-    <span className={cn('tabular', stale && 'text-orange-text')} title={stale ? LABELS.olderThan30 : undefined}>
+    <span className={cn('tabular', stale && 'text-orange-text')} title={stale ? t('LABELS.olderThan30') : undefined}>
       {time}
     </span>
   );
@@ -49,7 +49,7 @@ export function TimeStamp({ time, stale }: { time: string; stale: boolean }) {
 
 /** A figure's value (Swedish format, "Okänt" for null) followed by its confidence chip. */
 export function FigureText({ figure, format, className, showSource }: { figure: Figure; format?: (n: number) => string; className?: string; showSource?: boolean }) {
-  const text = figure.value === null ? LABELS.unknown : format ? format(figure.value) : fmt(figure.value);
+  const text = figure.value === null ? t('LABELS.unknown') : format ? format(figure.value) : fmt(figure.value);
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
       <span className="tabular">{text}</span>

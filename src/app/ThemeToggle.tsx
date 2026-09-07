@@ -1,5 +1,5 @@
 import { MoonIcon, SunIcon } from 'lucide-react';
-import { LABELS } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 export function ThemeToggle() {
   const theme = useTheme((s) => s.theme);
   const toggleTheme = useTheme((s) => s.toggleTheme);
-  const label = theme === 'dark' ? LABELS.lightMode : LABELS.darkMode;
+  const label = theme === 'dark' ? t('LABELS.lightMode') : t('LABELS.darkMode');
   return (
     <Tooltip>
       <TooltipTrigger asChild>

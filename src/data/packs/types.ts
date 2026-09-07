@@ -28,10 +28,16 @@ export type SyncState = 'Synced' | 'Delayed' | 'Manual' | 'Offline';
 export type AcceptsLevel = 'Ward' | 'Monitored' | 'Intensive' | 'Home';
 export type CareLevel = 'Ward' | 'Monitored' | 'Intensive';
 
+/** A text the pack carries in both languages (DESIGN-LANG.md § 3); proper nouns stay plain strings. */
+export interface LocalizedText {
+  sv: string;
+  en: string;
+}
+
 export type LadderKey = 'fastsallda' | 'disponibla_normal' | 'disponibla_v33' | 'belagda' | 'lediga';
 export interface LadderStep {
   key: LadderKey;
-  label: string;
+  label: LocalizedText;
   figure: Figure;
 }
 
@@ -44,6 +50,7 @@ export interface ExtraFigure {
 export interface CareNode {
   id: NodeId;
   name: string;
+  descriptorEn?: string; // English descriptor shown after the Swedish name in English mode (DESIGN-LANG.md § 4)
   shortName: string; // map label
   type: NodeType;
   status: NodeStatus;
@@ -108,7 +115,7 @@ export interface FlowMetric {
   key: string;
   site: SiteId;
   block: FlowBlock;
-  label: string;
+  label: LocalizedText;
   value: Figure;
   qualifier?: string;
   unlockRoute?: string;
@@ -249,9 +256,9 @@ export interface Patient {
 export type BeredskapsLage = 'Normalläge' | 'Stabsläge' | 'Förstärkningsläge' | 'Katastrofläge';
 
 export interface PlaybookTask {
-  title: string;
-  area: string;
-  ownerRole: string;
+  title: LocalizedText;
+  area: LocalizedText;
+  ownerRole: LocalizedText; // its sv form is the role key
   dueOffsetMin: number;
   note?: string;
 }
@@ -267,7 +274,7 @@ export type TargetMeasure =
   | 'icuAddedDays';
 
 export interface PlaybookTarget {
-  label: string;
+  label: LocalizedText;
   target: number;
   unit: string;
   withinMin: number;
@@ -281,13 +288,13 @@ export interface Playbook {
   id: string;
   key: PlaybookKey;
   code: string; // PB1–PB5
-  name: string;
-  trigger: string;
-  summary: string;
+  name: LocalizedText;
+  trigger: LocalizedText;
+  summary: LocalizedText;
   defaultLage: BeredskapsLage;
-  roles: string[];
+  roles: LocalizedText[]; // sv forms are the role keys
   tasks: PlaybookTask[];
-  channels: string[];
+  channels: LocalizedText[]; // sv forms are the channel keys
   targets: PlaybookTarget[];
   setsEhrOutage?: boolean;
   navigateTo?: string; // PB4 opens Evakuering
@@ -305,13 +312,13 @@ export interface IncidentTask extends PlaybookTask {
 
 export interface Channel {
   id: string;
-  name: string;
-  memberRoles: string[];
+  name: LocalizedText;
+  memberRoles: LocalizedText[];
   messages: Message[];
 }
 
 export interface IncidentTarget {
-  label: string;
+  label: LocalizedText;
   target: number;
   unit: string;
   dueAt: string;
@@ -322,7 +329,7 @@ export interface IncidentTarget {
 export interface Incident {
   playbookId: string;
   playbookKey: PlaybookKey;
-  name: string;
+  name: LocalizedText;
   lage: BeredskapsLage;
   activatedAt: string;
   activatedBy: string;
@@ -348,7 +355,7 @@ export type ScenarioKey = 'masskada' | 'tryck' | 'journalbortfall' | 'mottagande
 
 export interface ScenarioParam {
   key: string;
-  label: string;
+  label: LocalizedText;
   type: 'number' | 'select';
   options?: Array<{ value: string; label: string }>;
   unit?: string;
@@ -356,7 +363,7 @@ export interface ScenarioParam {
 
 export interface ScenarioPreset {
   key: ScenarioKey;
-  name: string;
+  name: LocalizedText;
   params: Record<string, number | string>;
   paramDefs: ScenarioParam[];
   tickMin: number;

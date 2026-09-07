@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react';
 import type { Patient, Stability, TransportNeed } from '@/data/types';
-import { EQUIPMENT_LABELS, EVAC, LABELS, MOVE_STATUS_LABELS, STABILITIES, STABILITY_LABELS, TRANSPORT_LABELS, TRANSPORT_NEEDS } from '@/data/vocab';
+import { EVAC_STATUS_FILTERS, STABILITIES, TRANSPORT_NEEDS, type EvacStatusFilter } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { isInTransit, patientName } from '@/lib/evacuation';
 import { cn } from '@/lib/utils';
 import { StatusChip } from '@/components/Chip';
 import { Button } from '@/components/ui/button';
 
-type StatusFilter = (typeof EVAC.statusFilters)[number]['key'];
-
-function statusMatches(p: Patient, f: StatusFilter): boolean {
+function statusMatches(p: Patient, f: EvacStatusFilter): boolean {
   const m = p.move;
   switch (f) {
     case 'all':
@@ -53,14 +52,16 @@ interface PatientListProps {
 }
 
 const ALL = 'all' as const;
-const STABILITY_OPTIONS = [{ key: ALL, label: EVAC.filters.all }, ...STABILITIES.map((s) => ({ key: s, label: STABILITY_LABELS[s] }))] as const;
-const TRANSPORT_OPTIONS = [{ key: ALL, label: EVAC.filters.all }, ...TRANSPORT_NEEDS.map((t) => ({ key: t, label: TRANSPORT_LABELS[t] }))] as const;
 
 /** Left pane – filter chips, grouped by ward, one row per patient. */
 export function PatientList({ patients, selectedId, onSelect }: PatientListProps) {
   const [stability, setStability] = useState<typeof ALL | Stability>(ALL);
   const [transport, setTransport] = useState<typeof ALL | TransportNeed>(ALL);
-  const [status, setStatus] = useState<StatusFilter>('all');
+  const [status, setStatus] = useState<EvacStatusFilter>('all');
+  // Option labels are built per render so that they follow the locale.
+  const stabilityOptions: ReadonlyArray<{ key: typeof ALL | Stability; label: string }> = [{ key: ALL, label: t('EVAC.filters.all') }, ...STABILITIES.map((s) => ({ key: s, label: tm('STABILITY_LABELS')[s] }))];
+  const transportOptions: ReadonlyArray<{ key: typeof ALL | TransportNeed; label: string }> = [{ key: ALL, label: t('EVAC.filters.all') }, ...TRANSPORT_NEEDS.map((need) => ({ key: need, label: tm('TRANSPORT_LABELS')[need] }))];
+  const statusOptions: ReadonlyArray<{ key: EvacStatusFilter; label: string }> = EVAC_STATUS_FILTERS.map((k) => ({ key: k, label: tm('EVAC.statusFilters')[k] }));
 
   const filtered = useMemo(
     () => patients.filter((p) => (stability === ALL || p.stability === stability) && (transport === ALL || p.transport === transport) && statusMatches(p, status)),
@@ -76,17 +77,17 @@ export function PatientList({ patients, selectedId, onSelect }: PatientListProps
   return (
     <div>
       <div className="sticky top-0 z-10 space-y-2 border-b border-border bg-surface px-4 py-3">
-        <h2 className="text-heading">{EVAC.patients(filtered.length)}</h2>
-        <p className="text-small text-text-muted">{LABELS.fictionalPatients}</p>
-        <FilterRow label={EVAC.filters.stability} options={STABILITY_OPTIONS} value={stability} onChange={setStability} />
-        <FilterRow label={EVAC.filters.transport} options={TRANSPORT_OPTIONS} value={transport} onChange={setTransport} />
-        <FilterRow label={EVAC.filters.status} options={EVAC.statusFilters} value={status} onChange={setStatus} />
+        <h2 className="text-heading">{t('EVAC.patients', { n: filtered.length })}</h2>
+        <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
+        <FilterRow label={t('EVAC.filters.stability')} options={stabilityOptions} value={stability} onChange={setStability} />
+        <FilterRow label={t('EVAC.filters.transport')} options={transportOptions} value={transport} onChange={setTransport} />
+        <FilterRow label={t('EVAC.filters.status')} options={statusOptions} value={status} onChange={setStatus} />
       </div>
       {filtered.length === 0 ? (
         <div className="space-y-2 px-4 py-6">
-          <p>{EVAC.noMatch}</p>
+          <p>{t('EVAC.noMatch')}</p>
           <Button variant="link" onClick={clear}>
-            {EVAC.clearFilters}
+            {t('EVAC.clearFilters')}
           </Button>
         </div>
       ) : (
@@ -108,20 +109,20 @@ export function PatientList({ patients, selectedId, onSelect }: PatientListProps
                           <span className="min-w-0 flex-1 truncate font-medium">
                             {patientName(p)} <span className="font-normal text-text-secondary tabular">{p.age}</span>
                           </span>
-                          <StatusChip status={p.stability} label={STABILITY_LABELS[p.stability]} />
+                          <StatusChip status={p.stability} label={tm('STABILITY_LABELS')[p.stability]} />
                         </span>
                         <span className="flex w-full items-center gap-2 text-small">
-                          <span className="text-text-secondary">{TRANSPORT_LABELS[p.transport]}</span>
-                          {p.equipment.length ? <span className="text-text-muted">{p.equipment.map((e) => EQUIPMENT_LABELS[e]).join(', ')}</span> : null}
+                          <span className="text-text-secondary">{tm('TRANSPORT_LABELS')[p.transport]}</span>
+                          {p.equipment.length ? <span className="text-text-muted">{p.equipment.map((e) => tm('EQUIPMENT_LABELS')[e]).join(', ')}</span> : null}
                           <span className="ml-auto">
                             {p.move ? (
                               p.move.suggested ? (
-                                <StatusChip status="Suggested" label={EVAC.suggested} />
+                                <StatusChip status="Suggested" label={t('EVAC.suggested')} />
                               ) : (
-                                <StatusChip status={p.move.status} label={MOVE_STATUS_LABELS[p.move.status]} />
+                                <StatusChip status={p.move.status} label={tm('MOVE_STATUS_LABELS')[p.move.status]} />
                               )
                             ) : (
-                              <span className="text-text-muted">{EVAC.notPlanned}</span>
+                              <span className="text-text-muted">{t('EVAC.notPlanned')}</span>
                             )}
                           </span>
                         </span>

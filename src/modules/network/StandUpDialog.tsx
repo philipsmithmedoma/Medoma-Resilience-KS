@@ -2,7 +2,8 @@ import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import type { NodeType, SharingLevel } from '@/data/types';
 import { useStore } from '@/data/store';
-import { CURRENT_USER, LABELS, NET, NODE_TYPE_LABELS, SHARING_LABELS, SHARING_LEVELS } from '@/data/vocab';
+import { CURRENT_USER, SHARING_LEVELS, STAND_UP_TYPES } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -44,7 +45,7 @@ export function StandUpDialog({ open, onOpenChange, onCreated }: StandUpDialogPr
     if (!valid) return;
     const id = standUpNode({ name, type, site, plannedBeds: Number(plannedBeds), lead, sharing });
     onOpenChange(false);
-    toast(NET.nodeCreated);
+    toast(t('NET.nodeCreated'));
     onCreated?.(id);
   };
 
@@ -52,11 +53,11 @@ export function StandUpDialog({ open, onOpenChange, onCreated }: StandUpDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{NET.standUp}</DialogTitle>
+          <DialogTitle>{t('NET.standUp')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1">
-            <label htmlFor={ids.site}>{NET.fields.site}</label>
+            <label htmlFor={ids.site}>{t('NET.fields.site')}</label>
             <Select
               value={siteName}
               onValueChange={(v) => {
@@ -78,34 +79,34 @@ export function StandUpDialog({ open, onOpenChange, onCreated }: StandUpDialogPr
             </Select>
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.name}>{NET.fields.name}</label>
+            <label htmlFor={ids.name}>{t('NET.fields.name')}</label>
             <Input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.type}>{NET.fields.type}</label>
+            <label htmlFor={ids.type}>{t('NET.fields.type')}</label>
             <Select value={type} onValueChange={(v) => setType(v as NodeType)}>
               <SelectTrigger id={ids.type} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {NET.standUpTypes.map((t) => (
+                {STAND_UP_TYPES.map((t) => (
                   <SelectItem key={t} value={t}>
-                    {NODE_TYPE_LABELS[t]}
+                    {tm('NODE_TYPE_LABELS')[t]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.beds}>{NET.fields.plannedBeds}</label>
+            <label htmlFor={ids.beds}>{t('NET.fields.plannedBeds')}</label>
             <Input id={ids.beds} type="number" min={1} value={plannedBeds} onChange={(e) => setPlannedBeds(e.target.value)} className="w-32" />
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.lead}>{NET.fields.lead}</label>
+            <label htmlFor={ids.lead}>{t('NET.fields.lead')}</label>
             <StaffSelect id={ids.lead} value={lead} onChange={setLead} />
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.sharing}>{NET.fields.sharing}</label>
+            <label htmlFor={ids.sharing}>{t('NET.fields.sharing')}</label>
             <Select value={sharing} onValueChange={(v) => setSharing(v as SharingLevel)}>
               <SelectTrigger id={ids.sharing} className="w-48">
                 <SelectValue />
@@ -113,7 +114,7 @@ export function StandUpDialog({ open, onOpenChange, onCreated }: StandUpDialogPr
               <SelectContent>
                 {SHARING_LEVELS.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {SHARING_LABELS[s]}
+                    {tm('SHARING_LABELS')[s]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -122,10 +123,10 @@ export function StandUpDialog({ open, onOpenChange, onCreated }: StandUpDialogPr
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            {LABELS.cancel}
+            {t('LABELS.cancel')}
           </Button>
           <Button onClick={submit} disabled={!valid}>
-            {NET.standUp}
+            {t('NET.standUp')}
           </Button>
         </DialogFooter>
       </DialogContent>

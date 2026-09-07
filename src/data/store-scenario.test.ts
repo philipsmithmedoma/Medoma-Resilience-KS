@@ -43,7 +43,7 @@ describe('scenario store (SPEC.md § 7.2–7.4)', () => {
     s().applyRecommendation('katastrof');
     expect(s().incident!.lage).toBe('Katastrofläge');
     s().applyRecommendation('stryk_elektiv');
-    expect(s().incident!.tasks.find((t) => t.title === 'Stryk elektiv operation och frigör salar')!.status).toBe('Done');
+    expect(s().incident!.tasks.find((t) => t.title.sv === 'Stryk elektiv operation och frigör salar')!.status).toBe('Done');
     s().applyRecommendation('transport');
     const req = s().requests[s().requests.length - 1];
     expect(req).toMatchObject({ resourceName: 'Transportambulans', quantity: 4, fromNodeId: 'ambulans', toNodeId: 'solna', priority: 'High', incident: true });

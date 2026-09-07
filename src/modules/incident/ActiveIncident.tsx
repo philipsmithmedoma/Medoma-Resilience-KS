@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import type { BeredskapsLage, Incident } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT, LABELS, LAGEN } from '@/data/vocab';
+import { LAGEN } from '@/data/vocab';
+import { lt, t, tm } from '@/lib/i18n';
 import { taskCounts } from '@/lib/incident';
 import { PageTitle } from '@/components/PageTitle';
 import { StatusChip } from '@/components/Chip';
@@ -31,17 +32,17 @@ export function ActiveIncident({ incident }: { incident: Incident }) {
   const incidentLog = log.slice(Math.max(0, startIndex));
 
   const tabs = [
-    { key: 'overview', label: INCIDENT.tabs.overview },
-    { key: 'tasks', label: `${INCIDENT.tabs.tasks} (${counts.done}/${counts.total})` },
-    { key: 'channels', label: `${INCIDENT.tabs.channels} (${incident.channels.length})` },
-    { key: 'log', label: `${INCIDENT.tabs.log} (${incidentLog.length})` },
+    { key: 'overview', label: t('INCIDENT.tabs.overview') },
+    { key: 'tasks', label: `${t('INCIDENT.tabs.tasks')} (${counts.done}/${counts.total})` },
+    { key: 'channels', label: `${t('INCIDENT.tabs.channels')} (${incident.channels.length})` },
+    { key: 'log', label: `${t('INCIDENT.tabs.log')} (${incidentLog.length})` },
   ];
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-4">
-          <PageTitle title={incident.name}>
+          <PageTitle title={lt(incident.name)}>
             {editingLage ? (
               <Select
                 value={incident.lage}
@@ -49,44 +50,44 @@ export function ActiveIncident({ incident }: { incident: Incident }) {
                 onValueChange={(v) => {
                   setLage(v as BeredskapsLage);
                   setEditingLage(false);
-                  toast(INCIDENT.lageChanged);
+                  toast(t('INCIDENT.lageChanged'));
                 }}
               >
-                <SelectTrigger className="w-56" aria-label={INCIDENT.lage} size="sm">
+                <SelectTrigger className="w-56" aria-label={t('INCIDENT.lage')} size="sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {LAGEN.map((l) => (
                     <SelectItem key={l} value={l}>
-                      {l}
+                      {tm('LAGE_LABELS')[l]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             ) : (
               <>
-                <StatusChip status={incident.lage} />
+                <StatusChip status={incident.lage} label={tm('LAGE_LABELS')[incident.lage]} />
                 <button type="button" className="text-small text-primary-text hover:text-primary-hover hover:underline" onClick={() => setEditingLage(true)}>
-                  {LABELS.change}
+                  {t('LABELS.change')}
                 </button>
               </>
             )}
-            <StatusChip status="Active" label={INCIDENT.active} />
+            <StatusChip status="Active" label={t('INCIDENT.active')} />
           </PageTitle>
           <div className="flex items-center gap-4">
             <Button variant="tertiary" onClick={() => setAddOpen(true)}>
-              {INCIDENT.addTask}
+              {t('INCIDENT.addTask')}
             </Button>
             <Button variant="destructive" onClick={() => setCloseOpen(true)}>
-              {LABELS.closeIncident}
+              {t('LABELS.closeIncident')}
             </Button>
           </div>
         </div>
-        <p className="text-text-secondary">{INCIDENT.activatedLine(incident.activatedAt, incident.activatedBy, incident.commander)}</p>
+        <p className="text-text-secondary">{t('INCIDENT.activatedLine', { at: incident.activatedAt, by: incident.activatedBy, commander: incident.commander })}</p>
         {incident.note ? <p className="text-text-secondary">{incident.note}</p> : null}
       </div>
 
-      <SubTabs tabs={tabs} active={tab} onChange={(k) => setTab(k as TabKey)} label={INCIDENT.title} />
+      <SubTabs tabs={tabs} active={tab} onChange={(k) => setTab(k as TabKey)} label={t('INCIDENT.title')} />
 
       {tab === 'overview' ? <OverviewTab incident={incident} /> : null}
       {tab === 'tasks' ? <TasksTab incident={incident} /> : null}

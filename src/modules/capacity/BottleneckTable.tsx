@@ -1,5 +1,5 @@
 import type { Bottleneck, Capability, CareNode } from '@/data/types';
-import { CAP, LABELS } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
@@ -18,15 +18,16 @@ export function BottleneckTable({ bottlenecks, capabilities, nodes, showNode = f
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-16">{CAP.columns.rank}</TableHead>
-          {showNode ? <TableHead>{CAP.columns.node}</TableHead> : null}
-          <TableHead>{CAP.columns.capacity}</TableHead>
-          <TableHead>{CAP.columns.limitingResource}</TableHead>
-          <TableHead>{CAP.columns.impact}</TableHead>
-          <TableHead>{CAP.columns.wouldUnlock}</TableHead>
+          <TableHead className="w-16">{t('CAP.columns.rank')}</TableHead>
+          {showNode ? <TableHead>{t('CAP.columns.node')}</TableHead> : null}
+          <TableHead>{t('CAP.columns.capacity')}</TableHead>
+          <TableHead>{t('CAP.columns.limitingResource')}</TableHead>
+          <TableHead>{t('CAP.columns.impact')}</TableHead>
+          <TableHead>{t('CAP.columns.wouldUnlock')}</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      {/* Bottleneck narratives are pack data and stay Swedish in both languages (DESIGN-LANG.md § 3). */}
+      <TableBody lang="sv">
         {bottlenecks.map((b) => {
           const cap = capabilityFor(b);
           const clickable = Boolean(cap && onSelectCapability);
@@ -37,7 +38,7 @@ export function BottleneckTable({ bottlenecks, capabilities, nodes, showNode = f
               className={cn(clickable && 'cursor-pointer')}
               tabIndex={clickable ? 0 : undefined}
               role={clickable ? 'button' : undefined}
-              aria-label={clickable ? LABELS.ariaExpand(b.capacity) : undefined}
+              aria-label={clickable ? t('LABELS.ariaExpand', { name: b.capacity }) : undefined}
               onClick={clickable ? select : undefined}
               onKeyDown={
                 clickable

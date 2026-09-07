@@ -100,7 +100,7 @@ describe('pack shape (DATA.md § 1–8)', () => {
     expect(pack.playbooks[3].navigateTo).toBe('/evakuering');
     expect(pack.playbooks[4]).toMatchObject({ tickDays: true });
     expect(pack.playbooks[4].targets[0]).toMatchObject({ withinUnit: 'dygn', withinMin: 14400 });
-    expect(pb1.tasks.some((t) => t.title === 'Anmäl läget till TiB och RSSL')).toBe(true);
+    expect(pb1.tasks.some((t) => t.title.sv === 'Anmäl läget till TiB och RSSL')).toBe(true);
   });
 
   it('resource counts add up to the total for every row, including "Ej i tjänst"', () => {

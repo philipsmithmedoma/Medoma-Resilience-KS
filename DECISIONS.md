@@ -409,3 +409,23 @@ Spec: DESIGN-KS.md § 2, DESIGN-DARK.md § 1, DESIGN-LANG.md § 1
 Decision: The GitHub tools available in the session cannot attach files to a pull request, so the required screenshots (six pages in both themes, Start and Läget nu in English) are committed under `docs/screenshots/batch5/` and embedded in the pull request description from the branch. The 1440 px set was checked but not committed.
 Rejected: Uploading elsewhere – nothing outside the repository is allowed.
 Spec: DESIGN-DARK.md § 5, DESIGN-LANG.md § 6
+
+## 2026-09-07 – Batch 5 – t() over nested tables with dotted keys; tm() for label maps; tn() for plurals
+Decision: `vocab.ts` exports two tables, `sv` and `en`, with the same nested shape (`Vocab = typeof sv`, `en: Vocab`), string leaves with `{name}` placeholders and no functions. `t('FLOW.placement.audit.placed', { ward })` resolves a dotted key in the current locale and interpolates; `tm('NODE_STATUS_LABELS')` returns a branch (enum label maps, the chapter list, the recommendation table) typed from the table; `tn('FLOW.discharge.days', n)` picks `_one`/`_other`. Keys are typed as the union of leaf paths, so a wrong key fails the type check. The unit test asserts key parity in both directions, identical placeholder sets per key, and the plural pairs. Non-linguistic constants (ids, enum lists, chip tones, tile tokens, vehicle names) stay exported from `vocab.ts` beside the tables. The locale is read at call time from the i18n store; the app shell reads it with a hook and keys the page content on it, so every string re-renders on a switch.
+Rejected: A flat key file – hundreds of keys lose the module grouping the components already use; per-component hooks – pure helpers in `src/lib` build strings too.
+Spec: DESIGN-LANG.md § 1
+
+## 2026-09-07 – Batch 5 – Pack texts are { sv, en } objects whose Swedish form is the key
+Decision: Playbook names, triggers, summaries, roles, task titles, areas, owner roles, channel names and target labels, scenario preset names and parameter labels, flow metric labels and ladder step labels are `LocalizedText` in the pack; the vocab entries are reused through `both()` where the label already existed in the tables. Matching (role assignment, channel membership, `markTaskDoneByTitle`, the target measures) uses the Swedish form as the key, so store actions keep their string signatures and the Batch 1–3 tests keep their Swedish titles. User-typed task titles get the same text in both languages. Capacity classes and the transport node carry `descriptorEn`, rendered by `nodeLabel()` in English mode only.
+Rejected: Numeric ids for roles and tasks – a wider change than the addendum allows and no gain for the demo.
+Spec: DESIGN-LANG.md § 3–4
+
+## 2026-09-07 – Batch 5 – What stays Swedish in English mode
+Decision: Beyond DESIGN-LANG.md § 4, the following pack data stays Swedish because § 3 does not list it: bottleneck narratives, capability units and component names, resource names, figure labels and basis texts on Källor and node detail, the site-specific cancelled-surgery notes, and the audit log and scenario events already written (they are stored as text when they happen). These regions carry `lang="sv"` so screen readers and the sweep can tell them apart. The English sentence frames wrap the Swedish data (e.g. "Capacity now: 2 akuta operationer möjliga nu, limited by postop-platser"). Recommendation labels and effects stay in the vocab tables (there is no recommendation table in the pack) and are rendered from the key.
+Rejected: Translating the bottleneck narratives – data values that the addendum does not ask for.
+Spec: DESIGN-LANG.md § 3–4
+
+## 2026-09-07 – Batch 5 – Formatting by locale
+Decision: `format.ts` reads the locale on every call: `Intl.NumberFormat('sv-SE')` or `('en-GB')` for numbers, "95,6 %" (no-break space) or "95.6%" for percent, "dag n"/"day n" and "dygn"/"days" from the tables, "Okänt"/"Unknown" for null, and the demo date from `LABELS.demoDate`. Durations and clock times are identical in both languages. Tests set the locale explicitly.
+Rejected: Formatting at the component level – dozens of call sites.
+Spec: DESIGN-LANG.md § 2

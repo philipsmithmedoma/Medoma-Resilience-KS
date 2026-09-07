@@ -2,7 +2,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/data/store';
-import { INCIDENT, LABELS } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 
 interface CloseIncidentDialogProps {
   open: boolean;
@@ -15,21 +15,21 @@ export function CloseIncidentDialog({ open, onOpenChange }: CloseIncidentDialogP
   const close = () => {
     closeIncident();
     onOpenChange(false);
-    toast(INCIDENT.incidentClosed);
+    toast(t('INCIDENT.incidentClosed'));
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{INCIDENT.closeTitle}</DialogTitle>
-          <DialogDescription>{INCIDENT.closeBody}</DialogDescription>
+          <DialogTitle>{t('INCIDENT.closeTitle')}</DialogTitle>
+          <DialogDescription>{t('INCIDENT.closeBody')}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            {LABELS.cancel}
+            {t('LABELS.cancel')}
           </Button>
           <Button variant="destructive" onClick={close}>
-            {LABELS.closeIncident}
+            {t('LABELS.closeIncident')}
           </Button>
         </DialogFooter>
       </DialogContent>

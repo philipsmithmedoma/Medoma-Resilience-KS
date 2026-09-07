@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { Figure } from '@/data/types';
 import { useStore } from '@/data/store';
-import { CONFIDENCE_CHIPS, CONFIDENCE_TEXT, SOURCES, toneOf } from '@/data/vocab';
+import { SOURCE_ANCHORS, toneOf } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { isMirror } from '@/lib/figure';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Chip } from './Chip';
@@ -9,9 +10,9 @@ import { Chip } from './Chip';
 /** The Källor anchor for a figure: its source key, or the confidence class row. */
 export function sourceAnchor(figure: Figure): string {
   if (figure.source) return figure.source;
-  if (figure.confidence === 'reported') return SOURCES.anchors.reported;
-  if (figure.confidence === 'estimate') return SOURCES.anchors.estimate;
-  return SOURCES.anchors.illustrative;
+  if (figure.confidence === 'reported') return SOURCE_ANCHORS.reported;
+  if (figure.confidence === 'estimate') return SOURCE_ANCHORS.estimate;
+  return SOURCE_ANCHORS.illustrative;
 }
 
 interface ConfidenceChipProps {
@@ -28,20 +29,20 @@ interface ConfidenceChipProps {
  */
 export function ConfidenceChip({ figure, showSource = false, className }: ConfidenceChipProps) {
   const mirror = isMirror(figure);
-  const label = mirror ? CONFIDENCE_TEXT.mirror : CONFIDENCE_CHIPS[figure.confidence];
+  const label = mirror ? t('CONFIDENCE_TEXT.mirror') : tm('CONFIDENCE_CHIPS')[figure.confidence];
   if (!label) {
     if (!showSource || !figure.source) return null;
     return (
       <ConfidencePopover figure={figure}>
         <button type="button" className={`text-small text-text-muted hover:text-primary-text hover:underline ${className ?? ''}`}>
-          {CONFIDENCE_TEXT.source} {figure.source}
+          {t('CONFIDENCE_TEXT.source')} {figure.source}
         </button>
       </ConfidencePopover>
     );
   }
   return (
     <ConfidencePopover figure={figure}>
-      <button type="button" className={`rounded-full ${className ?? ''}`} aria-label={`${label}: ${CONFIDENCE_TEXT[mirror ? 'mirror' : figure.confidence]}`}>
+      <button type="button" className={`rounded-full ${className ?? ''}`} aria-label={`${label}: ${tm('CONFIDENCE_TEXT')[mirror ? 'mirror' : figure.confidence]}`}>
         <Chip tone={toneOf(mirror ? 'mirror' : figure.confidence)}>{label}</Chip>
       </button>
     </ConfidencePopover>
@@ -53,7 +54,7 @@ export function ConfidencePopover({ figure, children }: { figure: Figure; childr
   const since = useStore((s) => s.ehrOutageSince);
   const source = figure.source ? sources.find((s) => s.key === figure.source) : undefined;
   const mirror = isMirror(figure);
-  const text = mirror ? CONFIDENCE_TEXT.mirrorText(since ?? '') : CONFIDENCE_TEXT[figure.confidence];
+  const text = mirror ? t('CONFIDENCE_TEXT.mirrorText', { since: since ?? '' }) : tm('CONFIDENCE_TEXT')[figure.confidence];
   return (
     <Popover>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
@@ -64,18 +65,18 @@ export function ConfidencePopover({ figure, children }: { figure: Figure; childr
             {source.key}: {source.name}, {source.date}.{' '}
             {source.url ? (
               <a href={source.url} target="_blank" rel="noreferrer" className="text-primary-text hover:underline">
-                {SOURCES.open}
+                {t('SOURCES.open')}
               </a>
             ) : null}
           </p>
         ) : null}
         {figure.basis ? (
           <p className="text-small text-text-secondary">
-            {CONFIDENCE_TEXT.basis}: {figure.basis}
+            {t('CONFIDENCE_TEXT.basis')}: {figure.basis}
           </p>
         ) : null}
         <Link to={`/kallor#${sourceAnchor(figure)}`} className="block text-primary-text hover:text-primary-hover hover:underline">
-          {CONFIDENCE_TEXT.showInSources}
+          {t('CONFIDENCE_TEXT.showInSources')}
         </Link>
       </PopoverContent>
     </Popover>

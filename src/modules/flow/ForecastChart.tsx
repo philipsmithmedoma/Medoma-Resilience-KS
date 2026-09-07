@@ -1,4 +1,4 @@
-import { FLOW } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import type { ForecastResult } from '@/lib/forecast';
 import { fmt } from '@/lib/format';
 
@@ -27,10 +27,10 @@ export function ForecastChart({ result, clock }: { result: ForecastResult; clock
   const yFree = (v: number) => PAD.top + ((freeMax - v) / (freeMax - freeMin)) * innerH;
   const barW = slot / 5;
   const series: Array<{ key: keyof typeof SERIES_FILL; label: string; get: (b: ForecastResult['buckets'][number]) => number }> = [
-    { key: 'arrivals', label: FLOW.forecast.legend.arrivals, get: (b) => b.arrivals },
-    { key: 'admissions', label: FLOW.forecast.legend.admissions, get: (b) => b.admissions },
-    { key: 'discharges', label: FLOW.forecast.legend.discharges, get: (b) => b.discharges },
-    { key: 'elective', label: FLOW.forecast.legend.elective, get: (b) => b.elective },
+    { key: 'arrivals', label: t('FLOW.forecast.legend.arrivals'), get: (b) => b.arrivals },
+    { key: 'admissions', label: t('FLOW.forecast.legend.admissions'), get: (b) => b.admissions },
+    { key: 'discharges', label: t('FLOW.forecast.legend.discharges'), get: (b) => b.discharges },
+    { key: 'elective', label: t('FLOW.forecast.legend.elective'), get: (b) => b.elective },
   ];
   const linePoints = buckets.map((b, i) => `${PAD.left + i * slot + slot / 2},${yFree(b.free)}`).join(' ');
   const nowIndex = buckets.findIndex((b) => clock >= b.start && clock < b.end);
@@ -46,10 +46,10 @@ export function ForecastChart({ result, clock }: { result: ForecastResult; clock
         ))}
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-0.5 w-4 bg-text" />
-          {FLOW.forecast.legend.free}
+          {t('FLOW.forecast.legend.free')}
         </span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={FLOW.forecast.title}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={t('FLOW.forecast.title')}>
         <line x1={PAD.left} x2={W - PAD.right} y1={yFree(0)} y2={yFree(0)} className="stroke-text-muted" strokeWidth={1} strokeDasharray="4 4" />
         {buckets.map((b, i) => (
           <g key={b.start}>
@@ -78,7 +78,7 @@ export function ForecastChart({ result, clock }: { result: ForecastResult; clock
           <g>
             <line x1={PAD.left + nowIndex * slot + slot / 2} x2={PAD.left + nowIndex * slot + slot / 2} y1={PAD.top} y2={PAD.top + innerH} className="stroke-primary" strokeWidth={1} strokeDasharray="2 3" />
             <text x={PAD.left + nowIndex * slot + slot / 2 + 4} y={PAD.top + 12} fontSize={12} className="fill-primary-text">
-              {FLOW.forecast.now}
+              {t('FLOW.forecast.now')}
             </text>
           </g>
         ) : null}

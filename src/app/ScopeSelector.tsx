@@ -1,6 +1,7 @@
 import { ChevronDownIcon } from 'lucide-react';
 import { useStore } from '@/data/store';
-import { KAROLINSKA_ID, LABELS, REGION_ID, SCOPE_LABELS } from '@/data/vocab';
+import { KAROLINSKA_ID, REGION_ID } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { scopeName } from '@/lib/scope';
 import { cn } from '@/lib/utils';
 import {
@@ -30,7 +31,7 @@ export function ScopeSelector() {
         <button
           type="button"
           className="flex h-9 items-center gap-1 rounded-md px-1 text-[18px] leading-7 font-semibold text-text hover:bg-bg-muted"
-          aria-label={LABELS.scopeAria(name)}
+          aria-label={t('LABELS.scopeAria', { name })}
           title={name}
         >
           <span className="max-w-[240px] truncate">{name}</span>
@@ -38,10 +39,10 @@ export function ScopeSelector() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-56">
-        {item(KAROLINSKA_ID, SCOPE_LABELS.karolinskaLong)}
-        {item('solna', SCOPE_LABELS.solna)}
-        {item('huddinge', SCOPE_LABELS.huddinge)}
-        {item(REGION_ID, SCOPE_LABELS.region)}
+        {item(KAROLINSKA_ID, t('SCOPE_LABELS.karolinskaLong'))}
+        {item('solna', t('SCOPE_LABELS.solna'))}
+        {item('huddinge', t('SCOPE_LABELS.huddinge'))}
+        {item(REGION_ID, t('SCOPE_LABELS.region'))}
         {stoodUp.length ? <DropdownMenuSeparator /> : null}
         {stoodUp.map((n) => item(n.id, n.name))}
       </DropdownMenuContent>

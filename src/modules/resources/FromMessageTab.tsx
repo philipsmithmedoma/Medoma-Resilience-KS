@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import type { Message } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { parseMessage, type ParsedRequest } from '@/lib/parse';
 import { MessageThread } from '@/components/MessageThread';
 import { NewRequestDialog } from './NewRequestDialog';
@@ -26,7 +26,7 @@ export function FromMessageTab() {
         className="h-[calc(100vh-260px)] min-h-[360px] max-w-[900px]"
         onSend={(text) => {
           addNodeMessage(text);
-          toast(INCIDENT.messageSent);
+          toast(t('INCIDENT.messageSent'));
         }}
         onCreateRequest={onCreateRequest}
       />

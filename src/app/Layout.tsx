@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useStore } from '@/data/store';
+import { useLocale } from '@/lib/i18n';
 import { TICK_WALL_MS } from '@/lib/time';
 import { Nav } from './Nav';
 import { IncidentBanner } from './IncidentBanner';
@@ -23,6 +24,8 @@ function useClockTicker() {
 export function Layout() {
   const [closeOpen, setCloseOpen] = useState(false);
   const location = useLocation();
+  // The locale is read here so that the whole shell re-renders on a switch; the page content is keyed to remount.
+  const locale = useLocale();
   useClockTicker();
   useEffect(() => {
     if (!location.hash) window.scrollTo({ top: 0 });
@@ -32,7 +35,9 @@ export function Layout() {
       <Nav />
       <IncidentBanner onClose={() => setCloseOpen(true)} />
       <main className="flex-1 px-6 pt-4 pb-8">
-        <Outlet />
+        <div key={locale} className="contents">
+          <Outlet />
+        </div>
       </main>
       <CloseIncidentDialog open={closeOpen} onOpenChange={setCloseOpen} />
       <ScenarioPanel />

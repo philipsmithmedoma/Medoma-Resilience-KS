@@ -1,6 +1,7 @@
 // Destination and transport compatibility for evacuation planning – SPEC.md § 6.7.
 import type { CareNode, MoveStatus, Patient, Resource, SiteId } from '@/data/types';
-import { ACCEPTS_FOR_CARE_LEVEL, AMBULANCE_NODE_ID, ASIH_ID, CARE_LEVEL_LABELS, EVAC, GERIATRIK_ID, NODE_STATUS_LABELS, TRANSPORT_COMPATIBILITY, TRANSPORT_LABELS, VEHICLES } from '@/data/vocab';
+import { ACCEPTS_FOR_CARE_LEVEL, AMBULANCE_NODE_ID, ASIH_ID, GERIATRIK_ID, TRANSPORT_COMPATIBILITY, VEHICLES } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 
 export const GERIATRIK_MIN_AGE = 75;
 
@@ -26,20 +27,20 @@ export function relevantFree(node: CareNode, patient: Pick<Patient, 'careLevel'>
 /** Reason a destination is incompatible for the patient, or undefined when compatible. */
 export function destinationReason(patient: Patient, node: CareNode): string | undefined {
   if (node.type === 'Home care' || node.id === ASIH_ID) {
-    if (!node.accepts.includes('Home')) return EVAC.reasons.doesNotAccept(CARE_LEVEL_LABELS[patient.careLevel]);
-    if (!patient.homeCareEligible || patient.stability !== 'Stable') return EVAC.reasons.notEligible;
+    if (!node.accepts.includes('Home')) return t('EVAC.reasons.doesNotAccept', { level: tm('CARE_LEVEL_LABELS')[patient.careLevel].toLowerCase() });
+    if (!patient.homeCareEligible || patient.stability !== 'Stable') return t('EVAC.reasons.notEligible');
   } else if (!node.accepts.includes(ACCEPTS_FOR_CARE_LEVEL[patient.careLevel])) {
-    return EVAC.reasons.doesNotAccept(CARE_LEVEL_LABELS[patient.careLevel]);
+    return t('EVAC.reasons.doesNotAccept', { level: tm('CARE_LEVEL_LABELS')[patient.careLevel].toLowerCase() });
   }
   if (node.id === GERIATRIK_ID) {
-    if (patient.stability !== 'Stable') return EVAC.reasons.doesNotAccept(CARE_LEVEL_LABELS[patient.careLevel]);
-    if (patient.age < GERIATRIK_MIN_AGE) return EVAC.reasons.ageLimit;
+    if (patient.stability !== 'Stable') return t('EVAC.reasons.doesNotAccept', { level: tm('CARE_LEVEL_LABELS')[patient.careLevel].toLowerCase() });
+    if (patient.age < GERIATRIK_MIN_AGE) return t('EVAC.reasons.ageLimit');
   }
-  if (node.status !== 'Operational') return NODE_STATUS_LABELS[node.status];
+  if (node.status !== 'Operational') return tm('NODE_STATUS_LABELS')[node.status];
   const free = relevantFree(node, patient);
-  if (!free) return EVAC.reasons.noFreePlaces;
-  if (free.free === null) return patient.careLevel === 'Intensive' ? EVAC.reasons.ivaUnknown : EVAC.reasons.noFreePlaces;
-  if (free.free <= 0) return EVAC.reasons.noFreePlaces;
+  if (!free) return t('EVAC.reasons.noFreePlaces');
+  if (free.free === null) return patient.careLevel === 'Intensive' ? t('EVAC.reasons.ivaUnknown') : t('EVAC.reasons.noFreePlaces');
+  if (free.free <= 0) return t('EVAC.reasons.noFreePlaces');
   return undefined;
 }
 
@@ -50,8 +51,8 @@ export function evacuationVehicles(resources: Resource[]): Resource[] {
 
 /** Reason a vehicle is incompatible for the patient, or undefined when it can be assigned. */
 export function vehicleReason(patient: Pick<Patient, 'transport'>, vehicle: Resource): string | undefined {
-  if (!TRANSPORT_COMPATIBILITY[patient.transport].includes(vehicle.name)) return EVAC.reasons.notSuitable(TRANSPORT_LABELS[patient.transport]);
-  if (vehicle.available <= 0) return EVAC.reasons.noneAvailable;
+  if (!TRANSPORT_COMPATIBILITY[patient.transport].includes(vehicle.name)) return t('EVAC.reasons.notSuitable', { need: tm('TRANSPORT_LABELS')[patient.transport].toLowerCase() });
+  if (vehicle.available <= 0) return t('EVAC.reasons.noneAvailable');
   return undefined;
 }
 

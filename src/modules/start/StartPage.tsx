@@ -2,7 +2,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { BedIcon, HeartPulseIcon, ScissorsIcon, StethoscopeIcon, UsersIcon, BuildingIcon } from 'lucide-react';
 import type { Figure, SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { ICON_TINTS, START } from '@/data/vocab';
+import { ICON_TINTS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
 import { sumFigures } from '@/lib/figure';
 import { isRegion, isSite, scopeName, sitesInScope } from '@/lib/scope';
 import { Button } from '@/components/ui/button';
@@ -27,16 +28,16 @@ export function StartPage() {
   const step = (key: string): Figure => ladder.find((s) => s.key === key)!.figure;
   const icuTotal = sumFigures(nodes.filter((n) => n.site && (sites.length ? sites.includes(n.site) : true) && n.intensiveCare).map((n) => n.intensiveCare!.total));
   const siteScope = isSite(scope);
-  const wholeHospital = siteScope ? START.wholeHospital : undefined;
+  const wholeHospital = siteScope ? t('START.wholeHospital') : undefined;
   const keyScope = isRegion(scope) || sites.length === 0 ? 'Karolinska' : scopeName(scope, nodes);
 
   const cards: CardModel[] = [
-    { key: 'fastsallda', title: START.cards.fastsallda, tile: tile(BedIcon, 'beds'), figure: step('fastsallda'), unit: START.units.beds },
-    { key: 'disponibla', title: START.cards.disponibla, tile: tile(BedIcon, 'beds'), figure: step('disponibla_normal'), unit: START.units.beds },
-    { key: 'iva', title: START.cards.iva, tile: tile(HeartPulseIcon, 'intensive'), figure: icuTotal, unit: START.units.beds },
-    { key: 'employees', title: START.cards.employees, tile: tile(UsersIcon, 'staff'), figure: hospital.employees, unit: START.units.people, note: wholeHospital },
-    { key: 'operations', title: START.cards.operations, tile: tile(ScissorsIcon, 'theatres'), figure: hospital.operations, unit: START.units.operations, note: wholeHospital },
-    { key: 'inpatient', title: START.cards.inpatient, tile: tile(StethoscopeIcon, 'imaging'), figure: hospital.inpatientEpisodes, unit: START.units.episodes, note: wholeHospital },
+    { key: 'fastsallda', title: t('START.cards.fastsallda'), tile: tile(BedIcon, 'beds'), figure: step('fastsallda'), unit: t('START.units.beds') },
+    { key: 'disponibla', title: t('START.cards.disponibla'), tile: tile(BedIcon, 'beds'), figure: step('disponibla_normal'), unit: t('START.units.beds') },
+    { key: 'iva', title: t('START.cards.iva'), tile: tile(HeartPulseIcon, 'intensive'), figure: icuTotal, unit: t('START.units.beds') },
+    { key: 'employees', title: t('START.cards.employees'), tile: tile(UsersIcon, 'staff'), figure: hospital.employees, unit: t('START.units.people'), note: wholeHospital },
+    { key: 'operations', title: t('START.cards.operations'), tile: tile(ScissorsIcon, 'theatres'), figure: hospital.operations, unit: t('START.units.operations'), note: wholeHospital },
+    { key: 'inpatient', title: t('START.cards.inpatient'), tile: tile(StethoscopeIcon, 'imaging'), figure: hospital.inpatientEpisodes, unit: t('START.units.episodes'), note: wholeHospital },
   ];
 
   const start = (n: number) => {
@@ -47,24 +48,25 @@ export function StartPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-title">{START.title}</h1>
+        <h1 className="text-title">{t('START.title')}</h1>
         <p className="text-body text-text-secondary">
-          {START.subtitle}{' '}
+          {t('START.subtitle')}{' '}
           <Link to="/kallor" className="text-primary-text hover:text-primary-hover hover:underline">
-            {START.sourcesLink}
+            {t('START.sourcesLink')}
           </Link>
         </p>
+        {t('START.glossary') ? <p className="text-small text-text-muted">{t('START.glossary')}</p> : null}
       </div>
 
-      <section aria-label={START.chapters}>
+      <section aria-label={t('START.chapters')}>
         <div className="grid grid-cols-5 gap-4">
-          {START.chapterList.map((c) => (
+          {tm('START.chapterList').map((c) => (
             <article key={c.n} className="flex flex-col rounded-lg border border-border bg-surface p-5 shadow-card">
               <span className="text-small text-text-secondary tabular">{c.n}</span>
               <h2 className="mt-1 text-heading">{c.title}</h2>
               <p className="mt-2 flex-1 text-body text-text-secondary">{c.description}</p>
               <Button className="mt-4 self-start" onClick={() => start(c.n)}>
-                {START.startChapter}
+                {t('START.startChapter')}
               </Button>
             </article>
           ))}
@@ -73,7 +75,7 @@ export function StartPage() {
 
       <section>
         <h2 className="mb-3 text-heading">
-          {START.keyFigures} <span className="font-normal text-text-secondary">{START.keyFigureScope(keyScope)}</span>
+          {t('START.keyFigures')} <span className="font-normal text-text-secondary">{t('START.keyFigureScope', { scope: keyScope })}</span>
         </h2>
         <div className="grid grid-cols-3 gap-4">
           {cards.map((card) => (
@@ -84,7 +86,7 @@ export function StartPage() {
 
       <p className="flex items-center gap-2 text-small text-text-muted">
         <BuildingIcon className="size-4" strokeWidth={1.5} aria-hidden />
-        {START.footer}
+        {t('START.footer')}
       </p>
     </div>
   );

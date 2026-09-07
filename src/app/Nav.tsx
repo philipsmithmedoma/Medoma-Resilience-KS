@@ -1,12 +1,14 @@
 import { Link, NavLink } from 'react-router-dom';
 import { BookOpenIcon, HeadphonesIcon, MessageSquareIcon } from 'lucide-react';
-import { CURRENT_USER, LABELS, MODULES } from '@/data/vocab';
+import { CURRENT_USER, MODULE_DEFS } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/Logo';
 import { ScopeSelector } from './ScopeSelector';
 import { DemoControls } from './DemoControls';
 import { ClockControl } from './ClockControl';
 import { ThemeToggle } from './ThemeToggle';
+import { LocaleToggle } from './LocaleToggle';
 
 function ModuleTab({ label, path }: { label: string; path: string }) {
   return (
@@ -30,27 +32,28 @@ export function Nav() {
   return (
     <header className="flex h-12 items-center border-b border-border bg-surface px-4 whitespace-nowrap">
       <div className="flex shrink-0 items-center gap-3">
-        <Link to="/" aria-label={LABELS.backToStart} className="flex items-center">
+        <Link to="/" aria-label={t('LABELS.backToStart')} className="flex items-center">
           <Logo />
         </Link>
         <ScopeSelector />
       </div>
-      <nav aria-label="Moduler" className="ml-8 flex h-full shrink-0 items-center gap-8">
-        {MODULES.map((m) => (
-          <ModuleTab key={m.key} label={m.label} path={m.path} />
+      <nav aria-label={t('LABELS.modulesAria')} className="ml-8 flex h-full shrink-0 items-center gap-8">
+        {MODULE_DEFS.map((m) => (
+          <ModuleTab key={m.key} label={t(`MODULES.${m.key}`)} path={m.path} />
         ))}
       </nav>
-      <div className="ml-auto flex shrink-0 items-center gap-2 pl-4">
-        <span title={LABELS.chat} className="text-text">
+      <div className="ml-auto flex shrink-0 items-center gap-2 pl-3">
+        <span title={t('LABELS.chat')} className="text-text">
           <MessageSquareIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </span>
-        <span title={LABELS.support} className="text-text">
+        <span title={t('LABELS.support')} className="text-text">
           <HeadphonesIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </span>
-        <span title={LABELS.documentation} className="text-text">
+        <span title={t('LABELS.documentation')} className="text-text">
           <BookOpenIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </span>
         <ClockControl />
+        <LocaleToggle />
         <ThemeToggle />
         <DemoControls />
         <span
@@ -59,7 +62,8 @@ export function Nav() {
         >
           {CURRENT_USER.initials}
         </span>
-        <span className="text-[16px] leading-6">{CURRENT_USER.name}</span>
+        {/* The name text needs the room the two toggles take at 1280 px; the avatar keeps it as a title (DECISIONS.md, KS build). */}
+        <span className="hidden text-[16px] leading-6 min-[1360px]:inline">{CURRENT_USER.name}</span>
       </div>
     </header>
   );

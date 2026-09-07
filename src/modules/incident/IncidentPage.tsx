@@ -1,5 +1,5 @@
 import { useStore } from '@/data/store';
-import { INCIDENT } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { PageTitle } from '@/components/PageTitle';
 import { PlaybooksTable } from './PlaybooksTable';
 import { PreviousIncidents } from './PreviousIncidents';
@@ -12,8 +12,8 @@ export function IncidentPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <PageTitle title={INCIDENT.title} />
-        <p>{INCIDENT.noActive}</p>
+        <PageTitle title={t('INCIDENT.title')} />
+        <p>{t('INCIDENT.noActive')}</p>
       </div>
       <PlaybooksTable />
       <PreviousIncidents />

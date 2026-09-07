@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/data/store';
-import { CAP, NET, REGION_NAME } from '@/data/vocab';
+import { REGION_NAME } from '@/data/vocab';
+import { t } from '@/lib/i18n';
 import { PageTitle } from '@/components/PageTitle';
 import { NodesTable } from '@/components/NodesTable';
 import { NodeMap } from '@/components/NodeMap';
@@ -22,13 +23,13 @@ export function NetworkPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <PageTitle title={NET.title} scope={REGION_NAME} />
+        <PageTitle title={t('NET.title')} scope={REGION_NAME} />
         <div className="flex items-center gap-4">
           <Button variant="tertiary" onClick={() => setStandingUp(true)}>
-            {NET.standUp}
+            {t('NET.standUp')}
           </Button>
           <Button variant="secondary" onClick={() => openScenarioPanel(scenario?.key ?? null)}>
-            {CAP.scenario}
+            {t('CAP.scenario')}
           </Button>
         </div>
       </div>

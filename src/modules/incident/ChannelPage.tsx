@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Message } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT } from '@/data/vocab';
+import { lt, t } from '@/lib/i18n';
 import { parseMessage, type ParsedRequest } from '@/lib/parse';
 import { PageTitle } from '@/components/PageTitle';
 import { MessageThread } from '@/components/MessageThread';
@@ -21,10 +21,10 @@ export function ChannelPage() {
   if (!incident || !channel) {
     return (
       <div className="space-y-4">
-        <PageTitle title={INCIDENT.title} />
-        <p>{INCIDENT.noActive}</p>
+        <PageTitle title={t('INCIDENT.title')} />
+        <p>{t('INCIDENT.noActive')}</p>
         <Link to="/incident" className="text-primary-text hover:text-primary-hover hover:underline">
-          {INCIDENT.backToIncident}
+          {t('INCIDENT.backToIncident')}
         </Link>
       </div>
     );
@@ -38,16 +38,16 @@ export function ChannelPage() {
   return (
     <div className="space-y-4">
       <Link to="/incident" className="text-primary-text hover:text-primary-hover hover:underline">
-        {INCIDENT.backToIncident}
+        {t('INCIDENT.backToIncident')}
       </Link>
-      <PageTitle title={channel.name} scope={incident.name} />
-      <p className="text-small text-text-secondary">{INCIDENT.members(channel.memberRoles)}</p>
+      <PageTitle title={lt(channel.name)} scope={lt(incident.name)} />
+      <p className="text-small text-text-secondary">{channel.memberRoles.map((r) => lt(r)).join(', ')}</p>
       <MessageThread
         messages={channel.messages}
         className="h-[calc(100vh-300px)] min-h-[360px] max-w-[900px]"
         onSend={(text) => {
           sendChannelMessage(channel.id, text);
-          toast(INCIDENT.messageSent);
+          toast(t('INCIDENT.messageSent'));
         }}
         onCreateRequest={onCreateRequest}
       />

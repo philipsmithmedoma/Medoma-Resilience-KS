@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Incident, TaskStatus } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT, TASK_STATUSES, TASK_STATUS_LABELS } from '@/data/vocab';
+import { TASK_STATUSES } from '@/data/vocab';
+import { key, lt, t, tm } from '@/lib/i18n';
 import { areasOf } from '@/lib/incident';
 import { StatusGlyph } from '@/components/StatusGlyph';
 import { RolePill, TextPill } from '@/components/RolePill';
@@ -23,54 +24,54 @@ export function TasksTab({ incident }: { incident: Incident }) {
   return (
     <div className="space-y-8">
       {areas.map((area) => {
-        const tasks = incident.tasks.filter((t) => t.area === area);
+        const tasks = incident.tasks.filter((task) => key(task.area) === key(area));
         return (
-          <section key={area}>
+          <section key={key(area)}>
             <h2 className="mb-2 text-heading">
-              {area} <span className="font-normal text-text-secondary">({tasks.length})</span>
+              {lt(area)} <span className="font-normal text-text-secondary">({tasks.length})</span>
             </h2>
             <ul className="divide-y divide-border border-y border-border">
-              {tasks.map((t) => {
-                const owner = staff.find((s) => s.name === t.owner);
+              {tasks.map((task) => {
+                const owner = staff.find((s) => s.name === task.owner);
                 return (
-                  <li key={t.id} className="flex min-h-10 items-center gap-3 py-1.5">
+                  <li key={task.id} className="flex min-h-10 items-center gap-3 py-1.5">
                     <button
                       type="button"
-                      aria-label={`${t.title}: ${TASK_STATUS_LABELS[t.status]}. ${INCIDENT.changeStatus}`}
-                      title={TASK_STATUS_LABELS[t.status]}
-                      onClick={() => setTaskStatus(t.id, nextTaskStatus(t.status))}
+                      aria-label={`${lt(task.title)}: ${tm('TASK_STATUS_LABELS')[task.status]}. ${t('INCIDENT.changeStatus')}`}
+                      title={tm('TASK_STATUS_LABELS')[task.status]}
+                      onClick={() => setTaskStatus(task.id, nextTaskStatus(task.status))}
                       className="flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-bg-muted"
                     >
-                      <StatusGlyph status={t.status} />
+                      <StatusGlyph status={task.status} />
                     </button>
                     <span className="min-w-0 flex-1">
-                      {t.title}
-                      {t.note ? <span className="block text-small text-text-muted">{t.note}</span> : null}
+                      {lt(task.title)}
+                      {task.note ? <span className="block text-small text-text-muted">{task.note}</span> : null}
                     </span>
-                    <TextPill>{t.ownerRole}</TextPill>
+                    <TextPill>{lt(task.ownerRole)}</TextPill>
                     {owner ? (
                       <span className="flex items-center gap-2 text-small text-text-secondary">
                         {owner.name}
                         <RolePill profession={owner.profession} />
                       </span>
                     ) : null}
-                    <span className="w-14 text-right tabular text-text-secondary" title={INCIDENT.due(t.due)}>
-                      {t.due}
+                    <span className="w-14 text-right tabular text-text-secondary" title={t('INCIDENT.due', { at: task.due })}>
+                      {task.due}
                     </span>
-                    {assigning === t.id ? (
+                    {assigning === task.id ? (
                       <StaffSelect
                         className="w-56"
-                        value={t.owner}
-                        ariaLabel={`${INCIDENT.assign} ${t.title}`}
+                        value={task.owner}
+                        ariaLabel={`${t('INCIDENT.assign')} ${lt(task.title)}`}
                         autoOpen
                         onChange={(name) => {
-                          assignTask(t.id, name);
+                          assignTask(task.id, name);
                           setAssigning(null);
                         }}
                       />
                     ) : (
-                      <button type="button" className="w-16 text-right text-primary-text hover:text-primary-hover hover:underline" onClick={() => setAssigning(t.id)}>
-                        {INCIDENT.assign}
+                      <button type="button" className="w-16 text-right text-primary-text hover:text-primary-hover hover:underline" onClick={() => setAssigning(task.id)}>
+                        {t('INCIDENT.assign')}
                       </button>
                     )}
                   </li>

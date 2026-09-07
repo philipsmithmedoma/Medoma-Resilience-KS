@@ -1,6 +1,7 @@
 // The Karolinska data pack – the only dataset in this repository. Every figure carries confidence,
 // source (DATA.md § 9 key) or basis. Nothing here is computed from other figures at runtime.
 import type {
+  LocalizedText,
   AuditEntry,
   BedRequest,
   Bottleneck,
@@ -24,7 +25,12 @@ import type {
   Ward,
 } from './types';
 import { PATIENTS_BY_SITE } from './patients';
-import { CAP, FLOW_LABELS, SCENARIO_NAMES, VEHICLES } from '../vocab';
+import { en, sv, VEHICLES, type Vocab } from '../vocab';
+
+/** A text in both languages (DESIGN-LANG.md § 3). */
+const tx = (svText: string, enText: string): LocalizedText => ({ sv: svText, en: enText });
+/** The same vocab entry in both languages. */
+const both = (pick: (v: Vocab) => string): LocalizedText => ({ sv: pick(sv), en: pick(en) });
 
 // ---------------------------------------------------------------------------
 // Figure helpers
@@ -45,11 +51,11 @@ const NOW = '14:40';
 // ---------------------------------------------------------------------------
 // § 3 Capacity ladder
 const ladder = (fastsallda: Figure, normal: Figure, v33: Figure, belagda: Figure, lediga: Figure): LadderStep[] => [
-  { key: 'fastsallda', label: CAP.ladderSteps.fastsallda, figure: fastsallda },
-  { key: 'disponibla_normal', label: CAP.ladderSteps.disponibla_normal, figure: normal },
-  { key: 'disponibla_v33', label: CAP.ladderSteps.disponibla_v33, figure: v33 },
-  { key: 'belagda', label: CAP.ladderSteps.belagda, figure: belagda },
-  { key: 'lediga', label: CAP.ladderSteps.lediga, figure: lediga },
+  { key: 'fastsallda', label: both((v) => v.CAP.ladderSteps.fastsallda), figure: fastsallda },
+  { key: 'disponibla_normal', label: both((v) => v.CAP.ladderSteps.disponibla_normal), figure: normal },
+  { key: 'disponibla_v33', label: both((v) => v.CAP.ladderSteps.disponibla_v33), figure: v33 },
+  { key: 'belagda', label: both((v) => v.CAP.ladderSteps.belagda), figure: belagda },
+  { key: 'lediga', label: both((v) => v.CAP.ladderSteps.lediga), figure: lediga },
 ];
 
 const NORMAL_BASIS = 'Karolinskas andel av regionens totala disponibla platser cirka 39 % (915/2 321 i v.33) applicerad på ett regionvärde utanför sommaren på cirka 2 750 (S4a, diagramintervall 2 686–2 798)';
@@ -156,6 +162,7 @@ export const NODES: CareNode[] = [
   ...regionHospital('ersta', 'Ersta sjukhus', 'Ersta', 41, 2, 59.318, 18.085),
   {
     id: 'geriatrik',
+    descriptorEn: 'geriatric care',
     name: 'Geriatrik (19 kliniker)',
     shortName: 'Geriatrik',
     type: 'Capacity class',
@@ -173,6 +180,7 @@ export const NODES: CareNode[] = [
   },
   {
     id: 'palliativ',
+    descriptorEn: 'palliative inpatient care',
     name: 'Sluten palliativ vård',
     shortName: 'Palliativ',
     type: 'Capacity class',
@@ -190,6 +198,7 @@ export const NODES: CareNode[] = [
   },
   {
     id: 'rehab',
+    descriptorEn: 'specialised rehabilitation',
     name: 'Specialiserad rehabilitering',
     shortName: 'Rehab',
     type: 'Capacity class',
@@ -207,6 +216,7 @@ export const NODES: CareNode[] = [
   },
   {
     id: 'psykiatri',
+    descriptorEn: 'psychiatry',
     name: 'Psykiatri',
     shortName: 'Psykiatri',
     type: 'Capacity class',
@@ -224,6 +234,7 @@ export const NODES: CareNode[] = [
   },
   {
     id: 'asih',
+    descriptorEn: 'advanced home care',
     name: 'ASIH – avancerad sjukvård i hemmet',
     shortName: 'ASIH',
     type: 'Home care',
@@ -245,6 +256,7 @@ export const NODES: CareNode[] = [
   },
   {
     id: 'ambulans',
+    descriptorEn: 'ambulance service',
     name: 'Ambulanssjukvården Region Stockholm',
     shortName: 'Ambulans',
     type: 'Transport',
@@ -605,8 +617,8 @@ const rows: Row[] = [
 ];
 
 export const FLOW_METRICS: FlowMetric[] = rows.flatMap(([key, block, solna, huddinge, qualifier]) => [
-  { key, site: 'solna' as const, block, label: FLOW_LABELS[key] ?? key, value: solna, qualifier },
-  { key, site: 'huddinge' as const, block, label: FLOW_LABELS[key] ?? key, value: huddinge, qualifier },
+  { key, site: 'solna' as const, block, label: both((v) => v.FLOW_LABELS[key] ?? key), value: solna, qualifier },
+  { key, site: 'huddinge' as const, block, label: both((v) => v.FLOW_LABELS[key] ?? key), value: huddinge, qualifier },
 ]);
 
 // ---------------------------------------------------------------------------
@@ -808,119 +820,165 @@ export const STAFF: Staff[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// § 8.2 Playbooks
-const t = (area: string, title: string, ownerRole: string, dueOffsetMin: number, note?: string): Playbook['tasks'][number] => ({ area, title, ownerRole, dueOffsetMin, note });
+// § 8.2 Playbooks – names, triggers, summaries, roles, tasks, channels and targets carry { sv, en } (DESIGN-LANG.md § 3)
+const R = {
+  ledare: tx('Sjukvårdsledare LSSL', 'Medical commander (LSSL)'),
+  medicinsk: tx('Medicinskt ansvarig', 'Medical lead'),
+  akut: tx('Akutansvarig', 'ED lead'),
+  operation: tx('Operationsansvarig (PMI)', 'Surgery lead (PMI)'),
+  iva: tx('IVA-ansvarig', 'ICU lead (IVA)'),
+  logistik: tx('Logistikansvarig', 'Logistics lead'),
+  kommunikation: tx('Kommunikationsansvarig (KiB)', 'Communications lead (KiB)'),
+  krisstod: tx('Krisstödsansvarig (PKL)', 'Crisis support lead (PKL)'),
+  it: tx('IT-kontakt', 'IT contact'),
+  reserv: tx('Ansvarig reservrutiner', 'Fallback procedures lead'),
+};
+const A = {
+  akuten: tx('Akuten', 'Emergency department'),
+  opIva: tx('Operation och IVA', 'Surgery and IVA'),
+  avd: tx('Vårdavdelningar', 'Wards'),
+  logTransport: tx('Logistik och transport', 'Logistics and transport'),
+  samverkanKomm: tx('Samverkan och kommunikation', 'Liaison and communication'),
+  it: tx('IT', 'IT'),
+  avdelningar: tx('Avdelningar', 'Wards'),
+  samverkan: tx('Samverkan', 'Liaison'),
+  logistik: tx('Logistik', 'Logistics'),
+};
+const C = {
+  lssl: tx('LSSL', 'LSSL'),
+  akuten: tx('Akuten', 'Emergency department'),
+  opIva: tx('Operation och IVA', 'Surgery and IVA'),
+  logTransport: tx('Logistik och transport', 'Logistics and transport'),
+  samverkanRssl: tx('Samverkan RSSL', 'Liaison RSSL'),
+  itAvd: tx('IT och avdelningar', 'IT and wards'),
+};
+const t = (area: LocalizedText, title: LocalizedText, ownerRole: LocalizedText, dueOffsetMin: number, note?: string): Playbook['tasks'][number] => ({ area, title, ownerRole, dueOffsetMin, note });
 
 export const PLAYBOOKS: Playbook[] = [
   {
     id: 'pb1',
     key: 'masskada',
     code: 'PB1',
-    name: 'Allvarlig händelse: masskada',
-    trigger: 'Larm från TiB eller TCK om många skadade',
-    summary: 'Etablerar LSSL, frigör operations- och intensivvårdskapacitet, startar överföringar till region och ASIH och säkrar förråd och transport.',
+    name: tx('Allvarlig händelse: masskada', 'Major incident: mass casualty'),
+    trigger: tx('Larm från TiB eller TCK om många skadade', 'Alert from TiB or TCK about many casualties'),
+    summary: tx(
+      'Etablerar LSSL, frigör operations- och intensivvårdskapacitet, startar överföringar till region och ASIH och säkrar förråd och transport.',
+      'Establishes LSSL, frees surgical and intensive care capacity, starts transfers to the region and ASIH, and secures supplies and transport.',
+    ),
     defaultLage: 'Förstärkningsläge',
-    roles: ['Sjukvårdsledare LSSL', 'Medicinskt ansvarig', 'Akutansvarig', 'Operationsansvarig (PMI)', 'IVA-ansvarig', 'Logistikansvarig', 'Kommunikationsansvarig (KiB)', 'Krisstödsansvarig (PKL)'],
-    channels: ['LSSL', 'Akuten', 'Operation och IVA', 'Logistik och transport', 'Samverkan RSSL'],
+    roles: [R.ledare, R.medicinsk, R.akut, R.operation, R.iva, R.logistik, R.kommunikation, R.krisstod],
+    channels: [C.lssl, C.akuten, C.opIva, C.logTransport, C.samverkanRssl],
     targets: [
-      { label: 'Triagekapacitet akuten Solna', target: 40, unit: 'patienter', withinMin: 30, measure: 'triageSolna' },
-      { label: 'Operationssalar tillgängliga', target: 8, unit: 'salar', withinMin: 60, measure: 'theatresAvailable' },
-      { label: 'IVA-platser tillkomna', target: 6, unit: 'platser', withinMin: 120, measure: 'icuAdded' },
-      { label: 'Vårdplatser frigjorda', target: 40, unit: 'platser', withinMin: 240, measure: 'bedsFreed' },
+      { label: tx('Triagekapacitet akuten Solna', 'Triage capacity ED Solna'), target: 40, unit: 'patienter', withinMin: 30, measure: 'triageSolna' },
+      { label: tx('Operationssalar tillgängliga', 'Operating theatres available'), target: 8, unit: 'salar', withinMin: 60, measure: 'theatresAvailable' },
+      { label: tx('IVA-platser tillkomna', 'IVA beds added'), target: 6, unit: 'platser', withinMin: 120, measure: 'icuAdded' },
+      { label: tx('Vårdplatser frigjorda', 'Beds freed'), target: 40, unit: 'platser', withinMin: 240, measure: 'bedsFreed' },
     ],
     tasks: [
-      t('Akuten', 'Upprätta triagezoner röd/gul/grön', 'Akutansvarig', 15),
-      t('Akuten', 'Töm akuten på färdigbedömda patienter', 'Akutansvarig', 20),
-      t('Akuten', 'Öppna andra traumabayen', 'Medicinskt ansvarig', 30),
-      t('Operation och IVA', 'Stryk elektiv operation och frigör salar', 'Operationsansvarig (PMI)', 30),
-      t('Operation och IVA', 'Kalla in anestesiteam', 'Operationsansvarig (PMI)', 45),
-      t('Operation och IVA', 'Öppna IMA som IVA-överflöd', 'IVA-ansvarig', 90),
-      t('Vårdavdelningar', 'Identifiera patienter för tidigare utskrivning', 'Medicinskt ansvarig', 45),
-      t('Vårdavdelningar', 'Starta överföringsplanering till region och ASIH', 'Medicinskt ansvarig', 60),
-      t('Vårdavdelningar', 'Frigör 40 vårdplatser', 'Medicinskt ansvarig', 240),
-      t('Logistik och transport', 'Begär ventilatorer till Huddinge', 'Logistikansvarig', 30),
-      t('Logistik och transport', 'Begär transportresurser från Ambulanssjukvården', 'Logistikansvarig', 45),
-      t('Logistik och transport', 'Kontrollera blodprodukter och syrgas', 'Logistikansvarig', 30),
-      t('Samverkan och kommunikation', 'Anmäl läget till TiB och RSSL', 'Sjukvårdsledare LSSL', 10),
-      t('Samverkan och kommunikation', 'Öppna kanaler och starta inkallning', 'Kommunikationsansvarig (KiB)', 15),
-      t('Samverkan och kommunikation', 'Aktivera PKL', 'Krisstödsansvarig (PKL)', 30),
+      t(A.akuten, tx('Upprätta triagezoner röd/gul/grön', 'Set up triage zones red/yellow/green'), R.akut, 15),
+      t(A.akuten, tx('Töm akuten på färdigbedömda patienter', 'Clear the ED of assessed patients'), R.akut, 20),
+      t(A.akuten, tx('Öppna andra traumabayen', 'Open the second trauma bay'), R.medicinsk, 30),
+      t(A.opIva, tx('Stryk elektiv operation och frigör salar', 'Cancel elective surgery and free theatres'), R.operation, 30),
+      t(A.opIva, tx('Kalla in anestesiteam', 'Call in anaesthesia teams'), R.operation, 45),
+      t(A.opIva, tx('Öppna IMA som IVA-överflöd', 'Open IMA as IVA overflow'), R.iva, 90),
+      t(A.avd, tx('Identifiera patienter för tidigare utskrivning', 'Identify patients for earlier discharge'), R.medicinsk, 45),
+      t(A.avd, tx('Starta överföringsplanering till region och ASIH', 'Start transfer planning to the region and ASIH'), R.medicinsk, 60),
+      t(A.avd, tx('Frigör 40 vårdplatser', 'Free 40 beds'), R.medicinsk, 240),
+      t(A.logTransport, tx('Begär ventilatorer till Huddinge', 'Request ventilators for Huddinge'), R.logistik, 30),
+      t(A.logTransport, tx('Begär transportresurser från Ambulanssjukvården', 'Request transport resources from Ambulanssjukvården'), R.logistik, 45),
+      t(A.logTransport, tx('Kontrollera blodprodukter och syrgas', 'Check blood products and oxygen'), R.logistik, 30),
+      t(A.samverkanKomm, tx('Anmäl läget till TiB och RSSL', 'Report the situation to TiB and RSSL'), R.ledare, 10),
+      t(A.samverkanKomm, tx('Öppna kanaler och starta inkallning', 'Open channels and start call-in'), R.kommunikation, 15),
+      t(A.samverkanKomm, tx('Aktivera PKL', 'Activate PKL'), R.krisstod, 30),
     ],
   },
   {
     id: 'pb2',
     key: 'journalbortfall',
     code: 'PB2',
-    name: 'Journalsystem otillgängligt',
-    trigger: 'Journalsystemet eller sjukhusets nät otillgängligt',
-    summary: 'Växlar sjukhuset till den operativa spegeln och manuella reservrutiner, som i juni 2022 (S16) när RSSL gick till stabsläge.',
+    name: tx('Journalsystem otillgängligt', 'EHR unavailable'),
+    trigger: tx('Journalsystemet eller sjukhusets nät otillgängligt', 'The EHR or the hospital network is unavailable'),
+    summary: tx(
+      'Växlar sjukhuset till den operativa spegeln och manuella reservrutiner, som i juni 2022 (S16) när RSSL gick till stabsläge.',
+      'Switches the hospital to the operational mirror and manual fallback procedures, as in June 2022 (S16) when RSSL went to stabsläge.',
+    ),
     defaultLage: 'Stabsläge',
     setsEhrOutage: true,
-    roles: ['Sjukvårdsledare LSSL', 'IT-kontakt', 'Ansvarig reservrutiner'],
-    channels: ['LSSL', 'IT och avdelningar'],
-    targets: [{ label: 'Avdelningar bekräftade på reservrutin', target: 4, unit: 'avdelningar', withinMin: 30, measure: 'wardsOnMirror' }],
+    roles: [R.ledare, R.it, R.reserv],
+    channels: [C.lssl, C.itAvd],
+    targets: [{ label: tx('Avdelningar bekräftade på reservrutin', 'Wards confirmed on fallback procedures'), target: 4, unit: 'avdelningar', withinMin: 30, measure: 'wardsOnMirror' }],
     tasks: [
-      t('IT', 'Bekräfta störningens omfattning med IT', 'IT-kontakt', 10),
-      t('Avdelningar', 'Gå över till operativ spegel och läskopia på alla avdelningar', 'Ansvarig reservrutiner', 30),
-      t('Avdelningar', 'Utse avdelningsrunners för pappersordinationer', 'Ansvarig reservrutiner', 20),
-      t('Avdelningar', 'Frys icke-akuta överflyttningar', 'Sjukvårdsledare LSSL', 15),
-      t('Avdelningar', 'Verifiera kritiska läkemedelslistor mot senaste spegling', 'Ansvarig reservrutiner', 45),
-      t('IT', 'Förbered återsynkronisering', 'IT-kontakt', 60),
+      t(A.it, tx('Bekräfta störningens omfattning med IT', 'Confirm the extent of the outage with IT'), R.it, 10),
+      t(A.avdelningar, tx('Gå över till operativ spegel och läskopia på alla avdelningar', 'Switch to the operational mirror and read-only copy on all wards'), R.reserv, 30),
+      t(A.avdelningar, tx('Utse avdelningsrunners för pappersordinationer', 'Appoint ward runners for paper orders'), R.reserv, 20),
+      t(A.avdelningar, tx('Frys icke-akuta överflyttningar', 'Freeze non-urgent transfers'), R.ledare, 15),
+      t(A.avdelningar, tx('Verifiera kritiska läkemedelslistor mot senaste spegling', 'Verify critical medication lists against the latest mirror'), R.reserv, 45),
+      t(A.it, tx('Förbered återsynkronisering', 'Prepare resynchronisation'), R.it, 60),
     ],
   },
   {
     id: 'pb3',
     key: 'mottagande',
     code: 'PB3',
-    name: 'Mottagande av evakuerade patienter',
-    trigger: 'RSSL fördelar patienter från annan region eller annat land',
-    summary: 'Tar emot patienter som RSSL fördelar till Karolinska, som övat i Sjukvårdsövning 26 (S15) med ett scenario på cirka 260 patienter.',
+    name: tx('Mottagande av evakuerade patienter', 'Receiving evacuated patients'),
+    trigger: tx('RSSL fördelar patienter från annan region eller annat land', 'RSSL distributes patients from another region or country'),
+    summary: tx(
+      'Tar emot patienter som RSSL fördelar till Karolinska, som övat i Sjukvårdsövning 26 (S15) med ett scenario på cirka 260 patienter.',
+      'Receives patients that RSSL distributes to Karolinska, as exercised in Sjukvårdsövning 26 (S15) with a scenario of about 260 patients.',
+    ),
     defaultLage: 'Stabsläge',
-    roles: ['Sjukvårdsledare LSSL', 'Medicinskt ansvarig', 'Logistikansvarig'],
-    channels: ['LSSL', 'Samverkan RSSL'],
-    targets: [{ label: 'Mottagningsplatser bekräftade', target: 60, unit: 'platser', withinMin: 120, measure: 'receivingBeds' }],
+    roles: [R.ledare, R.medicinsk, R.logistik],
+    channels: [C.lssl, C.samverkanRssl],
+    targets: [{ label: tx('Mottagningsplatser bekräftade', 'Receiving beds confirmed'), target: 60, unit: 'platser', withinMin: 120, measure: 'receivingBeds' }],
     tasks: [
-      t('Samverkan', 'Bekräfta tilldelning från RSSL', 'Sjukvårdsledare LSSL', 10),
-      t('Vårdavdelningar', 'Reservera mottagningsplatser per tema', 'Medicinskt ansvarig', 30),
-      t('Logistik', 'Ordna mottagningsplats vid ambulanshallen Huddinge', 'Logistikansvarig', 45),
-      t('Vårdavdelningar', 'Aktivera ASIH för utskrivningsklara', 'Medicinskt ansvarig', 60),
-      t('Samverkan', 'Rapportera läge till RSSL', 'Sjukvårdsledare LSSL', 90),
+      t(A.samverkan, tx('Bekräfta tilldelning från RSSL', 'Confirm the allocation from RSSL'), R.ledare, 10),
+      t(A.avd, tx('Reservera mottagningsplatser per tema', 'Reserve receiving beds per tema'), R.medicinsk, 30),
+      t(A.logistik, tx('Ordna mottagningsplats vid ambulanshallen Huddinge', 'Arrange a receiving point at the Huddinge ambulance hall'), R.logistik, 45),
+      t(A.avd, tx('Aktivera ASIH för utskrivningsklara', 'Activate ASIH for patients ready for discharge'), R.medicinsk, 60),
+      t(A.samverkan, tx('Rapportera läge till RSSL', 'Report the situation to RSSL'), R.ledare, 90),
     ],
   },
   {
     id: 'pb4',
     key: 'evakuering',
     code: 'PB4',
-    name: 'Evakuering av sjukvårdsinrättning',
-    trigger: 'Del av sjukhuset måste utrymmas',
-    summary: 'Klassificerar patienter för flytt, begär mottagningskapacitet via RSSL och transport, och startar evakueringsplaneringen.',
+    name: tx('Evakuering av sjukvårdsinrättning', 'Evacuation of a healthcare facility'),
+    trigger: tx('Del av sjukhuset måste utrymmas', 'Part of the hospital must be evacuated'),
+    summary: tx(
+      'Klassificerar patienter för flytt, begär mottagningskapacitet via RSSL och transport, och startar evakueringsplaneringen.',
+      'Classifies patients for moving, requests receiving capacity via RSSL and transport, and starts the evacuation planning.',
+    ),
     defaultLage: 'Förstärkningsläge',
     navigateTo: '/evakuering',
-    roles: ['Sjukvårdsledare LSSL', 'Medicinskt ansvarig', 'Logistikansvarig'],
-    channels: ['LSSL', 'Logistik och transport'],
-    targets: [{ label: 'Patienter flyttade', target: 60, unit: 'patienter', withinMin: 240, measure: 'patientsMoved' }],
+    roles: [R.ledare, R.medicinsk, R.logistik],
+    channels: [C.lssl, C.logTransport],
+    targets: [{ label: tx('Patienter flyttade', 'Patients moved'), target: 60, unit: 'patienter', withinMin: 240, measure: 'patientsMoved' }],
     tasks: [
-      t('Vårdavdelningar', 'Klassificera patienter för flytt', 'Medicinskt ansvarig', 20),
-      t('Samverkan', 'Begär mottagningskapacitet via RSSL', 'Sjukvårdsledare LSSL', 20),
-      t('Logistik och transport', 'Begär transportresurser', 'Logistikansvarig', 30),
-      t('Vårdavdelningar', 'Starta evakueringsplanering', 'Medicinskt ansvarig', 30),
+      t(A.avd, tx('Klassificera patienter för flytt', 'Classify patients for moving'), R.medicinsk, 20),
+      t(A.samverkan, tx('Begär mottagningskapacitet via RSSL', 'Request receiving capacity via RSSL'), R.ledare, 20),
+      t(A.logTransport, tx('Begär transportresurser', 'Request transport resources'), R.logistik, 30),
+      t(A.avd, tx('Starta evakueringsplanering', 'Start evacuation planning'), R.medicinsk, 30),
     ],
   },
   {
     id: 'pb5',
     key: 'pandemi',
     code: 'PB5',
-    name: 'Pandemisk våg',
-    trigger: 'Snabbt ökande behov av intensivvård',
-    summary: 'Bygger ut intensivvården stegvis och stryker elektiv verksamhet; referensen är ombyggnaden av O-huset till 64 IVA-platser på 10 dagar 2020 (S9).',
+    name: tx('Pandemisk våg', 'Pandemic wave'),
+    trigger: tx('Snabbt ökande behov av intensivvård', 'Rapidly rising need for intensive care'),
+    summary: tx(
+      'Bygger ut intensivvården stegvis och stryker elektiv verksamhet; referensen är ombyggnaden av O-huset till 64 IVA-platser på 10 dagar 2020 (S9).',
+      'Expands intensive care step by step and cancels elective activity; the reference is the conversion of O-huset to 64 IVA beds in 10 days in 2020 (S9).',
+    ),
     defaultLage: 'Förstärkningsläge',
     tickDays: true,
-    roles: ['Sjukvårdsledare LSSL', 'IVA-ansvarig', 'Logistikansvarig'],
-    channels: ['LSSL', 'Operation och IVA'],
-    targets: [{ label: 'IVA-platser tillkomna', target: 20, unit: 'platser', withinMin: 10 * 1440, withinUnit: 'dygn', measure: 'icuAddedDays' }],
+    roles: [R.ledare, R.iva, R.logistik],
+    channels: [C.lssl, C.opIva],
+    targets: [{ label: tx('IVA-platser tillkomna', 'IVA beds added'), target: 20, unit: 'platser', withinMin: 10 * 1440, withinUnit: 'dygn', measure: 'icuAddedDays' }],
     tasks: [
-      t('Operation och IVA', 'Aktivera plan för IVA-utbyggnad i O-huset', 'IVA-ansvarig', 60, 'Referens: O-huset Huddinge byggdes om till 64 IVA-platser på 10 dagar 2020 (S9).'),
-      t('Operation och IVA', 'Stryk elektiv verksamhet stegvis', 'Sjukvårdsledare LSSL', 120),
-      t('Logistik', 'Säkra ventilatorer och syrgas', 'Logistikansvarig', 120),
+      t(A.opIva, tx('Aktivera plan för IVA-utbyggnad i O-huset', 'Activate the plan for IVA expansion in O-huset'), R.iva, 60, 'Referens: O-huset Huddinge byggdes om till 64 IVA-platser på 10 dagar 2020 (S9).'),
+      t(A.opIva, tx('Stryk elektiv verksamhet stegvis', 'Cancel elective activity step by step'), R.ledare, 120),
+      t(A.logistik, tx('Säkra ventilatorer och syrgas', 'Secure ventilators and oxygen'), R.logistik, 120),
     ],
   },
 ];
@@ -930,18 +988,18 @@ export const PLAYBOOKS: Playbook[] = [
 export const SCENARIOS: ScenarioPreset[] = [
   {
     key: 'masskada',
-    name: SCENARIO_NAMES.masskada,
+    name: both((v) => v.SCENARIO_NAMES.masskada),
     params: { skadade: 60, rod: 20, gul: 40, gron: 40, fonster: 120, forsta: 20, primar: 'solna', sekundar: 'huddinge' },
     paramDefs: [
-      { key: 'skadade', label: 'Skadade', type: 'number' },
-      { key: 'rod', label: 'Röd, andel', type: 'number', unit: '%' },
-      { key: 'gul', label: 'Gul, andel', type: 'number', unit: '%' },
-      { key: 'gron', label: 'Grön, andel', type: 'number', unit: '%' },
-      { key: 'fonster', label: 'Ankomstfönster', type: 'number', unit: 'min' },
-      { key: 'forsta', label: 'Första ankomst', type: 'number', unit: 'min' },
+      { key: 'skadade', label: both((v) => v.SCENARIO.paramLabels.skadade), type: 'number' },
+      { key: 'rod', label: both((v) => v.SCENARIO.paramLabels.rod), type: 'number', unit: '%' },
+      { key: 'gul', label: both((v) => v.SCENARIO.paramLabels.gul), type: 'number', unit: '%' },
+      { key: 'gron', label: both((v) => v.SCENARIO.paramLabels.gron), type: 'number', unit: '%' },
+      { key: 'fonster', label: both((v) => v.SCENARIO.paramLabels.fonster), type: 'number', unit: 'min' },
+      { key: 'forsta', label: both((v) => v.SCENARIO.paramLabels.forsta), type: 'number', unit: 'min' },
       {
         key: 'primar',
-        label: 'Primär mottagare',
+        label: both((v) => v.SCENARIO.paramLabels.primar),
         type: 'select',
         options: [
           { value: 'solna', label: 'Karolinska Solna (TCK)' },
@@ -950,7 +1008,7 @@ export const SCENARIOS: ScenarioPreset[] = [
       },
       {
         key: 'sekundar',
-        label: 'Sekundär mottagare',
+        label: both((v) => v.SCENARIO.paramLabels.sekundar),
         type: 'select',
         options: [
           { value: 'huddinge', label: 'Karolinska Huddinge' },
@@ -963,61 +1021,61 @@ export const SCENARIOS: ScenarioPreset[] = [
   },
   {
     key: 'tryck',
-    name: SCENARIO_NAMES.tryck,
+    name: both((v) => v.SCENARIO_NAMES.tryck),
     params: { faktor: 1.3, timmar: 6, site: 'huddinge' },
     paramDefs: [
-      { key: 'faktor', label: 'Inflödesfaktor', type: 'number' },
-      { key: 'timmar', label: 'Varaktighet', type: 'number', unit: 'h' },
+      { key: 'faktor', label: both((v) => v.SCENARIO.paramLabels.faktor), type: 'number' },
+      { key: 'timmar', label: both((v) => v.SCENARIO.paramLabels.timmar), type: 'number', unit: 'h' },
     ],
     tickMin: 15,
     horizonTicks: 24,
   },
   {
     key: 'journalbortfall',
-    name: SCENARIO_NAMES.journalbortfall,
+    name: both((v) => v.SCENARIO_NAMES.journalbortfall),
     params: { timmar: 6 },
-    paramDefs: [{ key: 'timmar', label: 'Varaktighet', type: 'number', unit: 'h' }],
+    paramDefs: [{ key: 'timmar', label: both((v) => v.SCENARIO.paramLabels.timmar), type: 'number', unit: 'h' }],
     tickMin: 15,
     horizonTicks: 24,
   },
   {
     key: 'mottagande',
-    name: SCENARIO_NAMES.mottagande,
+    name: both((v) => v.SCENARIO_NAMES.mottagande),
     params: { patienter: 260, timmar: 12, andel: 35 },
     paramDefs: [
-      { key: 'patienter', label: 'Patienter', type: 'number' },
-      { key: 'timmar', label: 'Varaktighet', type: 'number', unit: 'h' },
-      { key: 'andel', label: 'Karolinskas andel', type: 'number', unit: '%' },
+      { key: 'patienter', label: both((v) => v.SCENARIO.paramLabels.patienter), type: 'number' },
+      { key: 'timmar', label: both((v) => v.SCENARIO.paramLabels.timmar), type: 'number', unit: 'h' },
+      { key: 'andel', label: both((v) => v.SCENARIO.paramLabels.andel), type: 'number', unit: '%' },
     ],
     tickMin: 15,
     horizonTicks: 48,
   },
   {
     key: 'pandemi',
-    name: SCENARIO_NAMES.pandemi,
+    name: both((v) => v.SCENARIO_NAMES.pandemi),
     params: { ivaPerDygn: 3, dygn: 14 },
     paramDefs: [
-      { key: 'ivaPerDygn', label: 'IVA-behov per dygn', type: 'number' },
-      { key: 'dygn', label: 'Antal dygn', type: 'number', unit: 'dygn' },
+      { key: 'ivaPerDygn', label: both((v) => v.SCENARIO.paramLabels.ivaPerDygn), type: 'number' },
+      { key: 'dygn', label: both((v) => v.SCENARIO.paramLabels.dygn), type: 'number', unit: 'dygn' },
     ],
     tickMin: 1440,
     horizonTicks: 14,
   },
   {
     key: 'siteevac',
-    name: SCENARIO_NAMES.siteevac,
+    name: both((v) => v.SCENARIO_NAMES.siteevac),
     params: { site: 'huddinge', patienter: 60 },
     paramDefs: [
       {
         key: 'site',
-        label: 'Site',
+        label: both((v) => v.SCENARIO.paramLabels.site),
         type: 'select',
         options: [
           { value: 'huddinge', label: 'Karolinska Huddinge' },
           { value: 'solna', label: 'Karolinska Solna' },
         ],
       },
-      { key: 'patienter', label: 'Patienter', type: 'number' },
+      { key: 'patienter', label: both((v) => v.SCENARIO.paramLabels.patienter), type: 'number' },
     ],
     tickMin: 15,
     horizonTicks: 0,

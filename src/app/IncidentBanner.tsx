@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '@/data/store';
-import { LABELS } from '@/data/vocab';
+import { lt, t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 interface IncidentBannerProps {
@@ -20,13 +20,13 @@ export function IncidentBanner({ onClose }: IncidentBannerProps) {
         katastrof ? 'border-banner-red-border bg-banner-red-bg' : 'border-banner-orange-border bg-banner-orange-bg',
       )}
     >
-      <span>{LABELS.incidentBanner(incident.name, incident.lage, incident.activatedAt, incident.activatedBy, incident.commander)}</span>
-      <span className="flex items-center gap-6">
+      <span className="truncate">{t('LABELS.incidentBanner', { name: lt(incident.name), lage: t(`LAGE_LABELS.${incident.lage}`), at: incident.activatedAt, by: incident.activatedBy, commander: incident.commander })}</span>
+      <span className="flex shrink-0 items-center gap-6 whitespace-nowrap">
         <Link to="/incident" className="text-primary-text hover:text-primary-hover hover:underline">
-          {LABELS.openIncident}
+          {t('LABELS.openIncident')}
         </Link>
         <button type="button" onClick={onClose} className="text-primary-text hover:text-primary-hover hover:underline">
-          {LABELS.closeIncident}
+          {t('LABELS.closeIncident')}
         </button>
       </span>
     </div>

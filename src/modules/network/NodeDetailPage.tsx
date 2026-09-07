@@ -3,7 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Figure, NodeStatus, SharingLevel } from '@/data/types';
 import { useStore } from '@/data/store';
-import { CAP, CARE_LEVEL_LABELS, CONFIDENCE_LABELS, DATA_SOURCE_LABELS, LABELS, NET, NODE_STATUSES, NODE_STATUS_LABELS, NODE_TYPE_LABELS, SHARING_LABELS, SHARING_LEVELS, SYNC_LABELS } from '@/data/vocab';
+import { NODE_STATUSES, SHARING_LEVELS } from '@/data/vocab';
+import { t, tm } from '@/lib/i18n';
+import { nodeLabel } from '@/lib/scope';
 import { displaySyncState, sourcesForScope, viewFigure } from '@/lib/figure';
 import { fmt, fmtDec } from '@/lib/format';
 import { isStale } from '@/lib/time';
@@ -37,10 +39,10 @@ export function NodeDetailPage() {
   if (!node) {
     return (
       <div className="space-y-4">
-        <PageTitle title={NET.title} />
-        <p>{NET.notFound}</p>
+        <PageTitle title={t('NET.title')} />
+        <p>{t('NET.notFound')}</p>
         <Link to="/natverk" className="text-primary-text hover:text-primary-hover hover:underline">
-          {NET.back}
+          {t('NET.back')}
         </Link>
       </div>
     );
@@ -52,36 +54,36 @@ export function NodeDetailPage() {
   const stoodUp = node.id.startsWith('node-');
   const change = (field: 'status' | 'sharing') => (
     <button type="button" className="text-primary-text hover:text-primary-hover hover:underline" onClick={() => setEditing(field)}>
-      {LABELS.change}
+      {t('LABELS.change')}
     </button>
   );
   const notShared = node.sharing === 'None';
-  const bedsLabel = node.type === 'Hospital' || node.type === 'Care hub' || node.type === 'Field hospital' ? NET.detail.beds : NET.detail.places;
+  const bedsLabel = node.type === 'Hospital' || node.type === 'Care hub' || node.type === 'Field hospital' ? t('NET.detail.beds') : t('NET.detail.places');
 
   const figureRows: Array<{ label: string; figure: Figure; text?: string }> = [
     ...(node.beds ? [{ label: `${bedsLabel}, totalt`, figure: node.beds.total }, { label: `${bedsLabel}, lediga`, figure: viewFigure(node.beds.free, outage) }] : []),
-    ...(node.intensiveCare ? [{ label: `${NET.detail.intensiveCare}, totalt`, figure: node.intensiveCare.total }, { label: `${NET.detail.intensiveCare}, lediga`, figure: viewFigure(node.intensiveCare.free, outage) }] : []),
-    ...(node.staffOnDuty ? [{ label: NET.detail.staff, figure: viewFigure(node.staffOnDuty, outage) }] : []),
+    ...(node.intensiveCare ? [{ label: `${t('NET.detail.intensiveCare')}, totalt`, figure: node.intensiveCare.total }, { label: `${t('NET.detail.intensiveCare')}, lediga`, figure: viewFigure(node.intensiveCare.free, outage) }] : []),
+    ...(node.staffOnDuty ? [{ label: t('NET.detail.staff'), figure: viewFigure(node.staffOnDuty, outage) }] : []),
     ...(node.extraFigures ?? []),
   ];
 
   return (
     <div className="space-y-6">
       <Link to="/natverk" className="text-primary-text hover:text-primary-hover hover:underline">
-        {NET.back}
+        {t('NET.back')}
       </Link>
-      <PageTitle title={node.name}>
-        <Chip tone="grey">{NODE_TYPE_LABELS[node.type]}</Chip>
-        <StatusChip status={node.status} label={NODE_STATUS_LABELS[node.status]} />
+      <PageTitle title={nodeLabel(node)}>
+        <Chip tone="grey">{tm('NODE_TYPE_LABELS')[node.type]}</Chip>
+        <StatusChip status={node.status} label={tm('NODE_STATUS_LABELS')[node.status]} />
       </PageTitle>
 
       <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-8">
         <div className="space-y-8">
           <KeyValueTable
             rows={[
-              { label: NET.detail.type, value: NODE_TYPE_LABELS[node.type] },
+              { label: t('NET.detail.type'), value: tm('NODE_TYPE_LABELS')[node.type] },
               {
-                label: NET.detail.status,
+                label: t('NET.detail.status'),
                 value:
                   editing === 'status' ? (
                     <Select
@@ -90,29 +92,29 @@ export function NodeDetailPage() {
                       onValueChange={(v) => {
                         setNodeStatus(node.id, v as NodeStatus);
                         setEditing(null);
-                        toast(NET.toasts.statusChanged);
+                        toast(t('NET.toasts.statusChanged'));
                       }}
                     >
-                      <SelectTrigger className="w-56" aria-label={NET.detail.changeStatus}>
+                      <SelectTrigger className="w-56" aria-label={t('NET.detail.changeStatus')}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {NODE_STATUSES.map((s) => (
                           <SelectItem key={s} value={s}>
-                            {NODE_STATUS_LABELS[s]}
+                            {tm('NODE_STATUS_LABELS')[s]}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   ) : (
-                    <StatusChip status={node.status} label={NODE_STATUS_LABELS[node.status]} />
+                    <StatusChip status={node.status} label={tm('NODE_STATUS_LABELS')[node.status]} />
                   ),
                 action: editing === 'status' ? null : change('status'),
               },
-              { label: NET.detail.lead, value: node.lead || '–' },
-              { label: NET.detail.place, value: node.place },
+              { label: t('NET.detail.lead'), value: node.lead || '–' },
+              { label: t('NET.detail.place'), value: node.place },
               {
-                label: NET.detail.sharing,
+                label: t('NET.detail.sharing'),
                 value:
                   editing === 'sharing' ? (
                     <Select
@@ -121,30 +123,30 @@ export function NodeDetailPage() {
                       onValueChange={(v) => {
                         setNodeSharing(node.id, v as SharingLevel);
                         setEditing(null);
-                        toast(NET.toasts.sharingChanged);
+                        toast(t('NET.toasts.sharingChanged'));
                       }}
                     >
-                      <SelectTrigger className="w-56" aria-label={NET.detail.changeSharing}>
+                      <SelectTrigger className="w-56" aria-label={t('NET.detail.changeSharing')}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {SHARING_LEVELS.map((s) => (
                           <SelectItem key={s} value={s}>
-                            {SHARING_LABELS[s]}
+                            {tm('SHARING_LABELS')[s]}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   ) : (
-                    SHARING_LABELS[node.sharing]
+                    tm('SHARING_LABELS')[node.sharing]
                   ),
                 action: editing === 'sharing' ? null : change('sharing'),
               },
               {
-                label: NET.detail.sync,
+                label: t('NET.detail.sync'),
                 value: (
                   <span className="flex items-center gap-2">
-                    <StatusChip status={displaySyncState(node, clock)} label={SYNC_LABELS[displaySyncState(node, clock)]} />
+                    <StatusChip status={displaySyncState(node, clock)} label={tm('SYNC_LABELS')[displaySyncState(node, clock)]} />
                     <TimeStamp time={node.lastSync} stale={isStale(clock, node.lastSync)} />
                   </span>
                 ),
@@ -154,11 +156,11 @@ export function NodeDetailPage() {
                     {
                       label: bedsLabel,
                       value: notShared ? (
-                        <span className="text-text-muted">{LABELS.notShared}</span>
+                        <span className="text-text-muted">{t('LABELS.notShared')}</span>
                       ) : (
                         <div>
                           <div className="flex items-center gap-2 tabular">
-                            {NET.detail.freeOf(fmt(viewFigure(node.beds.free, outage).value), fmt(node.beds.total.value))}
+                            {t('NET.detail.freeOf', { free: fmt(viewFigure(node.beds.free, outage).value), total: fmt(node.beds.total.value) })}
                             <ConfidenceChip figure={viewFigure(node.beds.free, outage)} />
                           </div>
                           <FigureLines figure={viewFigure(node.beds.free, outage)} clock={clock} />
@@ -167,17 +169,17 @@ export function NodeDetailPage() {
                     },
                   ]
                 : []),
-              ...(node.plannedBeds !== undefined ? [{ label: NET.detail.plannedBeds, value: <span className="tabular">{fmt(node.plannedBeds)}</span> }] : []),
+              ...(node.plannedBeds !== undefined ? [{ label: t('NET.detail.plannedBeds'), value: <span className="tabular">{fmt(node.plannedBeds)}</span> }] : []),
               ...(node.intensiveCare
                 ? [
                     {
-                      label: NET.detail.intensiveCare,
+                      label: t('NET.detail.intensiveCare'),
                       value: notShared ? (
-                        <span className="text-text-muted">{LABELS.notShared}</span>
+                        <span className="text-text-muted">{t('LABELS.notShared')}</span>
                       ) : (
                         <div>
                           <div className="flex items-center gap-2 tabular">
-                            {node.intensiveCare.free.value === null ? `${LABELS.unknown} ${LABELS.of} ${fmt(node.intensiveCare.total.value)}` : NET.detail.freeOf(fmt(viewFigure(node.intensiveCare.free, outage).value), fmt(node.intensiveCare.total.value))}
+                            {node.intensiveCare.free.value === null ? `${t('LABELS.unknown')} ${t('LABELS.of')} ${fmt(node.intensiveCare.total.value)}` : t('NET.detail.freeOf', { free: fmt(viewFigure(node.intensiveCare.free, outage).value), total: fmt(node.intensiveCare.total.value) })}
                             <ConfidenceChip figure={node.intensiveCare.free.value === null ? node.intensiveCare.total : viewFigure(node.intensiveCare.free, outage)} />
                           </div>
                           <FigureLines figure={viewFigure(node.intensiveCare.free, outage)} clock={clock} />
@@ -189,7 +191,7 @@ export function NodeDetailPage() {
               ...(node.staffOnDuty
                 ? [
                     {
-                      label: NET.detail.staff,
+                      label: t('NET.detail.staff'),
                       value:
                         node.sharing === 'Full' ? (
                           <div>
@@ -197,48 +199,48 @@ export function NodeDetailPage() {
                             <FigureLines figure={viewFigure(node.staffOnDuty, outage)} clock={clock} />
                           </div>
                         ) : (
-                          <StatusChip status="Not shared" label={LABELS.notShared} />
+                          <StatusChip status="Not shared" label={t('LABELS.notShared')} />
                         ),
                     },
                   ]
                 : []),
-              ...(node.radiusKm ? [{ label: NET.detail.place, value: NET.detail.radius(fmt(node.radiusKm)) }] : []),
+              ...(node.radiusKm ? [{ label: t('NET.detail.place'), value: t('NET.detail.radius', { km: fmt(node.radiusKm) }) }] : []),
               {
-                label: NET.detail.accepts,
+                label: t('NET.detail.accepts'),
                 value: node.accepts.length ? (
                   <span className="flex flex-wrap gap-1">
                     {node.accepts.map((a) => (
                       <Chip key={a} tone="grey">
-                        {CARE_LEVEL_LABELS[a]}
+                        {tm('CARE_LEVEL_LABELS')[a]}
                       </Chip>
                     ))}
                   </span>
                 ) : (
-                  <span className="text-text-muted">{LABELS.none}</span>
+                  <span className="text-text-muted">{t('LABELS.none')}</span>
                 ),
               },
             ]}
           />
 
           <section>
-            <SectionHeading>{NET.detail.sources}</SectionHeading>
+            <SectionHeading>{t('NET.detail.sources')}</SectionHeading>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{NET.detail.figure}</TableHead>
-                  <TableHead className="text-right">{NET.detail.value}</TableHead>
-                  <TableHead>{NET.detail.confidence}</TableHead>
-                  <TableHead>{NET.detail.source}</TableHead>
+                  <TableHead>{t('NET.detail.figure')}</TableHead>
+                  <TableHead className="text-right">{t('NET.detail.value')}</TableHead>
+                  <TableHead>{t('NET.detail.confidence')}</TableHead>
+                  <TableHead>{t('NET.detail.source')}</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody lang="sv">
                 {figureRows.map((row, i) => (
                   <TableRow key={`${row.label}-${i}`}>
                     <TableCell className="whitespace-normal">{row.label}</TableCell>
-                    <TableCell className="text-right tabular whitespace-normal">{row.text ?? (row.figure.value === null ? LABELS.unknown : Number.isInteger(row.figure.value) ? fmt(row.figure.value) : fmtDec(row.figure.value))}</TableCell>
+                    <TableCell className="text-right tabular whitespace-normal">{row.text ?? (row.figure.value === null ? t('LABELS.unknown') : Number.isInteger(row.figure.value) ? fmt(row.figure.value) : fmtDec(row.figure.value))}</TableCell>
                     <TableCell>
                       <span className="inline-flex items-center gap-2">
-                        {CONFIDENCE_LABELS[row.figure.confidence]}
+                        {tm('CONFIDENCE_LABELS')[row.figure.confidence]}
                         <ConfidenceChip figure={row.figure} showSource />
                       </span>
                     </TableCell>
@@ -251,17 +253,17 @@ export function NodeDetailPage() {
               <table className="mt-4 w-full text-body">
                 <thead>
                   <tr className="text-text-secondary">
-                    <th className="h-10 px-2 text-left font-normal">{CAP.columns.source}</th>
-                    <th className="h-10 px-2 text-left font-normal">{CAP.columns.state}</th>
-                    <th className="h-10 px-2 text-right font-normal">{CAP.columns.lastSync}</th>
+                    <th className="h-10 px-2 text-left font-normal">{t('CAP.columns.source')}</th>
+                    <th className="h-10 px-2 text-left font-normal">{t('CAP.columns.state')}</th>
+                    <th className="h-10 px-2 text-right font-normal">{t('CAP.columns.lastSync')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {systems.map((s) => (
                     <tr key={s.source} className="h-10 border-t border-border">
-                      <td className="px-2">{DATA_SOURCE_LABELS[s.source]}</td>
+                      <td className="px-2">{tm('DATA_SOURCE_LABELS')[s.source]}</td>
                       <td className="px-2">
-                        <StatusChip status={s.state} label={SYNC_LABELS[s.state]} />
+                        <StatusChip status={s.state} label={tm('SYNC_LABELS')[s.state]} />
                       </td>
                       <td className="px-2 text-right">
                         <TimeStamp time={s.lastSync} stale={s.state !== 'Offline' && isStale(clock, s.lastSync)} />
@@ -275,14 +277,14 @@ export function NodeDetailPage() {
 
           {nodeBottlenecks.length ? (
             <section>
-              <SectionHeading>{NET.detail.bottlenecks}</SectionHeading>
+              <SectionHeading>{t('NET.detail.bottlenecks')}</SectionHeading>
               <BottleneckTable bottlenecks={nodeBottlenecks} capabilities={capabilities} nodes={nodes} />
             </section>
           ) : null}
 
           {stoodUp ? (
             <section>
-              <SectionHeading>{NET.detail.resources}</SectionHeading>
+              <SectionHeading>{t('NET.detail.resources')}</SectionHeading>
               <button
                 type="button"
                 className="text-primary-text hover:text-primary-hover hover:underline"
@@ -291,7 +293,7 @@ export function NodeDetailPage() {
                   navigate('/resurser/lager');
                 }}
               >
-                {NET.detail.showInventory}
+                {t('NET.detail.showInventory')}
               </button>
             </section>
           ) : null}

@@ -2,7 +2,8 @@
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
 import type { NodeId, Priority, Resource, ResourceRequest } from './types';
-import { AMBULANCE_NODE_ID, CURRENT_USER, KAROLINSKA_ID, RES } from './vocab';
+import { AMBULANCE_NODE_ID, CURRENT_USER, KAROLINSKA_ID } from './vocab';
+import { t, tm } from '@/lib/i18n';
 import { formatClock } from '@/lib/time';
 
 export interface NewRequestInput {
@@ -46,7 +47,7 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
   const update = (id: string, patch: Partial<ResourceRequest>) =>
     set((s) => ({ requests: s.requests.map((r) => (r.id === id ? { ...r, ...patch } : r)) }));
   const logTransition = (action: string, r: ResourceRequest, detail?: string) =>
-    get().logEntry(RES.audit.transition(RES.audit.actions[action] ?? action, r.resourceName, r.quantity, nodeName(r.toNodeId)), RES.audit.object(r.resourceName, r.quantity), detail, CURRENT_USER.name, r.id);
+    get().logEntry(t('RES.audit.transition', { action: tm('RES.audit.actions')[action] ?? action, name: r.resourceName, qty: r.quantity, node: nodeName(r.toNodeId) }), t('RES.audit.object', { name: r.resourceName, qty: r.quantity }), detail, CURRENT_USER.name, r.id);
 
   return {
     createRequest: ({ resourceName, quantity, toNodeId, priority, note, fromNodeId, requestedBy }) => {
@@ -70,7 +71,7 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
         incident: Boolean(incident),
       };
       set((s) => ({ requests: [...s.requests, req] }));
-      get().logEntry(RES.audit.requested, RES.audit.object(resourceName, quantity), RES.audit.toNode(nodeName(toNodeId)), requestedBy ?? CURRENT_USER.name, id);
+      get().logEntry(t('RES.audit.requested'), t('RES.audit.object', { name: resourceName, qty: quantity }), t('RES.audit.toNode', { node: nodeName(toNodeId) }), requestedBy ?? CURRENT_USER.name, id);
       return id;
     },
 
@@ -95,7 +96,7 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
       if (!source || source.available < r.quantity) return;
       set((s) => ({ resources: adjust(s.resources, (x) => x.id === source.id, { available: -r.quantity, reserved: r.quantity }) }));
       update(id, { status: 'Allocated', fromNodeId });
-      logTransition('Allocated', r, RES.audit.fromNode(nodeName(fromNodeId)));
+      logTransition('Allocated', r, t('RES.audit.fromNode', { node: nodeName(fromNodeId) }));
     },
 
     dispatchRequest: (id, eta) => {
@@ -104,7 +105,7 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
       const fromNodeId = r.fromNodeId;
       set((s) => ({ resources: adjust(s.resources, (x) => x.nodeId === fromNodeId && x.name === r.resourceName, { reserved: -r.quantity, inTransit: r.quantity }) }));
       update(id, { status: 'Dispatched', eta });
-      logTransition('Dispatched', r, RES.eta(eta));
+      logTransition('Dispatched', r, t('RES.eta', { at: eta }));
     },
 
     receiveRequest: (id) => {
@@ -154,9 +155,9 @@ export const createResourcesSlice: StateCreator<AppStore, [], [], ResourcesActio
       const { clock, nextId } = get();
       if (!text.trim()) return;
       set((s) => ({
-        messagesFromNodes: [...s.messagesFromNodes, { id: nextId('msg'), author: CURRENT_USER.name, role: CURRENT_USER.role, at: formatClock(clock), text: text.trim(), nodeId: KAROLINSKA_ID }],
+        messagesFromNodes: [...s.messagesFromNodes, { id: nextId('msg'), author: CURRENT_USER.name, role: t('LABELS.currentUserRole'), at: formatClock(clock), text: text.trim(), nodeId: KAROLINSKA_ID }],
       }));
-      get().logEntry(RES.audit.sentMessage, RES.title, text.trim());
+      get().logEntry(t('RES.audit.sentMessage'), t('RES.title'), text.trim());
     },
   };
 };

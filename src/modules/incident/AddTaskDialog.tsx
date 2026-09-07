@@ -2,8 +2,8 @@ import { useEffect, useId, useState } from 'react';
 import { toast } from 'sonner';
 import type { Incident } from '@/data/types';
 import { useStore } from '@/data/store';
-import { INCIDENT, LABELS } from '@/data/vocab';
-import { areasOf } from '@/lib/incident';
+import { key, lt, t } from '@/lib/i18n';
+import { areasOf, roleLabel } from '@/lib/incident';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -18,10 +18,12 @@ interface AddTaskDialogProps {
 /** "Lägg till uppgift": Titel, Område, Ansvarig roll, Klar inom minuter (default 30). */
 export function AddTaskDialog({ incident, open, onOpenChange }: AddTaskDialogProps) {
   const addTask = useStore((s) => s.addTask);
-  const areas = areasOf(incident);
+  const playbooks = useStore((s) => s.playbooks);
+  const playbook = playbooks.find((p) => p.id === incident.playbookId);
+  const areas = areasOf(incident).map((a) => ({ key: key(a), label: lt(a) }));
   const roles = Object.keys(incident.roles);
   const [title, setTitle] = useState('');
-  const [area, setArea] = useState(areas[0] ?? '');
+  const [area, setArea] = useState(areas[0]?.key ?? '');
   const [ownerRole, setOwnerRole] = useState(roles[0] ?? '');
   const [dueIn, setDueIn] = useState('30');
   const ids = { title: useId(), area: useId(), role: useId(), due: useId() };
@@ -29,7 +31,7 @@ export function AddTaskDialog({ incident, open, onOpenChange }: AddTaskDialogPro
   useEffect(() => {
     if (open) {
       setTitle('');
-      setArea(areas[0] ?? '');
+      setArea(areas[0]?.key ?? '');
       setOwnerRole(roles[0] ?? '');
       setDueIn('30');
     }
@@ -41,37 +43,37 @@ export function AddTaskDialog({ incident, open, onOpenChange }: AddTaskDialogPro
     if (!valid) return;
     addTask({ title: title.trim(), area, ownerRole, dueInMin: Number(dueIn) });
     onOpenChange(false);
-    toast(INCIDENT.taskAdded);
+    toast(t('INCIDENT.taskAdded'));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{INCIDENT.addTask}</DialogTitle>
+          <DialogTitle>{t('INCIDENT.addTask')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1">
-            <label htmlFor={ids.title}>{INCIDENT.fields.title}</label>
+            <label htmlFor={ids.title}>{t('INCIDENT.fields.title')}</label>
             <Input id={ids.title} value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.area}>{INCIDENT.fields.area}</label>
+            <label htmlFor={ids.area}>{t('INCIDENT.fields.area')}</label>
             <Select value={area} onValueChange={setArea}>
               <SelectTrigger id={ids.area} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {areas.map((a) => (
-                  <SelectItem key={a} value={a}>
-                    {a}
+                  <SelectItem key={a.key} value={a.key}>
+                    {a.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.role}>{INCIDENT.fields.ownerRole}</label>
+            <label htmlFor={ids.role}>{t('INCIDENT.fields.ownerRole')}</label>
             <Select value={ownerRole} onValueChange={setOwnerRole}>
               <SelectTrigger id={ids.role} className="w-full">
                 <SelectValue />
@@ -79,23 +81,23 @@ export function AddTaskDialog({ incident, open, onOpenChange }: AddTaskDialogPro
               <SelectContent>
                 {roles.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {r}
+                    {roleLabel(playbook, r)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <label htmlFor={ids.due}>{INCIDENT.fields.dueIn}</label>
+            <label htmlFor={ids.due}>{t('INCIDENT.fields.dueIn')}</label>
             <Input id={ids.due} type="number" min={1} value={dueIn} onChange={(e) => setDueIn(e.target.value)} className="w-32" />
           </div>
         </div>
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            {LABELS.cancel}
+            {t('LABELS.cancel')}
           </Button>
           <Button onClick={submit} disabled={!valid}>
-            {INCIDENT.addTask}
+            {t('INCIDENT.addTask')}
           </Button>
         </DialogFooter>
       </DialogContent>

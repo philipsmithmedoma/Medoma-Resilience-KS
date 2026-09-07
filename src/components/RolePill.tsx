@@ -1,5 +1,5 @@
 import type { Profession } from '@/data/types';
-import { PROFESSION_LABELS } from '@/data/vocab';
+import { tm } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 // Fill per profession with a 1 px dashed border in a darker tint of the fill (DESIGN.md § 4); tokens carry the dark values.
@@ -12,7 +12,7 @@ const PILL: Record<Profession, string> = {
 
 export function RolePill({ profession, className }: { profession: Profession; className?: string }) {
   return (
-    <span title={PROFESSION_LABELS[profession]} className={cn('inline-flex h-[22px] items-center rounded-full border border-dashed px-2 text-small text-text', PILL[profession], className)}>
+    <span title={tm('PROFESSION_LABELS')[profession]} className={cn('inline-flex h-[22px] items-center rounded-full border border-dashed px-2 text-small text-text', PILL[profession], className)}>
       {profession}
     </span>
   );
