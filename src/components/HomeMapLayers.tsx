@@ -6,6 +6,8 @@ import type { HomeLayerKey, HomeMode } from '@/data/store-home';
 import { lt, t, tm } from '@/lib/i18n';
 import { isSchematic, linkedVertices, offmapEnd, offmapRotation, offmapSlots, vertexPositions, type LatLng } from '@/lib/home-geo';
 import { cssColor } from '@/lib/theme';
+import type { RoadCollection, RoadProps } from '@/lib/roadGraph';
+import { RoadsLayer } from './RoadsLayer';
 
 /** What the Hospital at Home page hands to NodeMap (SPEC.md § 11.6): layers, zones, infrastructure and patient dots. */
 export interface HomeOverlay {
@@ -21,18 +23,22 @@ export interface HomeOverlay {
   /** Disruptions (SPEC.md § 11.5): what a tap does depends on the mode; blocked elements and outage zones are drawn in the danger colour. */
   mode?: HomeMode;
   blockedNodes?: ReadonlySet<string>;
-  blockedLinks?: ReadonlySet<string>;
+  /** roads.json (or the fixture) and the OSM way ids closed in it (SPEC.md § 12.4). */
+  roads?: RoadCollection;
+  blockedWayIds?: ReadonlySet<number>;
   powerOutZones?: ReadonlySet<string>;
   waterOutZones?: ReadonlySet<string>;
   /** How a patient dot is drawn when it is affected; patients not in the map keep the neutral dot. */
   patientMarks?: ReadonlyMap<string, PatientMark>;
   onToggleNode?: (id: string) => void;
-  onToggleLink?: (id: string) => void;
+  /** A tap on a road segment in roads mode. */
+  onTapWay?: (props: RoadProps) => void;
   onToggleZone?: (zone: string) => void;
 }
 
 export type PatientMark = 'affected' | 'critical' | 'detour';
 const EMPTY: ReadonlySet<string> = new Set();
+const NO_WAYS: ReadonlySet<number> = new Set();
 
 /** Layer colours are design tokens: water teal, electricity olive, roads text-secondary. */
 export const LAYER_TOKEN: Record<InfraLayer, string> = {
@@ -118,8 +124,8 @@ function ClearOnMapClick({ onClear }: { onClear: () => void }) {
 export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
   const {
     layers, zones, infraNodes, infraLinks, patients, selectedId = null, onSelectNode,
-    mode = null, blockedNodes = EMPTY, blockedLinks = EMPTY, powerOutZones = EMPTY, waterOutZones = EMPTY, patientMarks,
-    onToggleNode, onToggleLink, onToggleZone,
+    mode = null, blockedNodes = EMPTY, roads, blockedWayIds = NO_WAYS, powerOutZones = EMPTY, waterOutZones = EMPTY, patientMarks,
+    onToggleNode, onTapWay, onToggleZone,
   } = overlay;
   const positions = useMemo(() => vertexPositions(sites, zones, infraNodes), [sites, zones, infraNodes]);
   const slots = useMemo(() => offmapSlots(infraLinks), [infraLinks]);
@@ -141,6 +147,8 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
     <>
       {onSelectNode && mode === null ? <ClearOnMapClick onClear={() => selectedId && onSelectNode(null)} /> : null}
 
+      {roads && layers.roads ? <RoadsLayer roads={roads} blocked={blockedWayIds} interactive={mode === 'roads' && Boolean(onTapWay)} onTap={onTapWay} /> : null}
+
       {zones
         .filter((z) => zoneMode || zoneOut(z.id))
         .map((z) => {
@@ -160,13 +168,12 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
       {infraLinks
         .filter((l) => layers[l.layer])
         .map((l) => {
-          const blocked = blockedLinks.has(l.id);
-          const colour = blocked ? DANGER : cssColor(LAYER_TOKEN[l.layer]);
+          const colour = cssColor(LAYER_TOKEN[l.layer]);
           const label = lt(l.label);
-          const schematic = isSchematic(l) && !blocked;
+          const schematic = isSchematic(l);
           const dashArray = !schematic ? undefined : l.style === 'dotted' ? DASH_DOTTED : DASH_SCHEMATIC;
-          const weight = (l.style === 'road' ? 3 : 2) + (blocked ? 1 : 0);
-          const opacity = blocked ? 1 : linkDim(l) ? 0.15 : l.style === 'street' ? 0.7 : 0.9;
+          const weight = 2;
+          const opacity = linkDim(l) ? 0.15 : l.style === 'street' ? 0.7 : 0.9;
           const from = positions.get(l.a);
           if (!from) return null;
           if (l.offmap) {
@@ -186,19 +193,10 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
           }
           const to = positions.get(l.b);
           if (!to) return null;
-          // In roads mode a link takes taps through a 14 px transparent hit path laid over the visible line.
-          const hit = mode === 'roads' && l.layer === 'roads' && onToggleLink;
           return (
-            <Fragment key={l.id}>
-              <Polyline positions={[from, to]} pathOptions={{ color: colour, weight, dashArray, opacity }} interactive={!hit}>
-                {!hit && label ? <Tooltip sticky>{label}</Tooltip> : null}
-              </Polyline>
-              {hit ? (
-                <Polyline positions={[from, to]} pathOptions={{ color: colour, weight: 14, opacity: 0 }} eventHandlers={{ click: () => onToggleLink(l.id) }}>
-                  {label ? <Tooltip sticky>{label}</Tooltip> : null}
-                </Polyline>
-              ) : null}
-            </Fragment>
+            <Polyline key={l.id} positions={[from, to]} pathOptions={{ color: colour, weight, dashArray, opacity }}>
+              {label ? <Tooltip sticky>{label}</Tooltip> : null}
+            </Polyline>
           );
         })}
 

@@ -1322,7 +1322,7 @@ export const INFRA_NODES: InfraNode[] = [
   }),
   // --- Roads and bridges ---------------------------------------------------
   infra({
-    id: 'r-norra-lanken', layer: 'roads', kind: 'tunnel', name: tx('Norra länken (E4/E20)', 'Norra länken (E4/E20)'),
+    id: 'r-norra-lanken', layer: 'roads', osmWayNames: ['Norra länken'], kind: 'tunnel', name: tx('Norra länken (E4/E20)', 'Norra länken (E4/E20)'),
     lat: 59.3526, lng: 18.0696, verified: true, coord: placesCoord,
     role: tx(
       'Tunnellänk som binder ihop E4/E20 norr om innerstaden; sjukhuset i Solna ligger alldeles intill. Norra änden av Essingeleden.',
@@ -1331,7 +1331,7 @@ export const INFRA_NODES: InfraNode[] = [
     status: tx('Verifierat: Trafikverket.', 'Verified: Trafikverket.'),
   }),
   infra({
-    id: 'r-essingeleden', layer: 'roads', kind: 'bridge', name: tx('Essingeleden (E4)', 'Essingeleden (E4)'),
+    id: 'r-essingeleden', layer: 'roads', osmWayNames: ['Essingeleden'], kind: 'bridge', name: tx('Essingeleden (E4)', 'Essingeleden (E4)'),
     lat: 59.3257, lng: 18.0045, verified: true, coord: ['reported', `${PLACES} (midpoint of the route)`],
     role: tx(
       'Sveriges mest trafikerade väg och den viktigaste vägförbindelsen mellan regionens norra och södra halva. Nio broar och viadukter mellan Västberga och Norra länken. Mycket av trafiken saknar alternativ väg.',
@@ -1352,7 +1352,7 @@ export const INFRA_NODES: InfraNode[] = [
     ],
   }),
   infra({
-    id: 'r-vasterbron', layer: 'roads', kind: 'bridge', name: tx('Västerbron', 'Västerbron'),
+    id: 'r-vasterbron', layer: 'roads', osmWayNames: ['Västerbron'], kind: 'bridge', name: tx('Västerbron', 'Västerbron'),
     lat: 59.3243, lng: 18.0275, verified: true, coord: placesCoord,
     role: tx(
       'Bro mellan Kungsholmen och Södermalm över Riddarfjärden; en av innerstadens förbindelser i snittet Saltsjö–Mälaren.',
@@ -1362,7 +1362,7 @@ export const INFRA_NODES: InfraNode[] = [
     figures: [{ label: tx('Trafik', 'Traffic'), unit: vehicles, value: 24500, confidence: 'reported', source: 'S-H13', asOf: '2019' }],
   }),
   infra({
-    id: 'r-centralbron', layer: 'roads', kind: 'bridge', name: tx('Centralbron', 'Centralbron'),
+    id: 'r-centralbron', layer: 'roads', osmWayNames: ['Centralbron'], kind: 'bridge', name: tx('Centralbron', 'Centralbron'),
     lat: 59.3264, lng: 18.0635, verified: true, coord: placesCoord,
     role: tx(
       'Innerstadens huvudförbindelse intill Gamla stan mellan Norrmalm och Södermalm.',
@@ -1372,7 +1372,7 @@ export const INFRA_NODES: InfraNode[] = [
     figures: [{ label: tx('Trafik', 'Traffic'), unit: vehicles, value: 102000, confidence: 'reported', source: 'S-H13', asOf: '2019' }],
   }),
   infra({
-    id: 'r-liljeholmsbron', layer: 'roads', kind: 'bridge', name: tx('Liljeholmsbron', 'Liljeholmsbron'),
+    id: 'r-liljeholmsbron', layer: 'roads', osmWayNames: ['Liljeholmsbron'], kind: 'bridge', name: tx('Liljeholmsbron', 'Liljeholmsbron'),
     lat: 59.3134, lng: 18.0319, verified: true, coord: placesCoord,
     role: tx(
       'Bro mellan Södermalm och Liljeholmen, den västra förbindelsen från Södermalm till söderförorterna.',
@@ -1386,7 +1386,7 @@ export const INFRA_NODES: InfraNode[] = [
     ],
   }),
   infra({
-    id: 'r-skanstullsbron', layer: 'roads', kind: 'bridge', name: tx('Skanstullsbron', 'Skanstullsbron'),
+    id: 'r-skanstullsbron', layer: 'roads', osmWayNames: ['Skanstullsbron'], kind: 'bridge', name: tx('Skanstullsbron', 'Skanstullsbron'),
     lat: 59.3029, lng: 18.0795, verified: true, coord: placesCoord,
     role: tx(
       'Bro mellan Södermalm och Gullmarsplan över Hammarby kanal, som leder till Södra länken och söderförorterna.',
@@ -1395,7 +1395,7 @@ export const INFRA_NODES: InfraNode[] = [
     status: tx('Verifierad existens. Trafikuppgift: ska verifieras.', 'Verified existence. Traffic figure: to verify.'),
   }),
   infra({
-    id: 'r-sodra-lanken', layer: 'roads', kind: 'tunnel', name: tx('Södra länken (E4/E20 / 222)', 'Södra länken (E4/E20 / 222)'),
+    id: 'r-sodra-lanken', layer: 'roads', osmWayNames: ['Södra länken'], kind: 'tunnel', name: tx('Södra länken (E4/E20 / 222)', 'Södra länken (E4/E20 / 222)'),
     lat: 59.301, lng: 18.1054, verified: true, coord: placesCoord,
     role: tx(
       'Tunnellänk söder om innerstaden som binder ihop Essingeleden/E4 med Nacka och söderförorterna.',
@@ -1450,34 +1450,6 @@ export const INFRA_LINKS: InfraLink[] = [
   link('el-skanstull-anneberg', 'el', 'e-skanstull', 'e-skanstull', 'dashed', false, noLabel, { dir: 'N', text: tx('kabel från Anneberg', 'cable from Anneberg') }),
   link('el-regionnat-solna', 'el', 'e-regionnat', 'solna', 'dashed', false, tx('regionnät, ej kartlagt', 'regional grid, not mapped')),
   link('el-regionnat-huddinge', 'el', 'e-regionnat', 'huddinge', 'dashed', false, tx('regionnät, ej kartlagt', 'regional grid, not mapped')),
-  // --- Roads: all routing is schematic; `street` for the two hospital-to-neighbourhood links -------------
-  link('rl-solna-norra-lanken', 'roads', 'solna', 'r-norra-lanken', 'road', true, tx('E4/E20 vid Solna', 'E4/E20 at Solna')),
-  link('rl-solna-zone-solna', 'roads', 'solna', z('solna'), 'street', true),
-  link('rl-solna-innerstaden', 'roads', 'solna', z('innerstaden'), 'street', true, tx('Solnavägen', 'Solnavägen')),
-  link('rl-solna-bromma', 'roads', 'solna', z('bromma'), 'road', true, tx('via Sundbyberg, schematisk', 'via Sundbyberg, schematic')),
-  link('rl-norra-lanken-taby', 'roads', 'r-norra-lanken', z('taby'), 'road', true, tx('E18/E4 norrut', 'E18/E4 north')),
-  link(
-    'rl-norra-lanken-lidingo', 'roads', 'r-norra-lanken', z('lidingo'), 'road', true,
-    tx('via Lidingöbron – en bro, kan stängas som denna länk', 'via Lidingöbron – a bridge, blockable as this link'),
-  ),
-  link('rl-norra-lanken-essingeleden', 'roads', 'r-norra-lanken', 'r-essingeleden', 'road', true, tx('E4', 'E4')),
-  link('rl-innerstaden-essingeleden', 'roads', z('innerstaden'), 'r-essingeleden', 'road', true, tx('Påfart Essingeleden', 'Essingeleden access')),
-  link('rl-innerstaden-vasterbron', 'roads', z('innerstaden'), 'r-vasterbron', 'road', true),
-  link('rl-vasterbron-sodermalm', 'roads', 'r-vasterbron', z('sodermalm'), 'road', true),
-  link('rl-innerstaden-centralbron', 'roads', z('innerstaden'), 'r-centralbron', 'road', true),
-  link('rl-centralbron-sodermalm', 'roads', 'r-centralbron', z('sodermalm'), 'road', true),
-  link('rl-essingeleden-soderort', 'roads', 'r-essingeleden', z('soderort'), 'road', true, tx('E4 Västberga/Årsta', 'E4 Västberga/Årsta')),
-  link('rl-sodermalm-liljeholmsbron', 'roads', z('sodermalm'), 'r-liljeholmsbron', 'road', true),
-  link('rl-liljeholmsbron-soderort', 'roads', 'r-liljeholmsbron', z('soderort'), 'road', true),
-  link('rl-sodermalm-skanstullsbron', 'roads', z('sodermalm'), 'r-skanstullsbron', 'road', true),
-  link('rl-skanstullsbron-sodra-lanken', 'roads', 'r-skanstullsbron', 'r-sodra-lanken', 'road', true),
-  link('rl-sodra-lanken-nacka', 'roads', 'r-sodra-lanken', z('nacka'), 'road', true, tx('väg 222', 'väg 222')),
-  link('rl-sodra-lanken-soderort', 'roads', 'r-sodra-lanken', z('soderort'), 'road', true),
-  link('rl-sodra-lanken-essingeleden', 'roads', 'r-sodra-lanken', 'r-essingeleden', 'road', true, tx('E4/E20 Årstalänken', 'E4/E20 Årsta link')),
-  link('rl-soderort-huddinge', 'roads', z('soderort'), z('huddinge'), 'road', true, tx('väg 226 Huddingevägen', 'väg 226 Huddingevägen')),
-  link('rl-essingeleden-huddinge', 'roads', 'r-essingeleden', 'huddinge', 'road', true, tx('E4/E20 söderut till Flemingsberg', 'E4/E20 south to Flemingsberg')),
-  link('rl-huddinge-zone-huddinge', 'roads', 'huddinge', z('huddinge'), 'street', true),
-  link('rl-huddinge-botkyrka', 'roads', 'huddinge', z('botkyrka'), 'road', true, tx('E4/E20 / väg 226 Botkyrka', 'E4/E20 / väg 226 Botkyrka')),
 ];
 
 /** Sources for DATA.md § 11 (S-H1…S-H14); coordinates are from Google Places, read 2026-11-02. */

@@ -5,7 +5,7 @@ import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
 import type { InfraLayer, ZoneId } from './types';
 import { lt, t } from '@/lib/i18n';
-import { linkLabel } from '@/lib/home-names';
+import { getRoadModel } from '@/lib/roadModel';
 import { sitesInScope } from '@/lib/scope';
 import { disruptionCount, impact } from '@/lib/reachability';
 
@@ -20,12 +20,20 @@ export interface HomeState {
   /** Defaults: patients and roads on, el and water off. */
   layers: Record<HomeLayerKey, boolean>;
   mode: HomeMode;
-  blockedLinks: Set<string>;
+  /** OSM way ids closed by a tap on a segment. */
+  blockedWays: Set<string>;
+  /** Roads closed by a tap with "block whole road": `name` or `name|ref`. */
+  blockedRoads: Set<string>;
+  /** Road nodes (bridges, tunnels) closed; each blocks its `osmWayNames`. */
   blockedNodes: Set<string>;
   powerOutZones: Set<ZoneId>;
   waterOutZones: Set<ZoneId>;
   /** The infrastructure node the panel shows; the map dims everything it is not linked to. */
   selectedNode: string | null;
+  /** In roads mode a tap blocks every way that shares the tapped way's name (view state). */
+  wholeRoad: boolean;
+  /** The road geometry has loaded (it is a dynamic import), so the road graph can answer. */
+  geoReady: boolean;
 }
 
 export interface HomeActions {
@@ -35,7 +43,10 @@ export interface HomeActions {
   /** Picks the mode (picking the active one clears it) and switches on the layer the mode acts on. */
   setHomeMode: (mode: HomeMode) => void;
   toggleBlockedNode: (id: string) => void;
-  toggleBlockedLink: (id: string) => void;
+  toggleBlockedWay: (id: string) => void;
+  toggleBlockedRoad: (key: string) => void;
+  setWholeRoad: (on: boolean) => void;
+  setHomeGeoReady: () => void;
   togglePowerOut: (zone: ZoneId) => void;
   toggleWaterOut: (zone: ZoneId) => void;
   /** Clears every disruption and writes one log entry; nothing happens when there is none. */
@@ -48,11 +59,14 @@ export function initialHome(): HomeState {
   return {
     layers: { patients: true, roads: true, el: false, water: false },
     mode: null,
-    blockedLinks: new Set(),
+    blockedWays: new Set(),
+    blockedRoads: new Set(),
     blockedNodes: new Set(),
     powerOutZones: new Set(),
     waterOutZones: new Set(),
     selectedNode: null,
+    wholeRoad: false,
+    geoReady: getRoadModel() !== null,
   };
 }
 
@@ -61,6 +75,13 @@ const toggled = <T>(set: ReadonlySet<T>, value: T): Set<T> => {
   if (!next.delete(value)) next.add(value);
   return next;
 };
+
+/** A way by its name, else its ref, else its OSM id (for the log and the panel). */
+export function wayLabel(id: string): string {
+  const g = getRoadModel()?.graph;
+  const w = g?.ways[g.wayIndexById.get(Number(id)) ?? -1];
+  return w?.name ?? w?.ref ?? `OSM ${id}`;
+}
 
 export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set, get) => {
   /** "N of 150 patients affected" for the current state and scope: the detail of every disruption log entry. */
@@ -102,14 +123,23 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), lt(node.name), detail());
     },
 
-    toggleBlockedLink: (id) => {
-      const { pack, home, logEntry } = get();
-      const link = pack.infraLinks.find((l) => l.id === id && l.layer === 'roads');
-      if (!link) return;
-      const blocking = !home.blockedLinks.has(id);
-      set((s) => ({ home: { ...s.home, blockedLinks: toggled(s.home.blockedLinks, id) } }));
-      logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), linkLabel(link, pack), detail());
+    toggleBlockedWay: (id) => {
+      const { home, logEntry } = get();
+      const blocking = !home.blockedWays.has(id);
+      set((s) => ({ home: { ...s.home, blockedWays: toggled(s.home.blockedWays, id) } }));
+      logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), wayLabel(id), detail());
     },
+
+    toggleBlockedRoad: (key) => {
+      const { home, logEntry } = get();
+      const blocking = !home.blockedRoads.has(key);
+      set((s) => ({ home: { ...s.home, blockedRoads: toggled(s.home.blockedRoads, key) } }));
+      logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), key.split('|')[0], detail());
+    },
+
+    setWholeRoad: (on) => set((s) => ({ home: { ...s.home, wholeRoad: on } })),
+
+    setHomeGeoReady: () => set((s) => (s.home.geoReady ? s : { home: { ...s.home, geoReady: true } })),
 
     togglePowerOut: (zone) => {
       const { pack, home, logEntry } = get();
@@ -130,7 +160,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
     resetHomeDisruptions: () => {
       const { home, logEntry } = get();
       if (disruptionCount(home) === 0) return;
-      set((s) => ({ home: { ...s.home, blockedLinks: new Set(), blockedNodes: new Set(), powerOutZones: new Set(), waterOutZones: new Set() } }));
+      set((s) => ({ home: { ...s.home, blockedWays: new Set(), blockedRoads: new Set(), blockedNodes: new Set(), powerOutZones: new Set(), waterOutZones: new Set() } }));
       logEntry(t('AUDIT.homeReset'), t('AUDIT.homeObject'), detail());
     },
 
@@ -142,7 +172,8 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
         home: {
           ...s.home,
           blockedNodes: new Set(preset.blockedNodes),
-          blockedLinks: new Set(),
+          blockedWays: new Set(),
+          blockedRoads: new Set(),
           powerOutZones: new Set(preset.powerOutZones),
           waterOutZones: new Set(preset.waterOutZones),
           mode: null,

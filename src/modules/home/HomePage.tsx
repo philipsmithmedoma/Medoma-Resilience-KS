@@ -7,6 +7,7 @@ import { HomePatientList } from './HomePatientList';
 import { NodePanel, PanelEmpty } from './NodePanel';
 import { ImpactPanel } from './ImpactPanel';
 import { useHomeImpact } from './useHomeImpact';
+import { useHomeGeo } from './useHomeGeo';
 
 /** SPEC.md § 11.6 – Sjukhus hemma: patient list (380 px), panel (320 px) and the map, as in Evakuering. */
 export function HomePage() {
@@ -17,6 +18,7 @@ export function HomePage() {
   const selectedId = useStore((s) => s.home.selectedNode);
   const selected = pack.infraNodes.find((n) => n.id === selectedId) ?? null;
   const mode = useStore((s) => s.home.mode);
+  const geo = useHomeGeo();
   const { impact, active } = useHomeImpact();
   // Middle pane: the result with disruptions; with a mode and none yet its instruction; else the selected node.
   const panel = active ? <ImpactPanel impact={impact} /> : mode ? <p className="px-4 py-4">{t(`HOME.instructions.${mode}`)}</p> : selected ? <NodePanel node={selected} /> : <PanelEmpty />;
@@ -31,7 +33,7 @@ export function HomePage() {
         </div>
         <div className="w-[320px] shrink-0 overflow-y-auto border-r border-border">{panel}</div>
         <div className="min-w-0 flex-1">
-          <HomeMap impact={impact} />
+          <HomeMap impact={impact} geo={geo} />
         </div>
       </div>
     </div>

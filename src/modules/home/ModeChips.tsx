@@ -9,6 +9,7 @@ export function ModeChips({ className }: { className?: string }) {
   const mode = useStore((s) => s.home.mode);
   const home = useStore((s) => s.home);
   const setHomeMode = useStore((s) => s.setHomeMode);
+  const setWholeRoad = useStore((s) => s.setWholeRoad);
   const resetHomeDisruptions = useStore((s) => s.resetHomeDisruptions);
   const labels = tm('HOME.modes');
   const any = disruptionCount(home) > 0;
@@ -29,6 +30,19 @@ export function ModeChips({ className }: { className?: string }) {
           {labels[m]}
         </button>
       ))}
+      {mode === 'roads' ? (
+        <button
+          type="button"
+          aria-pressed={home.wholeRoad}
+          onClick={() => setWholeRoad(!home.wholeRoad)}
+          className={cn(
+            'h-7 rounded-full border px-3 text-small whitespace-nowrap transition-colors duration-150',
+            home.wholeRoad ? 'border-primary-text bg-primary text-primary-foreground' : 'border-border bg-surface text-text hover:bg-bg-muted',
+          )}
+        >
+          {labels.wholeRoad}
+        </button>
+      ) : null}
       <button
         type="button"
         disabled={!any}

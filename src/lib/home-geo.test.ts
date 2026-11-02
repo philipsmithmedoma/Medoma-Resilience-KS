@@ -32,7 +32,7 @@ describe('home geometry (SPEC.md § 11.5–11.6)', () => {
     const byId = (id: string) => pack.infraLinks.find((l) => l.id === id)!;
     expect(isSchematic(byId('wl-gorvaln-solna'))).toBe(true);
     expect(isSchematic(byId('el-overby-beckomberga'))).toBe(false);
-    expect(isSchematic(byId('rl-norra-lanken-essingeleden'))).toBe(false);
+    expect(isSchematic(byId('el-hagby-odensala'))).toBe(false);
     expect(isSchematic(byId('el-regionnat-solna'))).toBe(true);
   });
 });

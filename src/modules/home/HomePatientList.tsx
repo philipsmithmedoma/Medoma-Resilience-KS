@@ -7,6 +7,7 @@ import { NO_FILTERS, filterPatients, groupByZone, hasFilters, type HomeFilters }
 import { isPrioritised, prioritise, type Impact, type ImpactReason, type ImpactRow } from '@/lib/reachability';
 import { cn } from '@/lib/utils';
 import { Chip } from '@/components/Chip';
+import { getRoadModel } from '@/lib/roadModel';
 import type { ChipTone } from '@/data/vocab';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,6 +34,8 @@ const REASON_TONE: Record<ImpactReason, ChipTone> = { unreachable: 'red', detour
 
 function PatientRow({ p, row }: { p: HomePatient; row?: ImpactRow }) {
   const reasons = tm('HOME.impact.reasons');
+  useStore((s) => s.home.geoReady); // the snap result exists once the geometry has loaded
+  const noRoad = getRoadModel()?.patients.get(p.id)?.unsnapped === true;
   const equipment = tm('HOME.equipment');
   const zones = useStore((s) => s.pack.homeZones);
   const zone = zones.find((z) => z.id === p.zone)!;
@@ -45,6 +48,11 @@ function PatientRow({ p, row }: { p: HomePatient; row?: ImpactRow }) {
         {row && isPrioritised(row) ? <Chip tone="grey" className="border-transparent bg-badge font-medium text-badge-text">{t('HOME.impact.prioritise')}</Chip> : null}
         {p.visitToday ? <Chip tone="blue">{t('HOME.list.visitToday')}</Chip> : null}
       </div>
+      {noRoad ? (
+        <div className="flex flex-wrap gap-1">
+          <Chip tone="warning">{reasons.noRoad}</Chip>
+        </div>
+      ) : null}
       {row ? (
         <div className="flex flex-wrap gap-1">
           {row.reasons.map((r) => (

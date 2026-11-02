@@ -1,6 +1,6 @@
 import { useStore } from '@/data/store';
 import { t, tn, lt } from '@/lib/i18n';
-import { linkLabel } from '@/lib/home-names';
+import { wayLabel } from '@/data/store-home';
 import type { Impact } from '@/lib/reachability';
 import { ConfidenceChip } from '@/components/ConfidenceChip';
 import { Button } from '@/components/ui/button';
@@ -17,10 +17,8 @@ export function ImpactPanel({ impact }: { impact: Impact }) {
   const lines: string[] = [];
   const closed = [
     ...[...home.blockedNodes].map((id) => lt(pack.infraNodes.find((n) => n.id === id)?.name ?? id)),
-    ...[...home.blockedLinks].map((id) => {
-      const link = pack.infraLinks.find((l) => l.id === id);
-      return link ? linkLabel(link, pack) : id;
-    }),
+    ...[...home.blockedRoads].map((key) => key.split('|')[0]),
+    ...[...home.blockedWays].map(wayLabel),
   ];
   if (closed.length) lines.push(t('HOME.impact.closed', { names: closed.join(', ') }));
   if (home.powerOutZones.size) lines.push(t('HOME.impact.powerOut', { names: [...home.powerOutZones].map(zoneName).join(', ') }));

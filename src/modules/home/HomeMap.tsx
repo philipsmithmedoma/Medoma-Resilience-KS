@@ -1,7 +1,10 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useStore } from '@/data/store';
 import { t } from '@/lib/i18n';
-import type { Impact } from '@/lib/reachability';
+import { blockedWayIdSet, type Impact } from '@/lib/reachability';
+import { getRoadModel } from '@/lib/roadModel';
+import { roadKey, type RoadProps } from '@/lib/roadGraph';
+import type { GeoData } from '@/lib/geoData';
 import { NodeMap } from '@/components/NodeMap';
 import type { HomeOverlay, PatientMark } from '@/components/HomeMapLayers';
 import { LayerChips } from './LayerChips';
@@ -9,13 +12,14 @@ import { ModeChips } from './ModeChips';
 import { MapLegend } from './MapLegend';
 
 /** Right pane (SPEC.md § 11.6): layer and mode chips above the map, the legend under it. */
-export function HomeMap({ impact }: { impact: Impact }) {
+export function HomeMap({ impact, geo }: { impact: Impact; geo: GeoData | null }) {
   const pack = useStore((s) => s.pack);
   const nodes = useStore((s) => s.nodes);
   const home = useStore((s) => s.home);
   const selectHomeNode = useStore((s) => s.selectHomeNode);
   const toggleBlockedNode = useStore((s) => s.toggleBlockedNode);
-  const toggleBlockedLink = useStore((s) => s.toggleBlockedLink);
+  const toggleBlockedWay = useStore((s) => s.toggleBlockedWay);
+  const toggleBlockedRoad = useStore((s) => s.toggleBlockedRoad);
   const togglePowerOut = useStore((s) => s.togglePowerOut);
   const toggleWaterOut = useStore((s) => s.toggleWaterOut);
   // Only the two Karolinska sites are care nodes on this map; the region's hospitals are not part of the picture.
@@ -26,6 +30,21 @@ export function HomeMap({ impact }: { impact: Impact }) {
     for (const r of impact.rows) marks.set(r.patient.id, r.critical ? 'critical' : r.affected ? 'affected' : 'detour');
     return marks;
   }, [impact]);
+  // A tap on a segment closes that way, or with "block whole road" every way with the same name (SPEC.md § 12.4).
+  const onTapWay = useCallback(
+    (p: RoadProps) => {
+      const key = home.wholeRoad ? roadKey(p) : null;
+      if (key) toggleBlockedRoad(key);
+      else toggleBlockedWay(String(p.id));
+    },
+    [home.wholeRoad, toggleBlockedRoad, toggleBlockedWay],
+  );
+  const blockedWayIds = useMemo(() => {
+    const model = getRoadModel();
+    return model ? blockedWayIdSet(model, home, pack) : new Set<number>();
+    // geoReady: the model exists once the geometry has loaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [home.blockedWays, home.blockedRoads, home.blockedNodes, home.geoReady, pack]);
   const overlay = useMemo<HomeOverlay>(
     () => ({
       layers: home.layers,
@@ -37,15 +56,16 @@ export function HomeMap({ impact }: { impact: Impact }) {
       onSelectNode: selectHomeNode,
       mode: home.mode,
       blockedNodes: home.blockedNodes,
-      blockedLinks: home.blockedLinks,
+      roads: geo?.roads,
+      blockedWayIds,
       powerOutZones: home.powerOutZones,
       waterOutZones: home.waterOutZones,
       patientMarks,
       onToggleNode: toggleBlockedNode,
-      onToggleLink: toggleBlockedLink,
+      onTapWay,
       onToggleZone: home.mode === 'el' ? togglePowerOut : toggleWaterOut,
     }),
-    [home, pack, patientMarks, selectHomeNode, toggleBlockedNode, toggleBlockedLink, togglePowerOut, toggleWaterOut],
+    [home, pack, geo, blockedWayIds, onTapWay, patientMarks, selectHomeNode, toggleBlockedNode, togglePowerOut, toggleWaterOut],
   );
   return (
     <div className="flex h-full min-w-0 flex-col">

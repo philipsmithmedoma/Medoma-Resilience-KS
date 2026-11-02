@@ -514,7 +514,9 @@ export interface HomePatient {
   givenName: string;
   age: number;
   zone: ZoneId;
-  lat: number; // synthetic, within the zone radius
+  street: string; // the street the patient lives on (OpenStreetMap, or the fixture's) – SPEC.md § 12.5
+  houseNo: number; // illustrative, 1–60
+  lat: number; // synthetic, a vertex of a street within the zone radius
   lng: number;
   team: string; // illustrative ASIH team name
   equipment: HomeEquipment[];
@@ -548,6 +550,8 @@ export interface InfraNode {
   coordSource: string;
   figures?: InfraFigure[]; // e.g. vehicles per day, each with confidence and source
   noMarker?: boolean; // drawn as an arrow or as status text on other nodes, not as a marker
+  /** Road nodes: the OpenStreetMap way names this node blocks when it is closed (SPEC.md § 12.5). */
+  osmWayNames?: string[];
 }
 
 export interface InfraLink {

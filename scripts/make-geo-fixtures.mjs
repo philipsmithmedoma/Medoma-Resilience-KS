@@ -56,26 +56,30 @@ const corridors = [
   W(9000016, 'Södra länken', 'E4', 'motorway', false, true, [L2, P(59.301, 18.1054), NACKA_Z]),
   W(9000017, 'Götgatan', null, 'secondary', false, false, [K3, SODERMALM_Z, SKANSTULL]),
   W(9000018, 'Söderledstunneln', null, 'trunk', false, true, [K1, P(59.31, 18.04), SODERORT_Z]),
-  W(9000019, 'Södertäljevägen', 'E4', 'trunk', false, false, [J5, P(59.27, 17.99), P(59.25, 17.97), HUDDINGE_Z, HUDDINGE_SITE, P(59.2, 17.88), BOTKYRKA_Z]),
+  W(9000019, 'Södertäljevägen', 'E4', 'trunk', false, false, [J5, P(59.27, 17.99), P(59.25, 17.97), HUDDINGE_Z, HUDDINGE_SITE]),
+  W(9000021, 'Södertäljevägen', 'E4', 'trunk', false, false, [HUDDINGE_SITE, P(59.2, 17.88), BOTKYRKA_Z]),
   W(9000020, 'Västberga allé', null, 'secondary', false, false, [J5, L1, SODERORT_Z]),
 ];
 
-// One ring road per zone so that a patient anywhere in a zone is within 1.5 km of a vertex of the graph.
+// One ring road of 0.9 km radius per zone, so that every street of the fixture is close to a vertex of its own zone. Only junctions
+// and way ends are vertices, so each ring is eight short ways (and a spoke to the zone centre), not one long way.
 const zones = [
   ['Solna', SOLNA_Z], ['Innerstaden', INNER_Z], ['Bromma', BROMMA_Z], ['Södermalm', SODERMALM_Z], ['Söderort', SODERORT_Z],
   ['Huddinge', HUDDINGE_Z], ['Botkyrka', BOTKYRKA_Z], ['Nacka', NACKA_Z], ['Lidingö', LIDINGO_Z], ['Täby', TABY_Z],
 ];
+const RING_POINTS = 8;
 const ringPoints = (c) => {
   const pts = [];
-  for (let i = 0; i < 12; i++) {
-    const a = (i * Math.PI) / 6;
-    pts.push([r5(c[0] + (1.2 * Math.sin(a)) / (111.32 * Math.cos((c[1] * Math.PI) / 180))), r5(c[1] + (1.2 * Math.cos(a)) / 111.32)]);
+  for (let i = 0; i < RING_POINTS; i++) {
+    const a = (i * 2 * Math.PI) / RING_POINTS;
+    pts.push([r5(c[0] + (0.9 * Math.sin(a)) / (111.32 * Math.cos((c[1] * Math.PI) / 180))), r5(c[1] + (0.9 * Math.cos(a)) / 111.32)]);
   }
   return pts;
 };
-const rings = zones.map(([name, c], i) => {
+const rings = zones.flatMap(([name, c], zi) => {
   const ring = ringPoints(c);
-  return W(9000101 + i, `${name} ringväg`, null, 'secondary', false, false, [c, ...ring, ring[0]]);
+  const segments = ring.map((pt, i) => [pt, ring[(i + 1) % RING_POINTS]]);
+  return [[c, ring[0]], ...segments].map((pts, i) => W(9000100 + zi * 20 + i, `${name} ringväg`, null, 'secondary', false, false, pts));
 });
 
 const lineFeature = (w) => ({
@@ -85,8 +89,8 @@ const lineFeature = (w) => ({
 });
 const collection = (features) => ({ type: 'FeatureCollection', features });
 
-// Streets: ten short residential streets per zone, deterministic positions within 80 % of the zone radius.
-const RADIUS = { Solna: 2.5, Innerstaden: 2.0, Bromma: 2.5, Södermalm: 1.8, Söderort: 2.5, Huddinge: 2.5, Botkyrka: 2.5, Nacka: 2.5, Lidingö: 2.0, Täby: 2.5 };
+// Streets: ten short residential streets per zone, each within 120 m of a vertex of the zone's own ring road, so that a
+// patient placed on one snaps to its own zone's vertex and not across the water to a neighbouring zone's.
 let seed = 20261103;
 const rnd = () => {
   seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
@@ -94,16 +98,18 @@ const rnd = () => {
 };
 const STREET_NAMES = ['Provgatan', 'Testvägen', 'Fixturgränd', 'Exempelstigen', 'Modellvägen', 'Provbacken', 'Testgatan', 'Fixturvägen', 'Exempelgatan', 'Modellgränd'];
 const streets = [];
-zones.forEach(([zone, c], zi) => {
+zones.forEach(([zoneName, c], zi) => {
+  const ring = ringPoints(c);
   for (let i = 0; i < 10; i++) {
-    const d = RADIUS[zone] * 0.8 * Math.sqrt(rnd());
+    const anchor = ring[Math.floor(rnd() * ring.length)];
+    const d = 0.12 * Math.sqrt(rnd());
     const b = rnd() * 2 * Math.PI;
-    const a = P(c[1] + (d * Math.cos(b)) / 111.32, c[0] + (d * Math.sin(b)) / (111.32 * Math.cos((c[1] * Math.PI) / 180)));
+    const a = P(anchor[1] + (d * Math.cos(b)) / 111.32, anchor[0] + (d * Math.sin(b)) / (111.32 * Math.cos((anchor[1] * Math.PI) / 180)));
     const dir = rnd() * 2 * Math.PI;
-    const step = 0.12;
+    const step = 0.04;
     const m = P(a[1] + (step * Math.cos(dir)) / 111.32, a[0] + (step * Math.sin(dir)) / (111.32 * Math.cos((a[1] * Math.PI) / 180)));
     const e = P(m[1] + (step * Math.cos(dir)) / 111.32, m[0] + (step * Math.sin(dir)) / (111.32 * Math.cos((m[1] * Math.PI) / 180)));
-    streets.push({ type: 'Feature', properties: { id: 9100000 + zi * 100 + i, name: `${STREET_NAMES[i]} ${zi + 1}` }, geometry: { type: 'LineString', coordinates: [a, m, e] } });
+    streets.push({ type: 'Feature', properties: { id: 9100000 + zi * 100 + i, name: `${STREET_NAMES[i]} i ${zoneName}` }, geometry: { type: 'LineString', coordinates: [a, m, e] } });
   }
 });
 
@@ -131,4 +137,4 @@ writeFileSync(path.join(out, 'fixture.json'), JSON.stringify(collection([...corr
 writeFileSync(path.join(out, 'fixture-streets.json'), JSON.stringify(collection(streets)));
 writeFileSync(path.join(out, 'fixture-power.json'), JSON.stringify(power));
 writeFileSync(path.join(out, 'fixture-water.json'), JSON.stringify(water));
-console.log(`fixture: ${corridors.length} corridor ways + ${rings.length} zone ring roads, ${streets.length} streets`);
+console.log(`fixture: ${corridors.length} corridor ways + ${rings.length} zone ring segments, ${streets.length} streets`);

@@ -1,7 +1,7 @@
 // Generates src/data/packs/patients.ts once, deterministically (SPEC.md § 6.7): 40 patients per site,
 // wards from DATA.md § 5.1, the first prototype's distribution constraints, ages 24–91, 12 home care
 // eligible per site. Run: node scripts/generate-patients.mjs
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -184,13 +184,37 @@ function position(lat, lng, radiusKm) {
   return [Number((lat + dLat).toFixed(5)), Number((lng + dLng).toFixed(5))];
 }
 
+// SPEC.md § 12.5: each patient lands on a random vertex of a random street within the zone's radius. The streets come from
+// src/data/packs/geo/streets.json (scripts/fetch-osm.mjs) or, until that has been fetched, from fixture-streets.json.
+// Placement has its own random stream, so equipment, batteries and visits are the same whichever file is used.
+const geoDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/data/packs/geo');
+const streetsFile = existsSync(path.join(geoDir, 'streets.json')) ? 'streets.json' : 'fixture-streets.json';
+const streetFeatures = JSON.parse(readFileSync(path.join(geoDir, streetsFile), 'utf8')).features.filter((f) => f.properties.name);
+console.log(`Placing home patients on ${streetFeatures.length} streets from ${streetsFile}`);
+const rand3 = mulberry32(HOME_SEED + 1);
+const kmBetween = (lat1, lng1, lat2, lng2) => Math.hypot((lat2 - lat1) * KM_PER_DEG_LAT, (lng2 - lng1) * KM_PER_DEG_LAT * Math.cos((lat1 * Math.PI) / 180));
+// A street vertex counts for a zone when it is within the zone's radius and the zone's centre is the nearest of the ten
+// centres: neighbouring zones overlap (Innerstaden and Södermalm are 2.4 km apart), and a patient of Södermalm must not
+// live in Norrmalm.
+function onStreet(zlat, zlng, radiusKm) {
+  const nearestIsThisZone = (lat, lng) => HOME_ZONES.every(([, olat, olng]) => kmBetween(lat, lng, zlat, zlng) <= kmBetween(lat, lng, olat, olng) + 1e-9);
+  const candidates = streetFeatures
+    .map((f) => ({ name: f.properties.name, vertices: f.geometry.coordinates.filter(([lng, lat]) => kmBetween(zlat, zlng, lat, lng) <= radiusKm && nearestIsThisZone(lat, lng)) }))
+    .filter((s) => s.vertices.length > 0);
+  if (candidates.length === 0) throw new Error(`No street within ${radiusKm} km of ${zlat}, ${zlng}`);
+  const street = candidates[Math.floor(rand3() * candidates.length)];
+  const [lng, lat] = street.vertices[Math.floor(rand3() * street.vertices.length)];
+  return { street: street.name, lat, lng, houseNo: 1 + Math.floor(rand3() * 60) };
+}
+
 const homePatients = [];
 for (const [zone, zlat, zlng, radiusKm, count, team] of HOME_ZONES) {
   for (let i = 0; i < count; i++) {
     const main = pickMain();
     const dialysis = rand2() < 0.05;
     const equipment = [...(main ? [main] : []), ...(dialysis ? ['Home dialysis'] : [])];
-    const [lat, lng] = position(zlat, zlng, radiusKm);
+    position(zlat, zlng, radiusKm); // keeps the main random stream where it was; the position now comes from a street
+    const { street, lat, lng, houseNo } = onStreet(zlat, zlng, radiusKm);
     const { familyName, givenName } = homeName();
     homePatients.push({
       id: `hp-${homePatients.length + 1}`,
@@ -198,6 +222,8 @@ for (const [zone, zlat, zlng, radiusKm, count, team] of HOME_ZONES) {
       givenName,
       age: randInt2(24, 91),
       zone,
+      street,
+      houseNo,
       lat,
       lng,
       team,

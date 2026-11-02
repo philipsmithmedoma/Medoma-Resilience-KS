@@ -269,7 +269,8 @@ describe('Hospital at Home pack (SPEC.md § 11.4, DATA.md § 11)', () => {
       }
       if (l.offmap) expect(l.offmap.text.sv && l.offmap.text.en).toBeTruthy();
     }
-    expect(count(pack.infraLinks, (l) => l.layer === 'roads')).toBe(24);
+    // The hand-made corridor links are gone; the roads come from OpenStreetMap (SPEC.md § 12.4).
+    expect(count(pack.infraLinks, (l) => l.layer === 'roads')).toBe(0);
     expect(count(pack.infraLinks, (l) => l.layer === 'water')).toBe(12);
     expect(count(pack.infraLinks, (l) => l.layer === 'el')).toBe(8);
     expect(count(pack.infraLinks, (l) => !!l.offmap)).toBe(6);
