@@ -365,3 +365,126 @@ Batch 3 – module and platform navigation (additive). The three-pane layout, th
 Batch 4 – disruptions and reachability (behaviour-changing, own batch). `store-home.ts`, `reachability.ts` with tests for roadDistances, zoneStatus, impact and prioritise (including: blocking Essingeleden alone leaves Söderort reachable via Centralbron or Västerbron; blocking Essingeleden, Centralbron, Västerbron, Liljeholmsbron and Skanstullsbron makes every zone south of Saltsjö–Mälaren unreachable from Solna but not from Huddinge; a power outage in Huddinge flags exactly the Huddinge patients), map interaction by mode, the result panel, the ordered list. Done when: the five test cases above pass; blocking and unblocking on the map updates patients and panel immediately; reset clears everything; audit log records each toggle.
 
 Batch 5 – presets, parity, polish (additive). The three presets in 11.5; vocab parity test covers every new key; screenshots of `/home` in light and dark and in English under `docs/screenshots/home/`; README demo story gains a step 6 for Hospital at Home. Done when: presets navigate and set state; parity test passes; screenshots exist; typecheck, tests and build pass on the branch.
+
+## 12. Real geography and preparedness mode
+
+### 12.1 Purpose
+
+§ 11 drew the road network as a hand-made corridor graph and placed half of the transmission nodes by estimate. This section replaces both with real geometry from OpenStreetMap so that the map, the bridges and the reachability computation match the Stockholm a preparedness officer knows. Patients stay synthetic, but they now live on real residential streets. Nothing in § 11's interaction model changes; what changes is the data underneath and the graph the reachability runs on. § 12.7 then gives the navigation two states, so that the resilience modules are hidden in normal operation and come forward in preparedness mode.
+
+### 12.2 Data files
+
+`scripts/fetch-osm.mjs` (Node, no dependencies beyond the repo's) runs the Overpass queries in `scripts/overpass/*.overpassql`, converts the answers to GeoJSON, simplifies line geometry with Douglas–Peucker at 8 m tolerance, drops every tag not listed below, and writes:
+
+* `src/data/packs/geo/roads.json` – ways with `highway` in motorway, motorway_link, trunk, trunk_link, primary, primary_link, secondary, secondary_link inside bbox 59.15, 17.65, 59.52, 18.30. Properties kept: `id` (OSM way id), `highway`, `name`, `ref`, `bridge` (true/false), `tunnel` (true/false), `oneway` (true/false), `lanes`. Budget 2.5 MB.
+* `src/data/packs/geo/streets.json` – ways with `highway` in residential, living_street within 2 500 m of each zone centre in § 11.4 (one query with ten `around` clauses). Properties: `id`, `name`. Used only to place patients. Budget 1.0 MB.
+* `src/data/packs/geo/power.json` – `power=substation` nodes and ways (as centroid points) with `voltage` matching 400000 or 220000, and `power=line` ways with `voltage` matching 400000 or 220000, inside bbox 59.10, 17.50, 59.60, 18.40. Properties: `id`, `power`, `name`, `operator`, `voltage`. Budget 0.4 MB.
+* `src/data/packs/geo/water.json` – `man_made=water_works` nodes and ways (centroids) in the same bbox. Properties: `id`, `name`, `operator`.
+* `src/data/packs/geo/README.md` – source, query date, bbox, simplification, and the ODbL attribution "© OpenStreetMap contributors, ODbL".
+
+The queries, verbatim:
+
+```
+// roads.overpassql
+[out:json][timeout:180];
+way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link)$"](59.15,17.65,59.52,18.30);
+out body geom;
+
+```
+
+
+```
+// power.overpassql
+[out:json][timeout:120];
+(
+  node["power"="substation"]["voltage"~"400000|220000"](59.10,17.50,59.60,18.40);
+  way["power"="substation"]["voltage"~"400000|220000"](59.10,17.50,59.60,18.40);
+  way["power"="line"]["voltage"~"400000|220000"](59.10,17.50,59.60,18.40);
+);
+out body geom;
+
+```
+
+
+```
+// water.overpassql
+[out:json][timeout:60];
+(
+  node["man_made"="water_works"](59.10,17.50,59.60,18.40);
+  way["man_made"="water_works"](59.10,17.50,59.60,18.40);
+);
+out body geom;
+
+```
+
+
+```
+// streets.overpassql – one around clause per zone, lat/lon from SPEC § 11.4
+[out:json][timeout:180];
+(
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3597,18.0005);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3312,18.0407);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3383,17.9401);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3125,18.0616);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.2986,18.0459);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.2365,17.9818);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.1988,17.8332);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3100,18.1648);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3661,18.1352);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.4451,18.0717);
+);
+out body geom;
+
+```
+
+The files are loaded with dynamic `import()` from the `/home` route only, so the initial bundle does not grow. Map attribution gains the ODbL text beside the tile attribution.
+
+### 12.3 Road graph
+
+`src/lib/roadGraph.ts` builds a graph from `roads.json` at load: a vertex for every coordinate shared by two or more ways and for every way end; an edge per way segment between vertices, weighted by haversine length in metres, with `wayId`, `name`, `ref`, `bridge`, `tunnel`, `oneway`; one-way ways give directed edges, all others two directed edges. The two sites and every patient are attached to the graph by snapping to the nearest vertex within 1 500 m (`snapDistance` stored; a patient beyond that is flagged `unsnapped` and treated as unreachable with reason "no road within 1.5 km"). Patients snap to the nearest vertex of the main-road graph; `streets.json` is not part of the graph.
+
+`src/lib/reachability.ts` is rewritten to run Dijkstra by length from each site in scope. Baseline distances are computed once per pack load and memoised. Blocking removes edges: a blocked way id removes all its edges; a blocked road name removes every way sharing that `name` (and `ref` when both are present); a blocked InfraNode of kind bridge/tunnel/junction removes the ways listed in its new `osmWayNames` field (§ 12.5). Status per patient: `unreachable` when no path from any site in scope; `delayed` when the shortest path is at least 25 % longer or 3 km longer than baseline; else `ok`. Zones keep their role for power and water outages only. `impact` and `prioritise` keep their signatures and semantics from § 11.5; `zoneStatus` is replaced by per-patient status and removed.
+
+### 12.4 Interaction and tests
+
+In `roads` mode the map shows `roads.json` as one Leaflet GeoJSON layer: motorway and trunk 3 px, primary 2.5 px, secondary 2 px, bridges with a 1 px lighter casing, tunnels dashed. A tap on a segment blocks that way; the mode bar gets a switch "Block whole road" / "Blockera hela vägen" which makes a tap block every way sharing the name. Blocked ways render in the accent colour. The named InfraNodes from § 11.3 remain as markers for the panel and block their `osmWayNames` set when tapped. The corridor links of § 11.3 are deleted from the pack; the water and el links stay.
+
+The five test cases of § 11.7 batch 4 are rewritten against the real graph:
+
+1. At baseline from Solna and from Huddinge, at least 95 % of patients snap within 1 500 m and have a path.
+2. Blocking every way named "Essingeleden" leaves at least one patient in Söderort reachable from Solna without detour via Huddinge (that is, with scope Solna only).
+3. Blocking the crossing set – every way named Essingeleden, Västerbron, Centralbron, Munkbroleden, Skeppsbron, Söderledstunneln, Katarinavägen, Stadsgårdsleden – makes every patient in Södermalm, Söderort, Huddinge, Botkyrka and Nacka unreachable from Solna. If the test finds a remaining path, it must print the way names on that path and fail; the missing crossing is then added to the set in the test and in DECISIONS.md, not worked around.
+4. The same crossing set leaves every patient in Huddinge and Botkyrka reachable from Huddinge.
+5. A power outage in Huddinge flags exactly the Huddinge patients.
+
+Tests use the committed GeoJSON; if it is absent (Overpass unreachable), they run against `src/data/packs/geo/fixture.json`, a hand-written graph of twenty ways with the same schema, and the PR description says so.
+
+### 12.5 Node coordinates from OSM
+
+`power.json` replaces the estimate coordinates in DATA.md § 11.2: the InfraNodes Överby, Beckomberga, Hagby and Skanstull take the centroid of the OSM substation whose `name` matches (case-insensitive, substring), and a new node Kolbotten is added the same way. Where no match exists the node keeps its estimate and the mismatch is logged. 400 kV and 220 kV lines from `power.json` are drawn in the el layer as polylines labelled by voltage, replacing the hand-drawn el links between nodes (the off-map arrows stay). `water.json` replaces the Görväln estimate with the matched water works centroid. Coordinate confidence for every replaced node becomes `reported` with source "OpenStreetMap, <query date>"; DATA.md § 11 is updated in place and the estimate basis text deleted. InfraNode gains `osmWayNames: string[]` for road nodes (Essingeleden → ["Essingeleden"], Västerbron → ["Västerbron"], Centralbron → ["Centralbron"], Liljeholmsbron → ["Liljeholmsbron"], Skanstullsbron → ["Skanstullsbron"], Norra länken → ["Norra länken"], Södra länken → ["Södra länken"]).
+
+Patients are re-placed by the generator (same seed): each patient lands on a random vertex of a random `streets.json` way within its zone's radius, and gains `street: string` (the way's name) and `houseNo: number` (illustrative, 1–60). The list shows "Street 12" with the existing "Fiktiva patientuppgifter" marking.
+
+### 12.6 Batches and definition of done
+
+Batch 6 – docs, fetch script and data files. Done when: § 12 is in SPEC.md and DATA.md; the script runs end to end and the four GeoJSON files exist within budget, or the fallback in the prompt is in place; README.md in geo/ carries the attribution; typecheck, tests and build pass.
+
+Batch 7 – road graph and reachability (behaviour-changing, own batch). `roadGraph.ts`, the rewritten `reachability.ts`, snapping, the five tests. Done when: tests pass on the real data or on the fixture; a tap on a segment or a named road blocks and unblocks; the panel and list respond as in § 11.6; the corridor links are gone.
+
+Batch 8 – el and water nodes from OSM (additive). § 12.5 for nodes and lines; DATA.md § 11 updated. Done when: no el node renders hollow except e-regionnat; Kolbotten exists; lines render with voltage labels; pack test checks every InfraNode's coordSource.
+
+Batch 9 – patients on streets, polish. Generator change, `street`/`houseNo`, list text, map attribution, the map on `/home` fits its bounds to the zones on load (`fitBounds` with 24 px padding) so zone labels do not collide, screenshots in `docs/screenshots/home/` refreshed, README demo story step 6 updated to mention the real map. Done when: 150 patients lie on streets; the map opens fitted to the zones; parity test passes; typecheck, tests and build pass on the branch.
+
+Batch 10 – preparedness mode (behaviour-changing, own batch, last). § 12.7 in full; the 2 100 px breakpoint and its width-tuned gaps are removed; DECISIONS.md records the removal. Done when: at 1 280 px both nav states fit in sv and en; the button and the close control work with the rules in § 12.7; activating an incident and running a scenario each turn the mode on; opening `/home` directly turns it on; the audit log shows each change with its reason; typecheck, tests and build pass.
+
+### 12.7 Preparedness mode
+
+The navigation has two states instead of a viewport breakpoint. The viewport-based collapse at 2 100 px from § 11.2 is removed.
+
+Normal operation (default): logo, scope selector, the five Medoma platform tabs as tabs, the divider, and one outlined button "Beredskap" / "Preparedness". No resilience module is in the nav. The right cluster keeps the clock, language, theme, Demo and user; the scenario controls (play, step, reset) are hidden. The root route redirects to `/patients`.
+
+Preparedness mode: logo, scope selector, one menu "Medoma" holding the five platform entries, the divider, then Läget nu, Sjukhus hemma, Kapacitet, Incident, Evakuering, Resurser and Nätverk as tabs. The button becomes a filled indicator in the accent colour "Beredskapsläge" / "Preparedness mode" with a close control. The scenario controls are shown. The root route redirects to `/start`. Both states must fit at 1 280 px in both languages without horizontal scroll.
+
+Activation. `preparednessActive(state, route)` is a pure function in `src/lib/preparedness.ts`: true when the manual flag is on, or an incident is active, or a scenario is running, or the current route belongs to a resilience module (`/start`, `/home`, `/capacity`, `/incident`, `/evacuation`, `/resources`, `/network` and their children; use the module list, not a hard-coded set). The manual flag `preparednessOn: boolean` lives in the main store, defaults to false, and every change goes through `logEntry()` with the reason "manual", "incident", "scenario" or "route". The Beredskap button sets the flag on and navigates to `/start`. The close control sets the flag off and, if the current route is a resilience route, navigates to `/planning`; if an incident is active or a scenario is running the close control is disabled with a tooltip "Avsluta incidenten eller scenariot först" / "End the incident or scenario first". The scenario presets of § 11.5 therefore open the mode by navigating. A reload on a resilience route keeps the mode because the route alone makes it active.
+
+Tests: `preparednessActive` for each of the four reasons and for none; the nav renders the platform tabs and no resilience tab when inactive, and the reverse when active; vocab parity for the new keys.

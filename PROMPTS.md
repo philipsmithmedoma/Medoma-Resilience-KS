@@ -29,3 +29,19 @@ Bunt 0 är bara dokument: lägg till texten under "SPEC.md § 11" ordagrant sist
 [SPEC.md § 11 – see SPEC.md § 11]
 
 [DATA.md § 11 – see DATA.md § 11]
+
+## Real geography and preparedness mode – bunt 6–10 in one session (branch `real-geo`)
+
+The prompt below was given in Swedish. The two documents it embeds (SPEC.md § 12 and DATA.md § 12) are not repeated here; they are appended verbatim to SPEC.md and DATA.md in batch 6.
+
+Läs först i sin helhet: CLAUDE.md, SPEC.md (särskilt § 11), DATA.md (särskilt § 11), DESIGN.md, DESIGN-KS.md, DESIGN-DARK.md, DESIGN-LANG.md, DECISIONS.md och PROMPTS.md. Läs sedan den faktiska koden på main och återanvänd den – anta aldrig. Ställ inga frågor; beslutsprotokollet i CLAUDE.md gäller och varje val specen inte gör loggas i DECISIONS.md under rubriken "## Real geography build".
+
+Skapa branchen real-geo från main. Bygg buntarna 6–10 i SPEC.md § 12.6 i ordning på den branchen. Varje bunt behandlas som en enhet: färdigställ den, kör npm run typecheck, npm test och npm run build, gå igenom buntens definition of done i den körande appen, committa med ett meddelande som namnger bunten, och börja först därefter på nästa. Alla befintliga tester ska fortsätta gå igenom; de fem testfallen i § 11.7 bunt 4 får skrivas om mot den riktiga grafen enligt § 12.4, inget annat. Avsluta med en pull request vars beskrivning innehåller de fem checklistorna med resultat per punkt, DECISIONS.md-posterna och datafilernas storlekar, och skriv ut PR-länken.
+
+Bunt 6 är dels dokument, dels ett skript. Lägg först till texten under "SPEC.md § 12" ordagrant sist i SPEC.md och texten under "DATA.md § 12" ordagrant sist i DATA.md, och denna prompt i PROMPTS.md; committa som "docs: spec and data for real geography". Bygg sedan skriptet.
+
+Nätverk: skriptet i bunt 6 är det enda som får anropa internet, och bara https://overpass-api.de/api/interpreter. Appen anropar aldrig Overpass; GeoJSON-filerna committas. Om Overpass inte går att nå från sessionen: skriv ändå skriptet, lägg frågorna som filer under scripts/overpass/, skriv i PR-beskrivningen exakt vilket kommando som ska köras lokalt, och bygg buntarna 7–10 mot ett litet handskrivet fixtur-GeoJSON med samma schema så att allt är testat och bara datafilerna saknas.
+
+[SPEC.md § 12 – see SPEC.md § 12]
+
+[DATA.md § 12 – see DATA.md § 12]
