@@ -4,6 +4,7 @@
 import type { DataPack, HomePatient, SiteId, ZoneId } from '@/data/types';
 import { blockedWayFlags, dijkstra, pathWayNames } from './roadGraph';
 import { getRoadModel, sourceVertices, type RoadModel } from './roadModel';
+import { batteryEmptyAt } from './disruptions';
 
 export const BOTH_SITES: SiteId[] = ['solna', 'huddinge'];
 
@@ -17,6 +18,8 @@ export interface Disruptions {
   blockedNodes: ReadonlySet<string>;
   powerOutZones: ReadonlySet<ZoneId>;
   waterOutZones: ReadonlySet<ZoneId>;
+  /** Zone → clock minute at which the earliest active power disruption covering it started (SPEC.md § 13.2); absent in pure tests. */
+  powerStart?: ReadonlyMap<ZoneId, number>;
 }
 
 export const NO_DISRUPTIONS: Disruptions = {
@@ -56,7 +59,14 @@ export interface ImpactRow {
   affected: boolean;
   /** Affected and el- or water-critical (drives the ring on the map). */
   critical: boolean;
+  /** Clock minute at which the battery is empty: the start of the earliest power disruption plus the battery hours (SPEC.md § 13.2). */
+  batteryEmptyAt?: number | null;
+  /** The clock has passed `batteryEmptyAt`; the row is then critical whatever the equipment. */
+  batteryEmpty?: boolean;
 }
+
+/** The window of the summary line "N run out within 2 h" (SPEC.md § 13.2). */
+export const BATTERY_WARNING_MIN = 120;
 
 export interface ImpactSummary {
   affected: number;
@@ -67,6 +77,11 @@ export interface ImpactSummary {
   unreachableCritical: number; // el- or water-critical among the unreachable
   powerOut: number;
   shortestBattery: number | null; // among el-critical patients without power
+  /** Patients without power whose battery is empty or runs out within 2 h of the clock (needs the clock and a start time). */
+  runOutWithin2h: number;
+  /** Of those, the ones whose battery is already empty. */
+  batteryEmpty: number;
+  earliestBatteryEmptyAt: number | null;
   waterOut: number;
   dialysis: number; // water-critical among those with a water disruption
 }
@@ -97,6 +112,7 @@ export function impact(
   state: Disruptions,
   scopeSites: SiteId[],
   model: RoadModel | null = getRoadModel(),
+  clock: number | null = null,
 ): Impact {
   // A scope that yields no sites (a stood-up node) uses both Karolinska sites (SPEC.md § 11.1).
   const sites = scopeSites.length ? scopeSites : BOTH_SITES;
@@ -130,13 +146,18 @@ export function impact(
     if (power) reasons.push('power');
     if (water) reasons.push('water');
     const affected = unreachable || power || water;
-    rows.push({ patient: p, reasons, unreachable, delayed, power, water, affected, critical: affected && (p.elCritical || p.waterCritical) });
+    const start = power ? state.powerStart?.get(p.zone) : undefined;
+    const emptyAt = start !== undefined && p.batteryHours !== null ? batteryEmptyAt(start, p.batteryHours) : null;
+    const batteryEmpty = emptyAt !== null && clock !== null && clock >= emptyAt;
+    rows.push({ patient: p, reasons, unreachable, delayed, power, water, affected, critical: affected && (p.elCritical || p.waterCritical || batteryEmpty), batteryEmptyAt: emptyAt, batteryEmpty });
   }
 
   const unreachableRows = rows.filter((r) => r.unreachable);
   const powerRows = rows.filter((r) => r.power);
   const waterRows = rows.filter((r) => r.water);
   const batteries = powerRows.filter((r) => r.patient.elCritical && r.patient.batteryHours !== null).map((r) => r.patient.batteryHours!);
+  const emptyAts = powerRows.map((r) => r.batteryEmptyAt).filter((x): x is number => x != null);
+  const soon = clock === null ? [] : powerRows.filter((r) => r.batteryEmptyAt != null && r.batteryEmptyAt <= clock + BATTERY_WARNING_MIN);
   const unreachableZoneIds = new Set(unreachableRows.map((r) => r.patient.zone));
   const summary: ImpactSummary = {
     affected: rows.filter((r) => r.affected).length,
@@ -147,6 +168,9 @@ export function impact(
     unreachableCritical: unreachableRows.filter((r) => r.patient.elCritical || r.patient.waterCritical).length,
     powerOut: powerRows.length,
     shortestBattery: batteries.length ? Math.min(...batteries) : null,
+    runOutWithin2h: soon.length,
+    batteryEmpty: powerRows.filter((r) => r.batteryEmpty).length,
+    earliestBatteryEmptyAt: emptyAts.length ? Math.min(...emptyAts) : null,
     waterOut: waterRows.length,
     dialysis: waterRows.filter((r) => r.patient.waterCritical).length,
   };
@@ -176,7 +200,7 @@ export function explainPath(
  */
 export function priorityTier(r: ImpactRow): 1 | 2 | 3 | 4 | 5 | 6 {
   if (r.unreachable && r.patient.visitToday) return 1;
-  if (r.power && r.patient.elCritical) return 2;
+  if (r.power && (r.patient.elCritical || r.batteryEmpty === true)) return 2;
   if (r.water && r.patient.waterCritical) return 3;
   if (r.unreachable) return 4;
   if (r.power || r.water) return 5;
@@ -186,12 +210,17 @@ export function priorityTier(r: ImpactRow): 1 | 2 | 3 | 4 | 5 | 6 {
 /** Tiers 1–3 are the ones the list marks "Prioritera". */
 export const isPrioritised = (r: ImpactRow): boolean => priorityTier(r) <= 3;
 
-/** Order for the list: by tier, ties by battery hours ascending (no battery last), then by name so the order is stable. */
+/**
+ * Order for the list: by tier, then by the clock minute the battery is empty ascending (SPEC.md § 13.2), then by battery
+ * hours ascending (no battery last) for rows that have no deadline, then by name so the order is stable.
+ */
 export function prioritise(rows: ImpactRow[]): ImpactRow[] {
+  const deadline = (r: ImpactRow) => r.batteryEmptyAt ?? Number.POSITIVE_INFINITY;
   const battery = (r: ImpactRow) => r.patient.batteryHours ?? Number.POSITIVE_INFINITY;
   return [...rows].sort(
     (a, b) =>
       priorityTier(a) - priorityTier(b) ||
+      deadline(a) - deadline(b) ||
       battery(a) - battery(b) ||
       a.patient.familyName.localeCompare(b.patient.familyName, 'sv') ||
       a.patient.givenName.localeCompare(b.patient.givenName, 'sv'),

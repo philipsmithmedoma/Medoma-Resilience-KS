@@ -166,6 +166,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
     const entry: AuditEntry = { id, at: formatClock(state.clock), actor, action, object, detail, ref };
     set({ log: [...state.log, entry], clock: state.clock + (options?.advance === false ? 0 : 1), ids: state.ids + 1 });
     get().settleDischarges();
+    get().settleHomeDisruptions();
     return id;
   },
 
@@ -201,6 +202,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
     const s = get();
     set({ clock: s.clock + tickMinutes(s) });
     get().settleDischarges();
+    get().settleHomeDisruptions();
     if (s.scenario?.running) get().advanceScenario();
   },
 

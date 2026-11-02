@@ -1,6 +1,7 @@
 import { useStore } from '@/data/store';
 import { t, tn, lt } from '@/lib/i18n';
-import { wayLabel } from '@/data/store-home';
+import { activeDisruptions } from '@/lib/disruptions';
+import { formatClock } from '@/lib/time';
 import type { Impact } from '@/lib/reachability';
 import { ConfidenceChip } from '@/components/ConfidenceChip';
 import { Button } from '@/components/ui/button';
@@ -14,15 +15,9 @@ export function ImpactPanel({ impact }: { impact: Impact }) {
   const total = pack.homePatients.length;
   const zoneName = (id: string) => lt(pack.homeZones.find((z) => z.id === id)?.name ?? id);
 
-  const lines: string[] = [];
-  const closed = [
-    ...[...home.blockedNodes].map((id) => lt(pack.infraNodes.find((n) => n.id === id)?.name ?? id)),
-    ...[...home.blockedRoads].map((key) => key.split('|')[0]),
-    ...[...home.blockedWays].map(wayLabel),
-  ];
-  if (closed.length) lines.push(t('HOME.impact.closed', { names: closed.join(', ') }));
-  if (home.powerOutZones.size) lines.push(t('HOME.impact.powerOut', { names: [...home.powerOutZones].map(zoneName).join(', ') }));
-  if (home.waterOutZones.size) lines.push(t('HOME.impact.waterOut', { names: [...home.waterOutZones].map(zoneName).join(', ') }));
+  const clock = useStore((s) => s.clock);
+  const endHomeDisruption = useStore((s) => s.endHomeDisruption);
+  const active = activeDisruptions(home.disruptions);
 
   const facts: string[] = [];
   if (summary.unreachable > 0) {
@@ -33,6 +28,8 @@ export function ImpactPanel({ impact }: { impact: Impact }) {
   if (summary.powerOut > 0) {
     facts.push(tn('HOME.impact.facts.power', summary.powerOut));
     if (summary.shortestBattery !== null) facts.push(t('HOME.impact.facts.battery', { n: summary.shortestBattery }));
+    if (summary.earliestBatteryEmptyAt !== null && summary.earliestBatteryEmptyAt > clock) facts.push(t('HOME.time.earliest', { hhmm: formatClock(summary.earliestBatteryEmptyAt) }));
+    if (summary.runOutWithin2h > 0) facts.push(t('HOME.time.runOut', { n: summary.runOutWithin2h }));
   }
   if (summary.waterOut > 0) {
     facts.push(tn('HOME.impact.facts.water', summary.waterOut));
@@ -43,9 +40,19 @@ export function ImpactPanel({ impact }: { impact: Impact }) {
     <div className="space-y-4 px-4 py-4">
       <section className="space-y-1">
         <h3 className="text-body font-medium">{t('HOME.impact.active')}</h3>
-        <ul className="space-y-1">
-          {lines.map((l) => (
-            <li key={l}>{l}</li>
+        <ul className="space-y-2">
+          {active.map((d) => (
+            <li key={d.id} className="flex items-start gap-2">
+              <span className="min-w-0 flex-1">
+                {lt(d.label)}
+                <span className="block text-small text-text-secondary tabular">
+                  {t('HOME.time.startedAt', { hhmm: formatClock(d.startedAt) })}, {d.expectedEnd !== null ? t('HOME.time.endsAbout', { hhmm: formatClock(d.expectedEnd) }) : t('HOME.time.noEnd')}
+                </span>
+              </span>
+              <Button variant="link" className="h-auto shrink-0 p-0" onClick={() => endHomeDisruption(d.id)}>
+                {t('HOME.time.endNow')}
+              </Button>
+            </li>
           ))}
         </ul>
         <Button variant="link" className="h-auto p-0" onClick={resetHomeDisruptions}>

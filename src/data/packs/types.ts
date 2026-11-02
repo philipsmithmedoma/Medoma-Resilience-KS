@@ -574,6 +574,27 @@ export interface HomeDisruptionPreset {
   waterOutZones: ZoneId[];
 }
 
+/** A disruption as a record in time (SPEC.md § 13.2); the blocked and outage sets are derived from the active ones. */
+export type HomeDisruptionKind = 'road' | 'power' | 'water';
+export type HomeDisruptionSource = 'map' | 'preset' | 'message';
+/** What `target` names: an OSM way id, a road key (`name` or `name|ref`), a road InfraNode id, or a ZoneId. */
+export type HomeDisruptionTargetKind = 'way' | 'road' | 'node' | 'zone';
+export type HomeDisruptionEnd = 'manual' | 'expected' | 'reset' | 'replaced';
+export interface HomeDisruption {
+  id: string;
+  kind: HomeDisruptionKind;
+  target: string;
+  targetKind: HomeDisruptionTargetKind;
+  label: LocalizedText;
+  startedAt: number; // clock minutes
+  expectedEnd: number | null; // clock minutes
+  source: HomeDisruptionSource;
+  createdBy: string;
+  /** Set when the record stops being active; the record stays as history. */
+  endedAt: number | null;
+  endReason: HomeDisruptionEnd | null;
+}
+
 // ---------------------------------------------------------------------------
 // The pack
 export interface EdRooms {

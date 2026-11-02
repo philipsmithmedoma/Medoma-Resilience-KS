@@ -8,6 +8,7 @@ import { isPrioritised, prioritise, type Impact, type ImpactReason, type ImpactR
 import { cn } from '@/lib/utils';
 import { Chip } from '@/components/Chip';
 import { getRoadModel } from '@/lib/roadModel';
+import { formatClock } from '@/lib/time';
 import type { ChipTone } from '@/data/vocab';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -39,6 +40,7 @@ function PatientRow({ p, row }: { p: HomePatient; row?: ImpactRow }) {
   const equipment = tm('HOME.equipment');
   const zones = useStore((s) => s.pack.homeZones);
   const zone = zones.find((z) => z.id === p.zone)!;
+  useStore((s) => s.clock); // the row's battery status is recomputed on every clock change
   return (
     <li className="space-y-1 border-b border-border px-4 py-2">
       <div className="flex items-center gap-2">
@@ -72,6 +74,13 @@ function PatientRow({ p, row }: { p: HomePatient; row?: ImpactRow }) {
       <div className="text-small text-text-muted">
         {p.equipment.length ? p.equipment.map((e) => equipment[e]).join(', ') : t('HOME.list.noEquipment')}
         {p.batteryHours !== null ? <span className="ml-3 tabular text-text-secondary">{t('HOME.list.battery', { n: p.batteryHours })}</span> : null}
+        {row?.power && row.batteryEmptyAt != null ? (
+          row.batteryEmpty ? (
+            <Chip tone="red" className="ml-2">{t('HOME.time.batteryEmpty')}</Chip>
+          ) : (
+            <span className="ml-2 tabular font-medium text-text">{t('HOME.time.batteryUntil', { hhmm: formatClock(row.batteryEmptyAt) })}</span>
+          )
+        ) : null}
       </div>
     </li>
   );

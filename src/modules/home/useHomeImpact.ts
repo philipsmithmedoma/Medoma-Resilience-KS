@@ -13,9 +13,11 @@ export function useHomeImpact(): { impact: Impact; active: boolean } {
   const blockedNodes = useStore((s) => s.home.blockedNodes);
   const powerOutZones = useStore((s) => s.home.powerOutZones);
   const waterOutZones = useStore((s) => s.home.waterOutZones);
+  const powerStart = useStore((s) => s.home.powerStart);
+  const clock = useStore((s) => s.clock);
   return useMemo(() => {
-    const state = { blockedWays, blockedRoads, blockedNodes, powerOutZones, waterOutZones };
-    return { impact: impact(pack, state, sitesInScope(scope)), active: disruptionCount(state) > 0 };
+    const state = { blockedWays, blockedRoads, blockedNodes, powerOutZones, waterOutZones, powerStart };
+    return { impact: impact(pack, state, sitesInScope(scope), undefined, clock), active: disruptionCount(state) > 0 };
     // geoReady: the road graph loads after the first render, so the result is computed again when it is there.
-  }, [pack, scope, blockedWays, blockedRoads, blockedNodes, powerOutZones, waterOutZones, geoReady]);
+  }, [pack, scope, blockedWays, blockedRoads, blockedNodes, powerOutZones, waterOutZones, powerStart, clock, geoReady]);
 }

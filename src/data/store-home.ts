@@ -3,8 +3,10 @@
 // to the audit log through logEntry() like every other action.
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
-import type { DataPack, InfraLayer, InfraNode, ZoneId } from './types';
-import { lt, t } from '@/lib/i18n';
+import type { DataPack, HomeDisruption, HomeDisruptionKind, HomeDisruptionSource, HomeDisruptionTargetKind, InfraLayer, InfraNode, LocalizedText, ZoneId } from './types';
+import { lt, same, t } from '@/lib/i18n';
+import { CURRENT_USER, SYSTEM_ACTOR } from './vocab';
+import { deriveSets, expiredIds } from '@/lib/disruptions';
 import { getRoadModel } from '@/lib/roadModel';
 import { getAppliedNodes } from '@/lib/osmNodes';
 import { sitesInScope } from '@/lib/scope';
@@ -29,6 +31,10 @@ export interface HomeState {
   blockedNodes: Set<string>;
   powerOutZones: Set<ZoneId>;
   waterOutZones: Set<ZoneId>;
+  /** Every disruption as a record in time, ended ones included as history (SPEC.md § 13.2). The sets above are derived from the active records. */
+  disruptions: HomeDisruption[];
+  /** Zone → start of the earliest active power disruption covering it; the battery deadlines are computed from it. */
+  powerStart: Map<ZoneId, number>;
   /** The infrastructure node the panel shows; the map dims everything it is not linked to. */
   selectedNode: string | null;
   /** In roads mode a tap blocks every way that shares the tapped way's name (view state). */
@@ -53,10 +59,28 @@ export interface HomeActions {
   setHomeGeoReady: (infraNodes?: InfraNode[]) => void;
   togglePowerOut: (zone: ZoneId) => void;
   toggleWaterOut: (zone: ZoneId) => void;
+  /** Starts a disruption record (from the map, a preset or a message) and logs it; returns its id, or null when it is already active. */
+  startHomeDisruption: (input: NewDisruption) => string | null;
+  /** Ends a record by hand ("end now") and logs it. */
+  endHomeDisruption: (id: string) => void;
+  /** Ends every active record whose expected end the clock has reached and logs each as "ended (expected)". Called when the clock moves. */
+  settleHomeDisruptions: () => void;
+  /** Advances the shared clock (the "+1 h" control), logs it and lets expired disruptions end. */
+  advanceClock: (minutes: number) => void;
   /** Clears every disruption and writes one log entry; nothing happens when there is none. */
   resetHomeDisruptions: () => void;
   /** A scenario preset of the flag-setting kind (SPEC.md § 11.5): replaces the disruptions with the preset's and writes one log entry. */
   applyHomePreset: (key: 'bridge' | 'power' | 'water') => void;
+}
+
+export interface NewDisruption {
+  kind: HomeDisruptionKind;
+  target: string;
+  targetKind: HomeDisruptionTargetKind;
+  /** Display label; derived from the target when absent. */
+  label?: LocalizedText;
+  expectedEnd?: number | null;
+  source: HomeDisruptionSource;
 }
 
 export function initialHome(pack: Pick<DataPack, 'infraNodes'>): HomeState {
@@ -68,18 +92,14 @@ export function initialHome(pack: Pick<DataPack, 'infraNodes'>): HomeState {
     blockedNodes: new Set(),
     powerOutZones: new Set(),
     waterOutZones: new Set(),
+    disruptions: [],
+    powerStart: new Map(),
     selectedNode: null,
     wholeRoad: false,
     geoReady: getRoadModel() !== null,
     infraNodes: getAppliedNodes()?.nodes ?? pack.infraNodes,
   };
 }
-
-const toggled = <T>(set: ReadonlySet<T>, value: T): Set<T> => {
-  const next = new Set(set);
-  if (!next.delete(value)) next.add(value);
-  return next;
-};
 
 /** A way by its name, else its ref, else its OSM id (for the log and the panel). */
 export function wayLabel(id: string): string {
@@ -88,16 +108,77 @@ export function wayLabel(id: string): string {
   return w?.name ?? w?.ref ?? `OSM ${id}`;
 }
 
+/** The state with the given records and the sets derived from the active ones. */
+function withRecords(home: HomeState, disruptions: HomeDisruption[]): HomeState {
+  return { ...home, disruptions, ...deriveSets(disruptions) };
+}
+
+const same_ = (a: HomeDisruption, kind: HomeDisruptionKind, target: string) => a.kind === kind && a.target === target;
+
+let settlingHome = false;
+
 export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set, get) => {
   /** "N of 150 patients affected" for the current state and scope: the detail of every disruption log entry. */
   const detail = () => {
     const { pack, home, scope } = get();
-    const r = impact(pack, home, sitesInScope(scope));
+    const r = impact(pack, home, sitesInScope(scope), undefined, get().clock);
     return t('AUDIT.homeDetail', { n: r.summary.affected, total: pack.homePatients.length });
   };
   const zoneName = (zone: ZoneId) => {
     const z = get().pack.homeZones.find((x) => x.id === zone);
     return z ? lt(z.name) : zone;
+  };
+
+  const labelOf = (input: NewDisruption): LocalizedText => {
+    if (input.label) return input.label;
+    const { pack } = get();
+    if (input.kind === 'road') {
+      if (input.targetKind === 'node') return pack.infraNodes.find((n) => n.id === input.target)?.name ?? same(input.target);
+      return same(input.targetKind === 'way' ? wayLabel(input.target) : input.target.split('|')[0]);
+    }
+    const zone = pack.homeZones.find((z) => z.id === input.target);
+    const name = zone ? zone.name : same(input.target);
+    const key = input.kind === 'power' ? 'HOME.disruption.power' : 'HOME.disruption.water';
+    return { sv: t(key, { name: name.sv }, 'sv'), en: t(key, { name: name.en }, 'en') };
+  };
+  /** Adds a record (state only; the caller logs). Null when the same target is already disrupted. */
+  const addRecord = (input: NewDisruption): string | null => {
+    const { home, clock, nextId } = get();
+    if (home.disruptions.some((d) => d.endedAt === null && same_(d, input.kind, input.target))) return null;
+    const id = nextId('hd');
+    const record: HomeDisruption = {
+      id,
+      kind: input.kind,
+      target: input.target,
+      targetKind: input.targetKind,
+      label: labelOf(input),
+      startedAt: clock,
+      expectedEnd: input.expectedEnd ?? null,
+      source: input.source,
+      createdBy: CURRENT_USER.name,
+      endedAt: null,
+      endReason: null,
+    };
+    set((s) => ({ home: withRecords(s.home, [...s.home.disruptions, record]) }));
+    return id;
+  };
+  /** Ends the active record for a target (state only). Returns the record, or null. */
+  const endRecord = (match: (d: HomeDisruption) => boolean, reason: NonNullable<HomeDisruption['endReason']>): HomeDisruption | null => {
+    const found = get().home.disruptions.find((d) => d.endedAt === null && match(d));
+    if (!found) return null;
+    const at = get().clock;
+    set((s) => ({ home: withRecords(s.home, s.home.disruptions.map((d) => (d === found ? { ...d, endedAt: at, endReason: reason } : d))) }));
+    return found;
+  };
+  const endAll = (reason: 'reset' | 'replaced') => {
+    const at = get().clock;
+    set((s) => ({ home: withRecords(s.home, s.home.disruptions.map((d) => (d.endedAt === null ? { ...d, endedAt: at, endReason: reason } : d))) }));
+  };
+  /** A map tap: ends the active record for the target, else starts one (source "map"). Returns true when it started one. */
+  const toggleRecord = (input: NewDisruption): boolean => {
+    if (endRecord((d) => same_(d, input.kind, input.target), 'manual')) return false;
+    addRecord(input);
+    return true;
   };
 
   return {
@@ -120,25 +201,22 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       }),
 
     toggleBlockedNode: (id) => {
-      const { pack, home, logEntry } = get();
+      const { pack, logEntry } = get();
       const node = pack.infraNodes.find((n) => n.id === id && n.layer === 'roads');
       if (!node) return;
-      const blocking = !home.blockedNodes.has(id);
-      set((s) => ({ home: { ...s.home, blockedNodes: toggled(s.home.blockedNodes, id) } }));
+      const blocking = toggleRecord({ kind: 'road', target: id, targetKind: 'node', source: 'map' });
       logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), lt(node.name), detail());
     },
 
     toggleBlockedWay: (id) => {
-      const { home, logEntry } = get();
-      const blocking = !home.blockedWays.has(id);
-      set((s) => ({ home: { ...s.home, blockedWays: toggled(s.home.blockedWays, id) } }));
+      const { logEntry } = get();
+      const blocking = toggleRecord({ kind: 'road', target: id, targetKind: 'way', source: 'map' });
       logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), wayLabel(id), detail());
     },
 
     toggleBlockedRoad: (key) => {
-      const { home, logEntry } = get();
-      const blocking = !home.blockedRoads.has(key);
-      set((s) => ({ home: { ...s.home, blockedRoads: toggled(s.home.blockedRoads, key) } }));
+      const { logEntry } = get();
+      const blocking = toggleRecord({ kind: 'road', target: key, targetKind: 'road', source: 'map' });
       logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), key.split('|')[0], detail());
     },
 
@@ -147,25 +225,58 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
     setHomeGeoReady: (infraNodes) => set((s) => ({ home: { ...s.home, geoReady: true, infraNodes: infraNodes ?? s.home.infraNodes } })),
 
     togglePowerOut: (zone) => {
-      const { pack, home, logEntry } = get();
+      const { pack, logEntry } = get();
       if (!pack.homeZones.some((z) => z.id === zone)) return;
-      const out = !home.powerOutZones.has(zone);
-      set((s) => ({ home: { ...s.home, powerOutZones: toggled(s.home.powerOutZones, zone) } }));
+      const out = toggleRecord({ kind: 'power', target: zone, targetKind: 'zone', source: 'map' });
       logEntry(out ? t('AUDIT.homePowerOut') : t('AUDIT.homePowerRestored'), zoneName(zone), detail());
     },
 
     toggleWaterOut: (zone) => {
-      const { pack, home, logEntry } = get();
+      const { pack, logEntry } = get();
       if (!pack.homeZones.some((z) => z.id === zone)) return;
-      const out = !home.waterOutZones.has(zone);
-      set((s) => ({ home: { ...s.home, waterOutZones: toggled(s.home.waterOutZones, zone) } }));
+      const out = toggleRecord({ kind: 'water', target: zone, targetKind: 'zone', source: 'map' });
       logEntry(out ? t('AUDIT.homeWaterOut') : t('AUDIT.homeWaterRestored'), zoneName(zone), detail());
+    },
+
+    startHomeDisruption: (input) => {
+      const id = addRecord(input);
+      if (!id) return null;
+      const d = get().home.disruptions.find((x) => x.id === id)!;
+      get().logEntry(t('AUDIT.homeStarted'), lt(d.label), `${detail()} · ${t(`AUDIT.homeSources.${d.source}`)}`, undefined, id);
+      return id;
+    },
+
+    endHomeDisruption: (id) => {
+      const d = endRecord((x) => x.id === id, 'manual');
+      if (!d) return;
+      get().logEntry(t('AUDIT.homeEnded'), lt(d.label), detail(), undefined, id);
+    },
+
+    settleHomeDisruptions: () => {
+      if (settlingHome) return;
+      const due = expiredIds(get().home.disruptions, get().clock);
+      if (due.length === 0) return;
+      settlingHome = true;
+      try {
+        for (const id of due) {
+          const d = endRecord((x) => x.id === id, 'expected');
+          if (d) get().logEntry(t('AUDIT.homeEndedExpected'), lt(d.label), detail(), SYSTEM_ACTOR, id);
+        }
+      } finally {
+        settlingHome = false;
+      }
+    },
+
+    advanceClock: (minutes) => {
+      set((s) => ({ clock: s.clock + minutes }));
+      get().settleDischarges();
+      get().logEntry(t('AUDIT.homeClockAdvanced'), t('AUDIT.homeObject'), t('AUDIT.homeClockDetail', { n: minutes }), undefined, undefined, { advance: false });
     },
 
     resetHomeDisruptions: () => {
       const { home, logEntry } = get();
       if (disruptionCount(home) === 0) return;
-      set((s) => ({ home: { ...s.home, blockedWays: new Set(), blockedRoads: new Set(), blockedNodes: new Set(), powerOutZones: new Set(), waterOutZones: new Set() } }));
+      endAll('reset');
       logEntry(t('AUDIT.homeReset'), t('AUDIT.homeObject'), detail());
     },
 
@@ -173,14 +284,13 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       const { pack, logEntry } = get();
       const preset = pack.homePresets.find((p) => p.key === key);
       if (!preset) return;
+      endAll('replaced');
+      for (const id of preset.blockedNodes) addRecord({ kind: 'road', target: id, targetKind: 'node', source: 'preset' });
+      for (const z of preset.powerOutZones) addRecord({ kind: 'power', target: z, targetKind: 'zone', source: 'preset' });
+      for (const z of preset.waterOutZones) addRecord({ kind: 'water', target: z, targetKind: 'zone', source: 'preset' });
       set((s) => ({
         home: {
           ...s.home,
-          blockedNodes: new Set(preset.blockedNodes),
-          blockedWays: new Set(),
-          blockedRoads: new Set(),
-          powerOutZones: new Set(preset.powerOutZones),
-          waterOutZones: new Set(preset.waterOutZones),
           mode: null,
           selectedNode: null,
           // The layer the preset acts on is switched on so that the cause is visible.
