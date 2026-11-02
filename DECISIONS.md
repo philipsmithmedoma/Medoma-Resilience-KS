@@ -429,3 +429,130 @@ Spec: DESIGN-LANG.md § 3–4
 Decision: `format.ts` reads the locale on every call: `Intl.NumberFormat('sv-SE')` or `('en-GB')` for numbers, "95,6 %" (no-break space) or "95.6%" for percent, "dag n"/"day n" and "dygn"/"days" from the tables, "Okänt"/"Unknown" for null, and the demo date from `LABELS.demoDate`. Durations and clock times are identical in both languages. Tests set the locale explicitly.
 Rejected: Formatting at the component level – dozens of call sites.
 Spec: DESIGN-LANG.md § 2
+
+## Hospital at Home build
+
+## 2026-11-02 – Batch 0 – Work on branch home-module, not the session's default branch
+Decision: The prompt names the branch `home-module`, created from main; all six batches are committed and pushed there. The session's pre-assigned branch is not used for pushes.
+Rejected: Pushing to the pre-assigned branch – the user's explicit instruction names another one.
+Spec: SPEC.md § 11.7
+
+## 2026-11-02 – Batch 0 – PROMPTS.md holds the instruction text; the two embedded documents are referenced
+Decision: The new PROMPTS.md section reproduces the prose of the prompt and points at SPEC.md § 11 and DATA.md § 11 for the two documents it embeds, which batch 0 appends verbatim to those files.
+Rejected: Pasting both documents a second time into PROMPTS.md – three copies that must be kept in step.
+Spec: SPEC.md § 11.7 (batch 0)
+
+## 2026-11-02 – Batch 1 – Zone vertices are written `zone:<id>`; sites keep their plain ids
+Decision: Zone ids `solna` and `huddinge` are also the site ids, so a road-graph vertex for a zone is `zone:<ZoneId>` (also `HomeZone.graphNode`, "usually itself") while the sites stay `solna` and `huddinge` as SPEC.md § 11.3 says. Every link endpoint in the pack uses these forms; `GraphNodeId` is documented accordingly.
+Rejected: Plain zone ids everywhere – "site solna – zone solna" would be a self-loop on one vertex and the Solna site would be reachable from itself through its own neighbourhood; a prefix on the sites – contradicts the spec's vertex names.
+Spec: SPEC.md § 11.3
+
+## 2026-11-02 – Batch 1 – Home sources, presets and `noMarker` are additive members
+Decision: `DataPack` also gains `homeSources` (S-H1…S-H14, DATA.md § 11.4) and `homePresets` (the three flag presets of § 11.5); `InfraNode` gains optional `noMarker` (for `w-norrvatten-reserve` and `w-malaren`, which the data says have no marker of their own) and `figures` is typed `InfraFigure[]` (a `Figure` with `label`, `unit` and optional `valueMax` for a range). The S-H keys are kept out of `sources` because the existing pack test pins that list to S1–S22.
+Rejected: Appending S-H keys to `sources` – breaks an existing test the batch must leave unchanged; a second figure type unrelated to `Figure` – the confidence and source rendering is shared.
+Spec: SPEC.md § 11.3 ("additive only"), DATA.md § 11.4
+
+## 2026-11-02 – Batch 1 – Ranges and section totals in infrastructure figures
+Decision: Essingeleden's "140 000–170 000 vehicles/day" is one verified figure with `value` 140 000 and `valueMax` 170 000 (S-H12, 2026-08); the section total of about 309 000 vehicles/day (reported, S-H13, 2019) is carried as a second figure on Essingeleden because the data gives no node of its own for it. Liljeholmsbron's 37 000 has no year, so it carries a `basis` text saying so and no `asOf`.
+Rejected: Storing the range's midpoint – an invented number; dropping the section total – it is the figure that explains why the five bridges matter.
+Spec: DATA.md § 11.3
+
+## 2026-11-02 – Batch 1 – Link verification flags follow what the sources establish
+Decision: A link is `verified` only where DATA.md says the connection exists: Norrvatten–Solna and the Norrvatten–SVOA interconnection (S-H3), the existing 400 kV lines, and every road link; supply links from Lovö and Norsborg, Täby, Lidingö, Södermalm and Nacka, all planned lines (400 kV, the Anneberg cable) and both regional-grid links are `verified: false`. The reserve supply from Görvälnverket is a verified dotted link with an off-map arrow N whose `b` is the reserve node; every other off-map link has `b` equal to `a`. Links the data gives no label for carry an empty label rather than an invented one.
+Rejected: Marking all dashed links verified – the data says the supply areas of Lovö and Norsborg are not verified.
+Spec: DATA.md § 11 intro, § 11.1–11.3
+
+## 2026-11-02 – Batch 1 – Generator details the spec leaves open
+Decision: A patient's distance from the zone centre is the mean of two uniforms times the radius (a triangular spread, never outside the zone) at a uniform bearing; age is 24–91 like the hospital patients; names are drawn from the existing lists, unique across the 150 and distinct from staff and hospital patients; Home dialysis alone gives `batteryHours: null` because the spec lists no battery range for it; `elCritical` is Oxygen, IV infusion or Home ventilator only (Monitoring is not critical). The second generator has its own random stream, so regenerating leaves `patients.ts` byte-identical.
+Rejected: A single shared stream – extending the generator would silently change the 80 hospital patients and the tests pinned to them.
+Spec: SPEC.md § 11.4
+
+## 2026-11-02 – Batch 2 – View state lives under `home` in the store and is not logged
+Decision: `store-home.ts` is a slice whose state sits in one `home` object (`home.layers` now; mode, selection and disruptions follow in later batches) so that names like `mode` and `layers` cannot collide with the other slices. Layer visibility is view state like theme and locale: toggling a layer is not written to the audit log and does not advance the clock; only state changes that alter the picture of the care (blocking, outages, reset) are logged. "Återställ demo" restores the defaults (patients and roads on, el and water off) because the slice is part of `initialData()`.
+Rejected: Logging every toggle – a presenter flipping layers would push the scenario clock forward and fill the log with noise; top-level `layers`/`mode` keys – ambiguous in a store with nine slices.
+Spec: SPEC.md § 11.5
+
+## 2026-11-02 – Batch 2 – `NodeMap` takes one optional `home` overlay; layers are drawn by `HomeMapLayers`
+Decision: `NodeMap` gains the optional prop `home` (layers, zones, infrastructure nodes and links, patients). Its Leaflet children are drawn by `HomeMapLayers` inside the same `MapContainer` and `FitBounds` also fits the overlay's points (zones, markers, arrow tips). Symbols: water circle (teal token), electricity diamond (olive token), bridge square and tunnel circle (text-secondary token); an unverified node is hollow with a question mark; links of verified connections are solid, dashed/dotted styles and unverified links are dashed (`isSchematic`); off-map arrows are a short line with an arrowhead and the pack's text beside it, arrows that leave one node the same way fan out sideways with their labels on alternate sides. Patient dots are 2 px at 30 % opacity in the muted text token and do not take clicks; zones are small hollow points with their name (the translucent circles belong to the outage modes of batch 4). The region's hospitals are not drawn on this map, only Karolinska Solna and Huddinge.
+Rejected: A separate map component – the spec says extend, not fork; Leaflet default icons or SVG-only markers – a hollow "?" and the diamond need HTML icons that follow the theme through `var()` without a re-render; colour per layer from new tokens – the existing teal, olive and text-secondary tokens are enough.
+Spec: SPEC.md § 11.5–11.6, DESIGN-DARK.md § 3
+
+## 2026-11-02 – Batch 2 – The nav had to give up width for a seventh module; tabs fit by breakpoint
+Decision: With "Sjukhus hemma" the header overflowed 1280 px (1385 px in Swedish, wider in English). Below 1536 px the three decorative icons (chat, support, documentation) are hidden and the cluster gap is 4 px; below 1600 px the module gap is 24 px instead of 32 and the nav's left margin is 16 px. Measured with a headless browser, nothing scrolls horizontally in either language at 1280, 1360, 1440, 1536, 1600 and 1920 px. This supersedes the 32 px gap at 1280 px that KS batch 1 required; the batch 3 nav work re-measures with the platform tabs.
+Rejected: A horizontal scroll in the nav – violates the minimum-viewport rule; hiding the language or theme toggle – they are features.
+Spec: SPEC.md § 11.2 ("all tabs must fit at the 1280 px minimum viewport"), DESIGN-KS.md § 2
+
+## 2026-11-02 – Batch 3 – The five platform tabs collapse into a "Medoma" menu below 2100 px
+Decision: SPEC.md § 11.2's fallback applies. With the five platform tabs inline the nav needs about 590 px more than the six prototype tabs; it only fits above 2100 px, so below that the five tabs are one overflow menu labelled "Medoma" (a dropdown of five links; it carries the active top bar while a stub page is open), followed by the 1 px divider and the prototype's modules. To make that fit at the 1280 px minimum in both languages the nav was tightened by breakpoint, superseding batch 2's values: below 1600 px the header padding is 12 px, the module gap 16 px, the left margin 8 px, the clock buttons and theme toggle 28 px and the cluster gap 2 px; the three decorative icons appear from 1680 px, the module gap is 24 px from 1600 px and 32 px from 1760 px. Measured in a headless browser: nothing scrolls horizontally at 1280, 1366, 1440, 1536, 1600, 1680, 1760, 1920, 2100 and 2560 px in Swedish or English. In English at 1280 px the nav has 0 to 2 px to spare.
+Rejected: Inline platform tabs with smaller type – DESIGN.md fixes 16/500; hiding the language toggle – it is a feature; a horizontally scrolling nav – violates the minimum-viewport rule.
+Spec: SPEC.md § 11.2
+
+## 2026-11-02 – Batch 3 – Stub routes reuse the first prototype's old paths
+Decision: The five stubs live at `/patients`, `/activities`, `/planning`, `/employees` and `/reporting`; the first prototype's redirects from those paths to Start are removed because the paths now render a page. The stub text and link come from `STUB` in vocab; the title is the module label.
+Rejected: New paths such as `/plattform/patienter` – the old paths are the natural ones and nothing else uses them.
+Spec: SPEC.md § 11.2, § 3
+
+## 2026-11-02 – Batch 3 – Selection, dimming and the panel
+Decision: Selecting an infrastructure node is view state (`home.selectedNode`, not logged). A click on a marker selects it, a second click or a click on the empty map clears it, and switching off the node's layer clears it. Dimmed: links that do not touch the node (15 % opacity), nodes, zone points and zone labels that are not linked to it (25–35 %), and patient dots in zones that are not linked (10 % instead of 30 %). The panel shows the layer tag and kind, the name, the role, "Kopplad till" (other infrastructure nodes are links that select them, sites and zones are plain text, an off-map arrow reads "Utanför kartan: …", each with the link's label), the status (red and bold when the node is unverified), the node's figures with their confidence chip and source, and the position with its confidence chip and basis. The three works (Görvälnverket, Lovö, Norsborg) also show the common raw-water source (Östra Mälaren) as its own paragraph, as DATA.md § 11.1 says it is "shown as the status text on the three works".
+Rejected: Selecting zones and patients as well – the spec selects infrastructure; a marker for Östra Mälaren and the reserve supply – DATA.md gives them no marker of their own.
+Spec: SPEC.md § 11.5–11.6, DATA.md § 11.1
+
+## 2026-11-02 – Batch 3 – Position basis texts are shown in the wording of DATA.md
+Decision: `coordSource` is one string in the spec and the pack keeps DATA.md's English wording ("Görväln area, Järfälla; Places returned the adjacent Görväln House …"); the panel shows it as written with `lang="en"` under the confidence chip, in Swedish mode as well. The chip and the heading are translated.
+Rejected: Translating every basis text into a second string field – the spec types the field as a plain string and the texts are source notes, not UI copy.
+Spec: SPEC.md § 11.3, § 11.4
+
+## 2026-11-02 – Batch 3 – Source keys S-H1…S-H14 get their own section on Källor
+Decision: Källor gains a section "Sjukhus hemma: infrastruktur" listing S-H1…S-H14 with anchors (`/kallor#S-H12`) and every infrastructure figure under its source; the confidence popover looks a figure's source up in both source lists. `collectFigures` is unchanged, so the existing source test still pins S1–S22.
+Rejected: Merging the lists – breaks the existing test and mixes the hospital's figures with the infrastructure's.
+Spec: SPEC.md § 11.3, DESIGN-KS.md § 4, § 9
+
+## 2026-11-02 – Batch 3 – List filters are local; "Endast påverkade" waits for batch 4
+Decision: The patient list keeps its zone, equipment, visit-today and affected-only filters in component state (they are not scenario state and not logged). The affected-only chip is disabled, with a title explaining why, until a disruption exists (batch 4 passes the affected ids). Rows show name, age, area, team, equipment with battery hours and a "Besök i dag" chip; groups are the zones in pack order and patients are sorted by family and given name.
+Rejected: Filters in the store – nothing else reads them, and a demo reset would clear what the presenter set.
+Spec: SPEC.md § 11.6
+
+## 2026-11-02 – Batch 4 – Which Hospital at Home actions are logged
+Decision: Closing or reopening a road node or link, setting or restoring a power or water outage, and the reset are logged through `logEntry()` as Eva Lind with the object's name and the detail "N av 150 patienter påverkade" for the state after the change and the scope in force; each advances the scenario clock one minute like any action. Picking a mode, selecting a node and switching a layer are view state and are not logged. The reset chip writes one entry ("Återställde alla störningar") and does nothing when nothing is disrupted; it keeps the mode and the selection. A closed link is named by its two ends and its label ("Norra länken (E4/E20) – Lidingö (via Lidingöbron …)").
+Rejected: Logging mode changes – they change nothing about the care; one entry per element on reset – a reset of ten disruptions would bury the log.
+Spec: SPEC.md § 11.5 ("all writes go through logEntry()")
+
+## 2026-11-02 – Batch 4 – Rows, tiers and the meaning of "affected" and "critical"
+Decision: `impact()` returns a row for every patient with any flag, including patients who only have a detour; "affected" (the headline count, the filled dot, the "Påverkade" section and the "affected only" filter) is unreachable, power or water, so a detour-only patient is a row but not affected and is counted separately ("nås via omväg"). `prioritise()` has the spec's five tiers plus one the spec does not name: tier 5 is a patient without power or with a water disruption who is neither el-critical nor on dialysis; it sorts after "unreachable" and before "detour". Ties go by battery hours ascending (no battery last), then by name so the order is stable. The black "Prioritera" badge marks tiers 1–3 (the groups the spec orders first); the hollow ring on the map marks an affected patient who is el- or water-critical (`HomePatient.elCritical`/`waterCritical`), the definition the summary uses. The two are close but not identical: an unreachable patient with a visit today and no powered equipment gets the badge and a filled dot.
+Rejected: One flag for both – the spec describes the ring by criticality and the badge by priority; dropping the non-critical power/water patients from the list – they are affected and must be seen.
+Spec: SPEC.md § 11.5–11.6
+
+## 2026-11-02 – Batch 4 – The five-bridge case leaves Södermalm cut off from both sites
+Decision: In the road graph Södermalm's only links are bridge nodes, so blocking Essingeleden, Centralbron, Västerbron, Liljeholmsbron and Skanstullsbron isolates it from Solna and from Huddinge alike. The test for "every zone south of Saltsjö–Mälaren is unreachable from Solna but not from Huddinge" therefore covers Söderort, Huddinge, Botkyrka and Nacka, and asserts separately that Södermalm is unreachable from both and that from Huddinge the northern zones are the unreachable ones. At Karolinska scope (reachable from either site) only Södermalm's 15 patients remain unreachable.
+Rejected: Adding a road link to Södermalm so that it stays reachable – DATA.md § 11.3 lists the links exactly.
+Spec: SPEC.md § 11.7 batch 4, DATA.md § 11.3
+
+## 2026-11-02 – Batch 4 – Mode behaviour on the map
+Decision: Picking a mode also switches on the layer it acts on (roads, el or water). In roads mode a tap on a road marker toggles `blockedNodes`, and every road link has a 14 px transparent hit path over the visible line that toggles `blockedLinks`; in el and water mode the ten zones draw as dashed, translucent circles and a tap toggles that zone's outage of the active kind; outside those modes the circles of zones in outage stay visible. Blocked nodes turn the danger colour with a cross in the marker (not colour alone), blocked links are solid and one weight heavier, outage zones fill the danger colour at 22 %. With a mode active a tap never selects a node and the empty map does not clear the selection. Patient dots: affected 3 px filled danger colour, affected and critical 4 px hollow ring, detour-only 3 px amber, others unchanged; they take no clicks. The middle pane shows the result when there is any disruption, the mode's instruction sentence when there is a mode and none yet, else the selected node's panel.
+Rejected: A tap that both selects and blocks – ambiguous; hit areas on the markers only – the spec wants links blockable too.
+Spec: SPEC.md § 11.5–11.6
+
+## 2026-11-02 – Batch 4 – The list, the headline and the illustrative chip
+Decision: With disruptions the left list shows three sections: "Påverkade" in priority order, "Nås via omväg" and "Övriga" (by zone, then name); without disruptions it is grouped by zone as in batch 3. Rows show their reasons as chips (red for unreachable, power and water; warning for detour) and the badge. The "affected only" chip is enabled while a disruption exists and keeps exactly the affected patients. The headline "N av 150 patienter påverkade" carries the grey "Illustrativt" chip, because the patient count is a synthetic figure; its basis text says the patients were generated for the demo.
+Rejected: A single flat list – the spec orders by priority but the unaffected must still be findable; leaving the count without a chip – CLAUDE.md requires the confidence wherever a figure is shown.
+Spec: SPEC.md § 11.6, CLAUDE.md
+
+## 2026-11-02 – Batch 4 – Map usability: smaller markers and wheel zoom on this map only
+Decision: At the default zoom the inner-city bridges are 15–17 px apart, so the node markers are 18 px (was 20 px) and `NodeMap` gets the optional `scrollWheelZoom` prop, switched on for Hospital at Home (the page does not scroll, and zooming in is how a presenter separates Västerbron from Liljeholmsbron). Other maps are unchanged.
+Rejected: Spreading the markers apart – their positions are the sourced coordinates; a higher default zoom – the whole region must be in view at first.
+Spec: SPEC.md § 11.5–11.6
+
+## 2026-11-02 – Batch 5 – The three presets sit in the scenario panel, apart from `pack.scenarios`
+Decision: "Bro avstängd" / "Bridge closed", "Elavbrott" / "Power outage" and "Vattenstörning" / "Water disruption" are `pack.homePresets` and appear in the scenario panel's select under a group "Sjukhus hemma" after the six existing scenarios. Choosing one shows a sentence about what it does; "Starta" calls `applyHomePreset`, which replaces the current disruptions with the preset's (bridge: Essingeleden and Centralbron closed; power: Söderort and Huddinge; water: Solna och Sundbyberg), clears the mode and the selection, switches on the layer the preset acts on, writes one log entry as Eva Lind ("Aktiverade störningsscenario – {name}, N av 150 patienter påverkade") and navigates to `/home`. No scenario state and no ticks are created. While another scenario is running the panel shows its running view, so a preset is chosen when none runs.
+Rejected: Adding the keys to `pack.scenarios` and `ScenarioKey` – an existing test pins that list to six keys and the scenario engine's records are keyed by it; one log entry per closed element – a preset is one decision.
+Spec: SPEC.md § 11.5
+
+## 2026-11-02 – Batch 5 – How the vocab parity test covers the new keys
+Decision: The existing parity test already compares every key and placeholder of `sv` and `en`, so the new `HOME`, `STUB`, `MODULES` and `AUDIT` keys are covered by it. `vocab-home.test.ts` adds two things the key comparison cannot: it reads the source of every Hospital at Home file, collects each literal key passed to `t()`, `tn()` and `tm()` and asserts that it resolves to a string (or, for `tn`, a `_one`/`_other` pair; for `tm`, a branch with equal keys) in both languages, and it enumerates the keys built from data (modules, equipment, infrastructure kinds, layers, modes, instructions, presets, reasons). It also pins the spec's exact labels.
+Rejected: Relying on the generic test alone – a typo in a `t()` call would only show at run time in one language.
+Spec: SPEC.md § 11.7 batch 5, DESIGN-LANG.md § 1
+
+## 2026-11-02 – Batch 5 – Screenshots show the page without map tiles; README gets "Steg 6"
+Decision: `docs/screenshots/home/` holds seven screenshots of `/home` at 1280 px: layers on with a selected node in light/Swedish, dark/Swedish and light/English, and the three presets (bridge, power, water) in the combinations light/Swedish, dark/Swedish, light/English and dark/English. The build sandbox cannot reach OpenStreetMap, so the tile pane is empty (the map background shows through); markers, lines, circles and dots are drawn as in a live run. The README's presenter script gains "Steg 6 – Sjukhus hemma" after the five chapters; it is not a sixth chapter card on Start because SPEC.md § 8 defines five and § 11.7 asks for a README step only.
+Rejected: A sixth chapter on Start – changes SPEC.md § 8 and the Start page's equal-width layout; committing screenshots with fake tiles – nothing in them may look like data that is not there.
+Spec: SPEC.md § 11.7 batch 5

@@ -24,8 +24,8 @@ Kräver Node 22. Minsta bredd 1280 px. Kartunderlaget hämtas från OpenStreetMa
 | `src/data/packs/types.ts` | Domänmodellen och `DataPack`-gränssnittet. |
 | `src/data/vocab.ts` | Alla svenska UI-strängar och etiketter för enum-värden. |
 | `src/data/store*.ts` | Zustand-store med slices för incident, evakuering, resurser, nätverk, Läget nu och scenario. Varje tillståndsändring loggas med scenarioklockans tid. |
-| `src/lib/` | Rena moduler med tester: `forecast.ts`, `placement.ts`, `scenario.ts`, `flow.ts`, `capacity.ts`, `suggest.ts`, `parse.ts`, `figure.ts`, `format.ts`. |
-| `src/modules/` | Sidorna: `start`, `flow` (Läget nu), `capacity`, `incident`, `evacuation`, `resources`, `network`, `sources` (Källor), `scenario` (panelen). |
+| `src/lib/` | Rena moduler med tester: `forecast.ts`, `placement.ts`, `scenario.ts`, `flow.ts`, `capacity.ts`, `suggest.ts`, `parse.ts`, `figure.ts`, `format.ts`, `reachability.ts` (nåbarhet och påverkan för Sjukhus hemma). |
+| `src/modules/` | Sidorna: `start`, `flow` (Läget nu), `home` (Sjukhus hemma), `capacity`, `incident`, `evacuation`, `resources`, `network`, `sources` (Källor), `scenario` (panelen). |
 | `DATA.md` | Läsbar källa för datapaketet med källförteckning (S1–S22). |
 | `SPEC.md`, `DESIGN.md`, `DESIGN-KS.md` | Beteende och utseende. |
 | `DECISIONS.md` | Varje val som specen inte gör, med avvisat alternativ. |
@@ -44,7 +44,7 @@ Knappen "EN" i navigationsfältet växlar till engelska, "SV" tillbaka till sven
 
 ## Presentatörsmanus
 
-Startsidan (logotypen) har fem kapitel. Varje kapitel återställer demon, sätter omfattning och sida och startar vid behov ett scenario, så kapitlen kan visas i valfri ordning.
+Startsidan (logotypen) har fem kapitel, och Sjukhus hemma visas som steg 6 nedan. Varje kapitel återställer demon, sätter omfattning och sida och startar vid behov ett scenario, så kapitlen kan visas i valfri ordning.
 
 ### Vad man säger om chipen
 
@@ -103,6 +103,17 @@ Klicka **Starta kapitel** på Regional omfördelning. Nätverk öppnas för Regi
 - Klicka **Starta** i panelen. Efter cirka 3 h 30 min tar Södersjukhuset, Danderyd och S:t Göran slut på platser; tabellen visar 0 lediga och händelserna listar "vårdplatser slut".
 - Klicka **Utför** på Etablera vårdhubb Flemingsberg: noden dyker upp i tabellen som Under uppstart, i omfattningsväljaren och på kartan, och går i drift efter fyra tick med 40 platser som tar emot patienter.
 - Peka på Utskrivningsklara till ASIH och Tidigarelägg utskrivningar som Karolinskas egna bidrag.
+
+### Steg 6 – Sjukhus hemma
+
+Sjukhus hemma ligger i navigationen direkt efter Läget nu (`/home`). Det är inget kapitel på startsidan utan ett sjätte steg som visas efter de fem, eller på egen hand. De 150 patienterna är fiktiva och märkta så; antalet bär chipet Illustrativt. Kartans noder och förbindelser kommer från DATA.md § 11; vägarnas dragning är schematisk och noder som inte är verifierade är ihåliga med ett frågetecken.
+
+- Öppna **Sjukhus hemma**. Kartan visar de 150 patienterna som svaga prickar och vägar och broar. Slå på **El** och **Vatten** i chipraden ovanför kartan: heldragna linjer är verifierade förbindelser, streckade är schematiska, och pilar visar vart ledningar fortsätter utanför kartan. Regionnätet (70–220 kV) är det enda ihåliga: det är luckan att fylla först, och panelen säger det med röd text.
+- Klicka på en nod, till exempel Essingeleden: allt som inte hänger ihop med den tonas ned, och mittpanelen visar vad noden är, vad den är kopplad till, status och uppgifter med chip och källa (140 000–170 000 fordon per dygn, S-H12). Källorna S-H1–S-H14 finns på Källor.
+- Öppna Kapacitet, **Scenario**, och välj **Bro avstängd** under Sjukhus hemma, **Starta**. Essingeleden och Centralbron stängs: 0 av 150 patienter påverkade, men de 10 i Nacka nås via omväg, eftersom Södra länken inte längre nås över Essingeleden. Det första budskapet: en avstängd bro kostar tid, inte täckning, så länge det finns en väg runt.
+- Klicka **Stäng vägar** och stäng Västerbron, Liljeholmsbron och Skanstullsbron på kartan (eller välj en vägförbindelse). Vid omfattningen Karolinska nås Söderort, Huddinge, Botkyrka och Nacka fortfarande från Huddinge; bara Södermalm (15 patienter) är avskuret från båda siterna. Byt till **Karolinska Solna** uppe till vänster: nu är 75 patienter inte nåbara med bil, och listan till vänster sorteras med besök i dag och el-kritiska först, märkta Prioritera. Varje stängning och öppning loggas (Kapacitet, Logg) med antalet påverkade.
+- Välj **Elavbrott** (scenario eller knappen **Elavbrott** ovanför kartan): Söderort och Huddinge, 40 patienter utan el och kortaste batteritid hos el-kritiska 4 h. Det är batteritiden, inte avståndet, som avgör ordningen. **Vattenstörning** sätter vattnet ur drift i Solna och Sundbyberg (25 patienter). Knappen **Återställ** rensar allt.
+- Säg vad som är verifierat och inte: broar, vägar och verk finns i öppna källor; koordinater som inte kunde läsas exakt är markerade Estimat; antalet patienter, deras utrustning och batteritider är illustrativa. Vill man koppla på riktiga uppgifter är nästa steg att fylla regionnätet och Lovö/Norsborgs försörjningsområde.
 
 ### Utanför kapitlen
 

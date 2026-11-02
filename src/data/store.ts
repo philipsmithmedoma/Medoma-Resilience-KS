@@ -33,6 +33,7 @@ import { createResourcesSlice, type ResourcesActions } from './store-resources';
 import { createNetworkSlice, type NetworkActions } from './store-network';
 import { createFlowSlice, type FlowActions } from './store-flow';
 import { createScenarioSlice, type ScenarioActions } from './store-scenario';
+import { createHomeSlice, initialHome, type HomeActions, type HomeState } from './store-home';
 
 export interface DataState {
   pack: DataPack;
@@ -62,6 +63,7 @@ export interface DataState {
   scenario: ScenarioState | null;
   scenarioPanel: { open: boolean; key: ScenarioKey | null };
   freedByScenario: number;
+  home: HomeState; // Hospital at Home (SPEC.md § 11.5)
   ids: number;
 }
 
@@ -87,7 +89,7 @@ export interface Actions {
   armScenario: (key: ScenarioKey, start: boolean) => void;
 }
 
-export type AppStore = DataState & Actions & IncidentActions & EvacuationActions & ResourcesActions & NetworkActions & FlowActions & ScenarioActions;
+export type AppStore = DataState & Actions & IncidentActions & EvacuationActions & ResourcesActions & NetworkActions & FlowActions & ScenarioActions & HomeActions;
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -123,6 +125,7 @@ export function initialData(): DataState {
     scenario: null,
     scenarioPanel: { open: false, key: null },
     freedByScenario: 0,
+    home: initialHome(),
     ids: 100,
   };
 }
@@ -141,6 +144,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
   ...createNetworkSlice(set, get, api),
   ...createFlowSlice(set, get, api),
   ...createScenarioSlice(set, get, api),
+  ...createHomeSlice(set, get, api),
 
   nextId: (prefix) => {
     const n = get().ids + 1;

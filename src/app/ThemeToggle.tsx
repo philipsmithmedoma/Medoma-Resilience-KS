@@ -11,7 +11,7 @@ export function ThemeToggle() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button type="button" aria-label={label} onClick={toggleTheme} className="flex size-8 items-center justify-center rounded-md text-text hover:bg-bg-muted">
+        <button type="button" aria-label={label} onClick={toggleTheme} className="flex size-7 items-center justify-center rounded-md text-text hover:bg-bg-muted min-[1600px]:size-8">
           {theme === 'dark' ? <SunIcon className="size-5" strokeWidth={1.5} aria-hidden /> : <MoonIcon className="size-5" strokeWidth={1.5} aria-hidden />}
         </button>
       </TooltipTrigger>

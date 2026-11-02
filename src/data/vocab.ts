@@ -4,6 +4,7 @@
 // Non-linguistic constants (ids, enum lists, tones, tints) follow the tables.
 import type {
   AcceptsLevel,
+  HomeEquipment,
   BeredskapsLage,
   CareLevel,
   Confidence,
@@ -30,7 +31,22 @@ import type {
 // ---------------------------------------------------------------------------
 // Swedish (default)
 export const sv = {
-  MODULES: { flow: 'Läget nu', capacity: 'Kapacitet', incident: 'Incident', evacuation: 'Evakuering', resources: 'Resurser', network: 'Nätverk', sources: 'Källor', start: 'Start' },
+  MODULES: {
+    flow: 'Läget nu',
+    home: 'Sjukhus hemma',
+    capacity: 'Kapacitet',
+    incident: 'Incident',
+    evacuation: 'Evakuering',
+    resources: 'Resurser',
+    network: 'Nätverk',
+    sources: 'Källor',
+    start: 'Start',
+    patients: 'Patienter',
+    activities: 'Aktiviteter',
+    planning: 'Planering',
+    employees: 'Medarbetare',
+    reporting: 'Rapportering',
+  },
 
   SCOPE_LABELS: {
     karolinska: 'Karolinska',
@@ -196,6 +212,16 @@ export const sv = {
     ehrObject: 'Journalsystem',
     clockReset: 'Återställde klockan',
     clockObject: 'Scenarioklocka',
+    homeBlocked: 'Stängde',
+    homeUnblocked: 'Öppnade',
+    homePowerOut: 'Slog ut elen i',
+    homePowerRestored: 'Återställde elen i',
+    homeWaterOut: 'Störde vattnet i',
+    homeWaterRestored: 'Återställde vattnet i',
+    homeReset: 'Återställde alla störningar',
+    homeObject: 'Sjukhus hemma',
+    homeDetail: '{n} av {total} patienter påverkade',
+    homePreset: 'Aktiverade störningsscenario',
     demoReset: 'Återställde demon',
     columns: { time: 'Tid', actor: 'Aktör', action: 'Åtgärd', object: 'Objekt', detail: 'Detalj' },
   },
@@ -686,7 +712,109 @@ export const sv = {
   },
 
   // Källor (SPEC.md § 6.10)
+  STUB: {
+    text: 'Den här modulen finns i Medoma i dag och ligger utanför prototypen.',
+    link: 'Gå till Sjukhus hemma',
+    menu: 'Medoma',
+    menuAria: 'Medomas plattformsmoduler',
+  },
+
+  HOME: {
+    title: 'Sjukhus hemma',
+    mapAria: 'Karta över patienter i hemmet och deras infrastruktur',
+    layersAria: 'Kartlager',
+    layers: { patients: 'Patienter', roads: 'Vägar', el: 'El', water: 'Vatten' },
+    kinds: {
+      waterworks: 'Vattenverk',
+      reserve: 'Reserv',
+      pumping: 'Pumpstation',
+      transmission: 'Stamnätsstation',
+      generation: 'Kraftverk',
+      junction: 'Trafikplats',
+      bridge: 'Bro',
+      tunnel: 'Tunnel',
+    },
+    unverified: 'Ej verifierad',
+    legend: {
+      title: 'Teckenförklaring',
+      patient: 'Patient',
+      affected: 'Påverkad',
+      critical: 'Påverkad och kritisk',
+      detour: 'Omväg',
+      verifiedLink: 'Verifierad förbindelse',
+      schematicLink: 'Schematisk förbindelse',
+      bridge: 'Bro',
+      unverifiedNode: 'Ej verifierad nod',
+    },
+    modes: { label: 'Simulera störning', roads: 'Stäng vägar', el: 'Elavbrott', water: 'Vattenstörning', reset: 'Återställ' },
+    instructions: {
+      roads: 'Tryck på en bro, en tunnel eller en vägförbindelse på kartan för att stänga den. Tryck igen för att öppna den.',
+      el: 'Tryck på ett område på kartan för att slå ut elen där. Tryck igen för att återställa den.',
+      water: 'Tryck på ett område på kartan för att störa vattnet där. Tryck igen för att återställa det.',
+    },
+    impact: {
+      headline: '{n} av {total} patienter påverkade',
+      detour: ', {n} nås via omväg',
+      basis: 'Fiktiva patientuppgifter som genererats för demon, inte Karolinskas data.',
+      active: 'Aktiva störningar',
+      closed: 'Stängt: {names}',
+      powerOut: 'Elavbrott: {names}',
+      waterOut: 'Vattenstörning: {names}',
+      reset: 'Återställ störningar',
+      facts: {
+        unreachable_one: '{n} patient kan inte nås med bil ({zones})',
+        unreachable_other: '{n} patienter kan inte nås med bil ({zones})',
+        visitToday: '{n} av dem har besök i dag',
+        critical: '{n} av dem är el- eller vattenkritiska',
+        power_one: '{n} patient utan el',
+        power_other: '{n} patienter utan el',
+        battery: 'Kortaste batteritid hos el-kritiska utan el: {n} h',
+        water_one: '{n} patient med vattenstörning',
+        water_other: '{n} patienter med vattenstörning',
+        dialysis: '{n} av dem har hemdialys',
+      },
+      reasons: { unreachable: 'Nås inte med bil', detour: 'Nås via omväg', power: 'Utan el', water: 'Vattenstörning' },
+      prioritise: 'Prioritera',
+      groups: { affected: 'Påverkade ({n})', detour: 'Nås via omväg ({n})', others: 'Övriga ({n})' },
+    },
+    presets: {
+      group: 'Sjukhus hemma',
+      bridge: 'Stänger Essingeleden och Centralbron och öppnar Sjukhus hemma.',
+      power: 'Slår ut elen i Söderort och Huddinge och öppnar Sjukhus hemma.',
+      water: 'Stör vattnet i Solna och Sundbyberg och öppnar Sjukhus hemma.',
+    },
+    equipment: {
+      Oxygen: 'Syrgas',
+      'IV infusion': 'Infusion',
+      Monitoring: 'Övervakning',
+      'Home ventilator': 'Hemrespirator',
+      'Home dialysis': 'Hemdialys',
+    },
+    list: {
+      title: 'Patienter ({n})',
+      filters: { zone: 'Område', equipment: 'Utrustning', all: 'Alla', visitToday: 'Besök i dag', affectedOnly: 'Endast påverkade' },
+      affectedOnlyHint: 'Går att välja när en störning är satt på kartan.',
+      noMatch: 'Inga patienter matchar filtren.',
+      clearFilters: 'Rensa filter',
+      visitToday: 'Besök i dag',
+      battery: 'Batteri {n} h',
+      noEquipment: 'Ingen utrustning',
+    },
+    panel: {
+      empty: 'Välj en nod på kartan för att se vad den är och vad den försörjer.',
+      linkedTo: 'Kopplad till',
+      noLinks: 'Inga kopplingar.',
+      status: 'Status',
+      position: 'Läge på kartan',
+      commonSource: 'Gemensam råvattenkälla',
+      offmap: 'Utanför kartan: {text}',
+      deselect: 'Avmarkera',
+    },
+  },
+
   SOURCES: {
+    homeHeading: 'Sjukhus hemma: infrastruktur',
+    homeIntro: 'Källor till kartlagren för vatten, el och vägar. Nodernas läge är från Google Places (avläst 2026-11-02) om inget annat anges i panelen; dragningen av varje förbindelse är schematisk.',
     title: 'Källor',
     intro: 'Alla uppgifter i demon är antingen verifierade mot öppna källor, rapporterade av Medoma, estimat med angiven grund eller illustrativa scenariovärden.',
     verifiedTable: 'Verifierade och rapporterade uppgifter',
@@ -826,7 +954,22 @@ export type Vocab = typeof sv;
 // ---------------------------------------------------------------------------
 // English. Proper nouns, ward names, abbreviations and the region's legal terms stay Swedish (DESIGN-LANG.md § 4).
 export const en: Vocab = {
-  MODULES: { flow: 'Live status', capacity: 'Capacity', incident: 'Incident', evacuation: 'Evacuation', resources: 'Resources', network: 'Network', sources: 'Sources', start: 'Start' },
+  MODULES: {
+    flow: 'Live status',
+    home: 'Hospital at Home',
+    capacity: 'Capacity',
+    incident: 'Incident',
+    evacuation: 'Evacuation',
+    resources: 'Resources',
+    network: 'Network',
+    sources: 'Sources',
+    start: 'Start',
+    patients: 'Patients',
+    activities: 'Activities',
+    planning: 'Planning',
+    employees: 'Employees',
+    reporting: 'Reporting',
+  },
 
   SCOPE_LABELS: {
     karolinska: 'Karolinska',
@@ -995,6 +1138,16 @@ export const en: Vocab = {
     ehrObject: 'EHR',
     clockReset: 'Reset the clock',
     clockObject: 'Scenario clock',
+    homeBlocked: 'Closed',
+    homeUnblocked: 'Reopened',
+    homePowerOut: 'Cut the power in',
+    homePowerRestored: 'Restored the power in',
+    homeWaterOut: 'Disrupted the water in',
+    homeWaterRestored: 'Restored the water in',
+    homeReset: 'Reset all disruptions',
+    homeObject: 'Hospital at Home',
+    homeDetail: '{n} of {total} patients affected',
+    homePreset: 'Activated disruption scenario',
     demoReset: 'Reset the demo',
     columns: { time: 'Time', actor: 'Actor', action: 'Action', object: 'Object', detail: 'Detail' },
   },
@@ -1478,7 +1631,109 @@ export const en: Vocab = {
     asihLabel: 'ASIH',
   },
 
+  STUB: {
+    text: 'This module exists in Medoma today and is outside the scope of this prototype.',
+    link: 'Go to Hospital at Home',
+    menu: 'Medoma',
+    menuAria: 'Medoma platform modules',
+  },
+
+  HOME: {
+    title: 'Hospital at Home',
+    mapAria: 'Map of patients at home and the infrastructure they depend on',
+    layersAria: 'Map layers',
+    layers: { patients: 'Patients', roads: 'Roads', el: 'Electricity', water: 'Water' },
+    kinds: {
+      waterworks: 'Waterworks',
+      reserve: 'Reserve',
+      pumping: 'Pumping station',
+      transmission: 'Transmission station',
+      generation: 'Power plant',
+      junction: 'Junction',
+      bridge: 'Bridge',
+      tunnel: 'Tunnel',
+    },
+    unverified: 'Not verified',
+    legend: {
+      title: 'Legend',
+      patient: 'Patient',
+      affected: 'Affected',
+      critical: 'Affected and critical',
+      detour: 'Detour',
+      verifiedLink: 'Verified link',
+      schematicLink: 'Schematic link',
+      bridge: 'Bridge',
+      unverifiedNode: 'Unverified node',
+    },
+    modes: { label: 'Simulate a disruption', roads: 'Close roads', el: 'Power outage', water: 'Water disruption', reset: 'Reset' },
+    instructions: {
+      roads: 'Tap a bridge, a tunnel or a road link on the map to close it. Tap again to reopen it.',
+      el: 'Tap an area on the map to cut the power there. Tap again to restore it.',
+      water: 'Tap an area on the map to disrupt the water there. Tap again to restore it.',
+    },
+    impact: {
+      headline: '{n} of {total} patients affected',
+      detour: ', {n} reached via detour',
+      basis: 'Fictional patient data generated for the demo, not Karolinska data.',
+      active: 'Active disruptions',
+      closed: 'Closed: {names}',
+      powerOut: 'Power outage: {names}',
+      waterOut: 'Water disruption: {names}',
+      reset: 'Reset disruptions',
+      facts: {
+        unreachable_one: '{n} patient cannot be reached by car ({zones})',
+        unreachable_other: '{n} patients cannot be reached by car ({zones})',
+        visitToday: '{n} of them have a visit today',
+        critical: '{n} of them are electricity- or water-critical',
+        power_one: '{n} patient without power',
+        power_other: '{n} patients without power',
+        battery: 'Shortest battery among electricity-critical patients without power: {n} h',
+        water_one: '{n} patient with a water disruption',
+        water_other: '{n} patients with a water disruption',
+        dialysis: '{n} of them are on home dialysis',
+      },
+      reasons: { unreachable: 'Cannot be reached by car', detour: 'Reached via detour', power: 'Without power', water: 'Water disruption' },
+      prioritise: 'Prioritise',
+      groups: { affected: 'Affected ({n})', detour: 'Reached via detour ({n})', others: 'Others ({n})' },
+    },
+    presets: {
+      group: 'Hospital at Home',
+      bridge: 'Closes Essingeleden and Centralbron and opens Hospital at Home.',
+      power: 'Cuts the power in the southern suburbs and Huddinge and opens Hospital at Home.',
+      water: 'Disrupts the water in Solna and Sundbyberg and opens Hospital at Home.',
+    },
+    equipment: {
+      Oxygen: 'Oxygen',
+      'IV infusion': 'IV infusion',
+      Monitoring: 'Monitoring',
+      'Home ventilator': 'Home ventilator',
+      'Home dialysis': 'Home dialysis',
+    },
+    list: {
+      title: 'Patients ({n})',
+      filters: { zone: 'Area', equipment: 'Equipment', all: 'All', visitToday: 'Visit today', affectedOnly: 'Affected only' },
+      affectedOnlyHint: 'Available once a disruption is set on the map.',
+      noMatch: 'No patients match the filters.',
+      clearFilters: 'Clear filters',
+      visitToday: 'Visit today',
+      battery: 'Battery {n} h',
+      noEquipment: 'No equipment',
+    },
+    panel: {
+      empty: 'Select a node on the map to see what it is and what it supplies.',
+      linkedTo: 'Linked to',
+      noLinks: 'No links.',
+      status: 'Status',
+      position: 'Position on the map',
+      commonSource: 'Common raw-water source',
+      offmap: 'Off the map: {text}',
+      deselect: 'Clear selection',
+    },
+  },
+
   SOURCES: {
+    homeHeading: 'Hospital at Home: infrastructure',
+    homeIntro: 'Sources for the water, electricity and road layers. Node positions are from Google Places (read 2026-11-02) unless the panel says otherwise; the routing of every link is schematic.',
     title: 'Sources',
     intro: 'Every figure in the demo is either verified against open sources, reported by Medoma, an estimate with a stated basis or an illustrative scenario value.',
     verifiedTable: 'Verified and reported figures',
@@ -1637,11 +1892,21 @@ export interface ModuleDef {
 }
 export const MODULE_DEFS: ModuleDef[] = [
   { key: 'flow', path: '/laget-nu' },
+  { key: 'home', path: '/home' },
   { key: 'capacity', path: '/kapacitet' },
   { key: 'incident', path: '/incident' },
   { key: 'evacuation', path: '/evakuering' },
   { key: 'resources', path: '/resurser' },
   { key: 'network', path: '/natverk' },
+];
+
+/** The five Medoma platform modules (SPEC.md § 11.2): stub pages in the nav before the prototype's modules. */
+export const PLATFORM_DEFS: ModuleDef[] = [
+  { key: 'patients', path: '/patients' },
+  { key: 'activities', path: '/activities' },
+  { key: 'planning', path: '/planning' },
+  { key: 'employees', path: '/employees' },
+  { key: 'reporting', path: '/reporting' },
 ];
 
 export const NODE_TYPES: NodeType[] = ['Hospital', 'Care hub', 'Field hospital', 'Home care', 'Capacity class', 'Transport'];
@@ -1653,6 +1918,7 @@ export const CARE_LEVELS: CareLevel[] = ['Ward', 'Monitored', 'Intensive'];
 export const ACCEPTS_LEVELS: AcceptsLevel[] = ['Ward', 'Monitored', 'Intensive', 'Home'];
 export const TRANSPORT_NEEDS: TransportNeed[] = ['Walking', 'Wheelchair', 'Stretcher', 'Ambulance', 'Intensive care transport'];
 export const EQUIPMENT: Equipment[] = ['Oxygen', 'IV infusion', 'Monitoring'];
+export const HOME_EQUIPMENT: HomeEquipment[] = ['Oxygen', 'IV infusion', 'Monitoring', 'Home ventilator', 'Home dialysis'];
 export const MOVE_STATUSES: MoveStatus[] = ['Planned', 'Accepted', 'Transport assigned', 'Departed', 'Arrived', 'Handed over'];
 export const PRIORITIES: Priority[] = ['Low', 'Normal', 'High', 'Critical'];
 export const REQUEST_STATUSES: RequestStatus[] = ['Requested', 'Accepted', 'Allocated', 'Dispatched', 'Received', 'Rejected'];

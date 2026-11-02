@@ -8,6 +8,9 @@ import { EvacuationPage } from '@/modules/evacuation/EvacuationPage';
 import { ResourcesPage } from '@/modules/resources/ResourcesPage';
 import { NetworkPage } from '@/modules/network/NetworkPage';
 import { NodeDetailPage } from '@/modules/network/NodeDetailPage';
+import { HomePage } from '@/modules/home/HomePage';
+import { PlatformStubPage } from '@/modules/home/PlatformStubPage';
+import { PLATFORM_DEFS } from '@/data/vocab';
 import { SourcesPage } from '@/modules/sources/SourcesPage';
 
 export interface RouteDef {
@@ -22,6 +25,7 @@ export const routes: RouteDef[] = [
   { path: '/laget-nu/placering', element: <FlowPage tab="placement" /> },
   { path: '/laget-nu/prognos', element: <FlowPage tab="forecast" /> },
   { path: '/laget-nu/utskrivningsklara', element: <FlowPage tab="discharge" /> },
+  { path: '/home', element: <HomePage /> },
   { path: '/kapacitet', element: <CapacityPage /> },
   { path: '/incident', element: <IncidentPage /> },
   { path: '/incident/kanaler/:channelId', element: <ChannelPage /> },
@@ -32,6 +36,8 @@ export const routes: RouteDef[] = [
   { path: '/natverk', element: <NetworkPage /> },
   { path: '/natverk/:nodeId', element: <NodeDetailPage /> },
   { path: '/kallor', element: <SourcesPage /> },
+  // SPEC.md § 11.2: the five platform modules render a stub page that links to Hospital at Home.
+  ...PLATFORM_DEFS.map((m) => ({ path: m.path, element: <PlatformStubPage module={m} /> })),
 ];
 
 /** Old routes of the first prototype redirect to their new equivalent or to Start (SPEC.md § 3). */
@@ -44,9 +50,4 @@ export const redirects: Array<{ from: string; to: string }> = [
   { from: '/resources/from-message', to: '/resurser/meddelanden' },
   { from: '/network', to: '/natverk' },
   { from: '/network/:nodeId', to: '/natverk' },
-  { from: '/patients', to: '/' },
-  { from: '/activities', to: '/' },
-  { from: '/planning', to: '/' },
-  { from: '/employees', to: '/' },
-  { from: '/reporting', to: '/' },
 ];

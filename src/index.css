@@ -318,7 +318,7 @@ html .leaflet-container {
   background: var(--color-bg-muted);
   font-family: var(--font-sans);
 }
-html .leaflet-tooltip:not(.node-map-label),
+html .leaflet-tooltip:not(.node-map-label):not(.home-map-label),
 html .leaflet-popup-content-wrapper,
 html .leaflet-popup-tip {
   background: var(--color-surface);
@@ -351,4 +351,74 @@ html .leaflet-bar a:hover {
 /* Dark mode: invert the OpenStreetMap tiles only; markers, lines and the ASIH circle sit in other panes. */
 .dark .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6);
+}
+
+/* Hospital at Home map symbols (SPEC.md § 11.6): the layer colour arrives as --node-colour, a design token. */
+.home-node-wrap {
+  background: transparent;
+  border: 0;
+}
+.home-node {
+  box-sizing: border-box;
+  display: flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--node-colour);
+  background: var(--node-colour);
+  color: var(--color-surface);
+  font: 600 12px/1 var(--font-sans);
+}
+.home-node-circle {
+  border-radius: 50%;
+}
+.home-node-square {
+  border-radius: 3px;
+}
+.home-node-diamond {
+  width: 14px;
+  height: 14px;
+  margin: 2px;
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+.home-node-diamond > span {
+  transform: rotate(-45deg);
+}
+.home-node-open {
+  background: var(--color-surface);
+  color: var(--node-colour);
+}
+.home-arrow {
+  display: block;
+  width: 0;
+  height: 0;
+  margin: 1px 2px;
+  border-right: 5px solid transparent;
+  border-bottom: 12px solid var(--node-colour);
+  border-left: 5px solid transparent;
+}
+/* Plain secondary-coloured map labels for zones and off-map arrows. */
+.leaflet-tooltip.home-map-label {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  text-shadow: 0 0 3px var(--color-surface), 0 0 3px var(--color-surface);
+}
+.leaflet-tooltip.home-map-label::before {
+  display: none;
+}
+.home-node-dim {
+  opacity: 0.25;
+}
+.home-node-selected {
+  box-shadow: 0 0 0 3px var(--color-primary);
+}
+.leaflet-tooltip.home-map-label-dim {
+  opacity: 0.35;
 }

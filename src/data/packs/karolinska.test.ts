@@ -154,3 +154,129 @@ describe('pack shape (DATA.md § 1–8)', () => {
     expect(REGION_FIGURES.every((r: { figure: Figure }) => r.figure.source || r.figure.basis)).toBe(true);
   });
 });
+
+describe('Hospital at Home pack (SPEC.md § 11.4, DATA.md § 11)', () => {
+  const ZONE_COUNTS: Record<string, number> = {
+    solna: 25, innerstaden: 20, bromma: 15, sodermalm: 15, soderort: 20, huddinge: 20, botkyrka: 10, nacka: 10, lidingo: 5, taby: 10,
+  };
+  const TEAMS: Record<string, string> = {
+    solna: 'ASIH Nord', bromma: 'ASIH Nord', lidingo: 'ASIH Nord', taby: 'ASIH Nord',
+    innerstaden: 'ASIH City', sodermalm: 'ASIH City', nacka: 'ASIH City',
+    soderort: 'ASIH Syd', huddinge: 'ASIH Syd', botkyrka: 'ASIH Sydväst',
+  };
+  const BATTERY: Record<string, [number, number]> = { Monitoring: [10, 24], Oxygen: [2, 6], 'IV infusion': [6, 12], 'Home ventilator': [4, 10] };
+  const km = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+    const dLat = (bLat - aLat) * 111.32;
+    const dLng = (bLng - aLng) * 111.32 * Math.cos((aLat * Math.PI) / 180);
+    return Math.hypot(dLat, dLng);
+  };
+
+  it('has 150 patients with unique ids and the zone counts of SPEC.md § 11.4', () => {
+    expect(pack.homePatients).toHaveLength(150);
+    expect(new Set(pack.homePatients.map((p) => p.id)).size).toBe(150);
+    expect(pack.homeZones.map((z) => z.id)).toEqual(Object.keys(ZONE_COUNTS));
+    for (const [zone, n] of Object.entries(ZONE_COUNTS)) expect(count(pack.homePatients, (p) => p.zone === zone), zone).toBe(n);
+  });
+
+  it('places every patient inside its zone radius and assigns the team by zone', () => {
+    for (const p of pack.homePatients) {
+      const z = pack.homeZones.find((x) => x.id === p.zone)!;
+      expect(km(z.lat, z.lng, p.lat, p.lng), p.id).toBeLessThanOrEqual(z.radiusKm);
+      expect(p.team).toBe(TEAMS[p.zone]);
+    }
+  });
+
+  it('derives equipment, battery and criticality as specified', () => {
+    for (const p of pack.homePatients) {
+      const powered = p.equipment.find((e) => e !== 'Home dialysis');
+      expect(p.equipment.length).toBeLessThanOrEqual(2);
+      expect(p.elCritical).toBe(p.equipment.some((e) => e === 'Oxygen' || e === 'IV infusion' || e === 'Home ventilator'));
+      expect(p.waterCritical).toBe(p.equipment.includes('Home dialysis'));
+      if (powered) {
+        const [lo, hi] = BATTERY[powered];
+        expect(Number.isInteger(p.batteryHours)).toBe(true);
+        expect(p.batteryHours!).toBeGreaterThanOrEqual(lo);
+        expect(p.batteryHours!).toBeLessThanOrEqual(hi);
+      } else {
+        expect(p.batteryHours).toBeNull();
+      }
+    }
+    expect(count(pack.homePatients, (p) => p.elCritical)).toBeGreaterThan(0);
+    expect(count(pack.homePatients, (p) => p.waterCritical)).toBeGreaterThan(0);
+    expect(count(pack.homePatients, (p) => p.visitToday)).toBeGreaterThan(30);
+  });
+
+  it('uses no staff name and no name of a hospital patient', () => {
+    const staffNames = new Set(pack.staff.map((s) => s.name));
+    const hospital = new Set([...pack.patientsBySite.solna, ...pack.patientsBySite.huddinge].map((p) => `${p.givenName} ${p.familyName}`));
+    const names = pack.homePatients.map((p) => `${p.givenName} ${p.familyName}`);
+    expect(new Set(names).size).toBe(150);
+    expect(names.every((n) => !staffNames.has(n) && !hospital.has(n))).toBe(true);
+  });
+
+  it('has the ten zones with Places coordinates (reported) and a vertex of their own', () => {
+    expect(pack.homeZones).toHaveLength(10);
+    for (const z of pack.homeZones) {
+      expect(z.coordConfidence).toBe('reported');
+      expect(z.coordSource).toContain('Google Places');
+      expect(z.graphNode).toBe(`zone:${z.id}`);
+      expect(z.name.sv && z.name.en).toBeTruthy();
+    }
+    expect(pack.homeZones.find((z) => z.id === 'sodermalm')).toMatchObject({ lat: 59.3125, lng: 18.0616, radiusKm: 1.8 });
+  });
+
+  it('has 17 infrastructure nodes (5 water, 5 el, 7 roads), each with a coordSource, role and status in both languages', () => {
+    expect(count(pack.infraNodes, (n) => n.layer === 'water')).toBe(5);
+    expect(count(pack.infraNodes, (n) => n.layer === 'el')).toBe(5);
+    expect(count(pack.infraNodes, (n) => n.layer === 'roads')).toBe(7);
+    expect(new Set(pack.infraNodes.map((n) => n.id)).size).toBe(17);
+    for (const n of pack.infraNodes) {
+      expect(n.coordSource.length, n.id).toBeGreaterThan(0);
+      for (const text of [n.name, n.role, n.status]) expect(text.sv.length && text.en.length, n.id).toBeGreaterThan(0);
+    }
+    // Only the regional grid is unverified; its coordinate is illustrative.
+    expect(pack.infraNodes.filter((n) => !n.verified).map((n) => n.id)).toEqual(['e-regionnat']);
+    expect(pack.infraNodes.find((n) => n.id === 'e-regionnat')!.coordConfidence).toBe('illustrative');
+    expect(pack.infraNodes.find((n) => n.id === 'w-gorvaln')!.coordConfidence).toBe('estimate');
+    expect(pack.infraNodes.find((n) => n.id === 'r-centralbron')).toMatchObject({ coordConfidence: 'reported', lat: 59.3264, lng: 18.0635 });
+    expect(pack.infraNodes.find((n) => n.id === 'e-overby')).toMatchObject({ lat: 59.4757, lng: 17.8844 });
+  });
+
+  it('carries confidence and a known source on every infrastructure figure', () => {
+    const known = new Set(pack.homeSources.map((s) => s.key));
+    expect(pack.homeSources.map((s) => s.key)).toEqual(Array.from({ length: 14 }, (_, i) => `S-H${i + 1}`));
+    const figures = pack.infraNodes.flatMap((n) => n.figures ?? []);
+    expect(figures.length).toBe(5);
+    for (const f of figures) {
+      expect(['verified', 'reported', 'estimate', 'illustrative']).toContain(f.confidence);
+      expect(known.has(f.source!)).toBe(true);
+    }
+    const essing = pack.infraNodes.find((n) => n.id === 'r-essingeleden')!.figures![0];
+    expect(essing).toMatchObject({ value: 140000, valueMax: 170000, confidence: 'verified', source: 'S-H12' });
+    expect(pack.infraNodes.find((n) => n.id === 'r-centralbron')!.figures![0]).toMatchObject({ value: 102000, confidence: 'reported', source: 'S-H13' });
+  });
+
+  it('resolves every link endpoint to a site, a zone vertex or an infrastructure node', () => {
+    const sites = new Set(['solna', 'huddinge']);
+    const zones = new Set(pack.homeZones.map((z) => z.graphNode));
+    const nodes = new Set(pack.infraNodes.map((n) => n.id));
+    const roadNodes = new Set(pack.infraNodes.filter((n) => n.layer === 'roads').map((n) => n.id));
+    expect(new Set(pack.infraLinks.map((l) => l.id)).size).toBe(pack.infraLinks.length);
+    for (const l of pack.infraLinks) {
+      for (const end of [l.a, l.b]) {
+        expect(sites.has(end) || zones.has(end) || nodes.has(end), `${l.id}: ${end}`).toBe(true);
+        if (l.layer === 'roads') expect(sites.has(end) || zones.has(end) || roadNodes.has(end), `${l.id}: ${end}`).toBe(true);
+      }
+      if (l.offmap) expect(l.offmap.text.sv && l.offmap.text.en).toBeTruthy();
+    }
+    expect(count(pack.infraLinks, (l) => l.layer === 'roads')).toBe(24);
+    expect(count(pack.infraLinks, (l) => l.layer === 'water')).toBe(12);
+    expect(count(pack.infraLinks, (l) => l.layer === 'el')).toBe(8);
+    expect(count(pack.infraLinks, (l) => !!l.offmap)).toBe(6);
+  });
+
+  it('keeps the three flag presets of SPEC.md § 11.5', () => {
+    expect(pack.homePresets.map((p) => p.key)).toEqual(['bridge', 'power', 'water']);
+    expect(pack.homePresets[0].blockedNodes).toEqual(['r-essingeleden', 'r-centralbron']);
+  });
+});

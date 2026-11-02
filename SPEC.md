@@ -246,3 +246,122 @@ DoD:
 ## 10. Out of scope
 
 Real integrations, auth, persistence, mobile, the Karolinska logo, real staff names, any claim about Karolinska's internal KPIs beyond DATA.md, English UI toggle, i18n framework.
+
+## 11. Hospital at Home
+
+### 11.1 Purpose and route
+
+A new module, key `home`, route `/home`, nav label "Sjukhus hemma" (sv) / "Hospital at Home" (en), placed in the nav directly after "Läget nu". It shows the patients cared for in their homes (ASIH / hospital at home, under the Karolinska scope) on a map together with the infrastructure they depend on, and answers one question fast: when something breaks – a bridge, a road, the power, the water – which patients are affected, which cannot be reached by car from the hospital, and who must be prioritised. All patient data is synthetic and marked "Fiktiva patientuppgifter" like the rest of the prototype.
+
+The module respects the scope selector: reachability is computed from the sites in scope (`sitesInScope`); at Karolinska or region scope a patient is reachable if reachable from either Solna or Huddinge; if the scope yields no sites, use both.
+
+### 11.2 Platform navigation
+
+The nav gains the five existing Medoma platform modules as tabs before the prototype's modules, separated from them by a 1 px vertical divider, exactly as in the sibling repo Medoma-Resilience (Nav.tsx: `existing` then divider then `added`): keys `patients`, `activities`, `planning`, `employees`, `reporting`; en labels Patients, Activities, Planning, Employees, Reporting; sv labels Patienter, Aktiviteter, Planering, Medarbetare, Rapportering. Each renders a stub page: the page title and the sentence "This module exists in Medoma today and is outside the scope of this prototype." / "Den här modulen finns i Medoma i dag och ligger utanför prototypen." with a link to `/home` labelled "Go to Hospital at Home" / "Gå till Sjukhus hemma". All tabs must fit at the 1280 px minimum viewport without horizontal scroll; if they do not, collapse the five existing tabs into one overflow menu labelled "Medoma" and log the choice.
+
+### 11.3 Data model (additions to `src/data/packs/types.ts`, additive only)
+
+```ts
+export type HomeEquipment = 'Oxygen' | 'IV infusion' | 'Monitoring' | 'Home ventilator' | 'Home dialysis';
+export type ZoneId = string;
+
+export interface HomeZone {           // a locality that patients live in and that outages are reported per
+  id: ZoneId; name: LocalizedText; lat: number; lng: number; radiusKm: number;
+  graphNode: GraphNodeId;             // the road-graph node the zone hangs on (usually itself)
+  coordConfidence: Confidence; coordSource: string;
+}
+
+export interface HomePatient {
+  id: string; familyName: string; givenName: string; age: number; zone: ZoneId;
+  lat: number; lng: number;           // synthetic, within the zone radius
+  team: string;                       // illustrative ASIH team name
+  equipment: HomeEquipment[];
+  batteryHours: number | null;        // null when no powered equipment
+  visitToday: boolean;
+  elCritical: boolean;                // derived: Oxygen, IV infusion or Home ventilator
+  waterCritical: boolean;             // derived: Home dialysis
+}
+
+export type InfraLayer = 'water' | 'el' | 'roads';
+export type InfraKind = 'waterworks' | 'reserve' | 'pumping' | 'transmission' | 'generation' | 'junction' | 'bridge' | 'tunnel';
+
+export interface InfraNode {
+  id: string; layer: InfraLayer; kind: InfraKind; name: LocalizedText; lat: number; lng: number;
+  role: LocalizedText;                // two or three sentences
+  status: LocalizedText;              // verification status text shown in the panel
+  verified: boolean;                  // false renders the node hollow with a question mark
+  coordConfidence: Confidence; coordSource: string;
+  figures?: Figure[];                 // e.g. vehicles per day, each with confidence and source
+}
+
+export type GraphNodeId = string;     // an InfraNode id of kind junction/bridge/tunnel, a ZoneId, or a SiteId
+
+export interface InfraLink {
+  id: string; layer: InfraLayer; a: GraphNodeId; b: GraphNodeId;
+  label: LocalizedText; style: 'solid' | 'dashed' | 'dotted' | 'road' | 'street';
+  verified: boolean;                  // dashed/dotted or verified=false renders as schematic
+  offmap?: { dir: 'N' | 'S' | 'E' | 'W'; text: LocalizedText };  // an arrow leaving the map instead of a second node
+}
+
+export interface HomeDisruptionPreset { key: 'bridge' | 'power' | 'water'; ... }  // see 11.5
+```
+
+`DataPack` gains `homeZones: HomeZone[]`, `homePatients: HomePatient[]`, `infraNodes: InfraNode[]`, `infraLinks: InfraLink[]`. Existing members are untouched. The road graph is the set of `infraLinks` with `layer: 'roads'`; its vertices are the two sites (`solna`, `huddinge`), the road InfraNodes and the zones.
+
+### 11.4 Mock data
+
+Zones (coordinates from Google Places, 2026-11-02, confidence `reported`; patient counts illustrative):
+
+| id | name sv / en | lat | lng | radiusKm | patients |
+|---|---|---|---|---|---|
+| solna | Solna och Sundbyberg / Solna and Sundbyberg | 59.3597 | 18.0005 | 2.5 | 25 |
+| innerstaden | Innerstaden norr / Inner city north | 59.3312 | 18.0407 | 2.0 | 20 |
+| bromma | Bromma / Bromma | 59.3383 | 17.9401 | 2.5 | 15 |
+| sodermalm | Södermalm / Södermalm | 59.3125 | 18.0616 | 1.8 | 15 |
+| soderort | Söderort / Southern suburbs | 59.2986 | 18.0459 | 2.5 | 20 |
+| huddinge | Huddinge / Huddinge | 59.2365 | 17.9818 | 2.5 | 20 |
+| botkyrka | Botkyrka / Botkyrka | 59.1988 | 17.8332 | 2.5 | 10 |
+| nacka | Nacka / Nacka | 59.3100 | 18.1648 | 2.5 | 10 |
+| lidingo | Lidingö / Lidingö | 59.3661 | 18.1352 | 2.0 | 5 |
+| taby | Täby / Täby | 59.4451 | 18.0717 | 2.5 | 10 |
+
+Patients: 150, generated by extending `scripts/generate-patients.mjs` with a second seeded generator (seed 20261102) writing `packs/home-patients.ts`. Per patient: zone per the table; position uniform-sum (two uniforms) within the zone radius; equipment drawn with weights none 55 %, Monitoring 25 %, Oxygen 10 %, IV infusion 7 %, Home ventilator 3 %, plus Home dialysis independently 5 %; batteryHours Monitoring 10–24, Oxygen 2–6, IV infusion 6–12, Home ventilator 4–10, rounded; visitToday 40 %; team one of four illustrative names "ASIH Nord", "ASIH City", "ASIH Syd", "ASIH Sydväst" chosen by zone (Solna, Bromma, Lidingö, Täby → Nord; Innerstaden, Södermalm, Nacka → City; Söderort, Huddinge → Syd; Botkyrka → Sydväst). Names reuse the existing name lists. Nothing here is a real person.
+
+Infrastructure nodes and links: exactly the tables in DATA.md § 11, which carry coordinates, confidence and sources. Coordinates marked `estimate` keep their basis text in `coordSource`. Role and status texts in DATA.md § 11 are the panel texts, translated to both languages.
+
+### 11.5 Disruptions and impact
+
+State lives in a new store slice `store-home.ts`: `layers: Record<InfraLayer | 'patients', boolean>` (defaults patients and roads on, el and water off), `mode: null | 'roads' | 'el' | 'water'`, `blockedLinks: Set<string>`, `blockedNodes: Set<string>`, `powerOutZones: Set<ZoneId>`, `waterOutZones: Set<ZoneId>`, `selectedNode: string | null`. All writes go through `logEntry()` like every other action.
+
+Pure functions in `src/lib/reachability.ts`, fully unit-tested:
+
+- `roadDistances(links, blockedLinks, blockedNodes, fromSites)` – breadth-first hop counts from the given sites over road links, skipping blocked links and links touching blocked nodes; returns the minimum hops per vertex.
+- `zoneStatus(zones, baseline, current)` – `unreachable` when a zone's vertex has no distance, `delayed` when its distance exceeds the baseline distance computed with nothing blocked, else `ok`.
+- `impact(pack, state, scopeSites)` – one row per affected patient with reasons: "cannot be reached by car", "reached via detour", "without power", "water disruption"; flags `unreachable`, `delayed`, `power`, `water`; plus a summary: affected count (unreachable, power or water), detour count, unreachable count and their zones, how many of them have a visit today and how many are el- or water-critical, power-out count and the shortest battery among el-critical patients, water-out count and dialysis count.
+- `prioritise(rows)` – order: unreachable with visit today, then power-out el-critical by battery ascending, then water-out dialysis, then unreachable, then detour; ties by battery ascending.
+
+Map interaction by mode: in `roads` mode a tap on a road node (junction, bridge, tunnel) or a road link toggles it blocked (links get a 14 px transparent hit path); in `el` or `water` mode the zones render as translucent circles and a tap toggles the zone's outage; with no mode a tap on any infrastructure node selects it and dims everything it is not linked to. Blocked elements render in the accent (danger) colour; outage zones fill accent at low opacity. Patient dots: 2 px neutral at 30 % opacity; affected filled accent; affected and critical hollow accent ring; detour-only amber. A "Reset" chip clears all disruptions.
+
+Three scenario presets of the flag-setting kind (like tryck and journalbortfall, no ticks) are added to the scenario strip: "Bro avstängd" / "Bridge closed" blocks Essingeleden and Centralbron; "Elavbrott" / "Power outage" sets power out in Söderort and Huddinge; "Vattenstörning" / "Water disruption" sets water out in Solna. Each navigates to `/home`.
+
+### 11.6 Layout and panel
+
+Three-pane layout like Evakuering: left 380 px patient list, middle 320 px panel, right map (`NodeMap` extended, not forked: layer toggles as chips above the map, infrastructure layers as Leaflet layers, zones as circles, patient dots as `CircleMarker`). Legend under the map: patient, affected, affected and critical, detour, verified link, schematic link, bridge.
+
+Left list: one row per patient (name, age, zone, team, equipment with battery, visit-today badge), grouped by zone, filters: zone, equipment, visit today, affected only. When disruptions are active the list is ordered by `prioritise` and rows show their reasons and a "Prioritise" badge for critical rows.
+
+Middle panel: with no disruption and a selected infrastructure node, its layer tag, name, role, "Linked to" list and status (status in danger colour when `verified` is false). With disruptions: active disruptions as text with a reset link, the headline "N of 150 patients affected" (plus ", M reached via detour"), the summary facts as a short list, then nothing else – the ordered patients are in the left list. With a mode selected and no disruption yet: the mode's instruction sentence.
+
+### 11.7 Batches and definition of done
+
+Batch 0 – docs. This section in SPEC.md, § 11 in DATA.md, the prompt in PROMPTS.md. Done when: both files contain the sections verbatim; typecheck, tests and build unaffected.
+
+Batch 1 – data model and mock data (additive). Types in 11.3; generator and `home-patients.ts`; zones, infrastructure nodes and links from DATA.md § 11 in `karolinska.ts`; `loadPack()` returns them; pack test extended: 150 patients, counts per zone as in 11.4, every InfraLink endpoint resolves to a site, a road node or a zone, every node has a coordSource. Done when: tests pass including the new ones; nothing in the UI changes.
+
+Batch 2 – infrastructure layers on the map (additive). `NodeMap` extended with optional props for infrastructure layers, zones and patient dots; layer toggle chips; the `/home` route rendering only the map pane with the three layers and patients, no list and no panel yet; the nav tab for `home`. Done when: all three layers toggle; verified links solid, schematic dashed; unverified nodes hollow with "?"; off-map arrows render with their text; dark mode and both languages correct on this page.
+
+Batch 3 – module and platform navigation (additive). The three-pane layout, the patient list with filters, the node panel on selection, and 11.2 in full. Done when: list filters work; selecting a node dims the rest and shows role, links and status; the five platform tabs and divider render at 1280 px; the stub pages link to `/home`; DESIGN tokens only, no new colours.
+
+Batch 4 – disruptions and reachability (behaviour-changing, own batch). `store-home.ts`, `reachability.ts` with tests for roadDistances, zoneStatus, impact and prioritise (including: blocking Essingeleden alone leaves Söderort reachable via Centralbron or Västerbron; blocking Essingeleden, Centralbron, Västerbron, Liljeholmsbron and Skanstullsbron makes every zone south of Saltsjö–Mälaren unreachable from Solna but not from Huddinge; a power outage in Huddinge flags exactly the Huddinge patients), map interaction by mode, the result panel, the ordered list. Done when: the five test cases above pass; blocking and unblocking on the map updates patients and panel immediately; reset clears everything; audit log records each toggle.
+
+Batch 5 – presets, parity, polish (additive). The three presets in 11.5; vocab parity test covers every new key; screenshots of `/home` in light and dark and in English under `docs/screenshots/home/`; README demo story gains a step 6 for Hospital at Home. Done when: presets navigate and set state; parity test passes; screenshots exist; typecheck, tests and build pass on the branch.
