@@ -31,4 +31,11 @@ export function convertPower(osm: Overpass, toleranceM?: number): FeatureCollect
 export function convertWater(osm: Overpass): FeatureCollection;
 export const OUTPUTS: Array<{ file: string; query: string; convert: (osm: Overpass) => FeatureCollection; budget: number }>;
 export const BBOX: Record<string, string>;
-export function geoReadme(date: string, sizes: Record<string, number | undefined>): string;
+export interface PackGeoConfig {
+  bbox: Record<'roads' | 'power' | 'water', number[]>;
+  streetCentres: number[][];
+  streetRadiusM: number;
+}
+export const PACKS: Record<string, PackGeoConfig>;
+export function buildQuery(pack: string, name: string, bbox?: number[]): string;
+export function geoReadme(date: string, sizes: Record<string, number | undefined>, pack?: string): string;

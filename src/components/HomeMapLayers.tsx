@@ -1,7 +1,7 @@
 import { Fragment, useMemo } from 'react';
 import L from 'leaflet';
 import { Circle, CircleMarker, Marker, Polyline, Tooltip, useMapEvents } from 'react-leaflet';
-import type { CareNode, HomePatient, HomeZone, InfraLayer, InfraLink, InfraNode } from '@/data/types';
+import type { CareNode, HomePatient, HomeTeam, HomeZone, InfraLayer, InfraLink, InfraNode } from '@/data/types';
 import type { HomeLayerKey, HomeMode } from '@/data/store-home';
 import { lt, t, tm } from '@/lib/i18n';
 import { isSchematic, linkedVertices, offmapEnd, offmapRotation, offmapSlots, vertexPositions } from '@/lib/home-geo';
@@ -37,6 +37,22 @@ export interface HomeOverlay {
   /** A tap on a road segment in roads mode. */
   onTapWay?: (props: RoadProps) => void;
   onToggleZone?: (zone: string) => void;
+  /** The teams: a small square in the team's colour at each base, in every mode (SPEC.md § 14.2). */
+  teams?: HomeTeam[];
+  /** Colour token per team id; by place in `teams` when absent. */
+  teamTokens?: Record<string, string>;
+  /** The Planning map: one team's visits as a numbered sequence from its base (SPEC.md § 14.3). */
+  sequence?: VisitSequence;
+  /** Points the map fits instead of the zones (Planning). */
+  fitPoints?: Array<[number, number]>;
+}
+
+export interface VisitSequence {
+  token: string;
+  base: [number, number];
+  stops: Array<{ id: string; n: number; lat: number; lng: number; label: string }>;
+  selectedId?: string | null;
+  onSelect?: (patientId: string) => void;
 }
 
 export type PatientMark = 'affected' | 'critical' | 'detour';
@@ -49,6 +65,40 @@ export const LAYER_TOKEN: Record<InfraLayer, string> = {
   el: '--color-olive',
   roads: '--color-text-secondary',
 };
+
+function stopIcon(n: number, token: string, selected: boolean): L.DivIcon {
+  const key = `stop|${n}|${token}|${selected}`;
+  let icon = iconCache.get(key);
+  if (!icon) {
+    icon = L.divIcon({
+      className: 'home-node-wrap',
+      html: `<span class="home-stop${selected ? ' home-stop-selected' : ''}" style="--node-colour:var(${token})">${n}</span>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+    });
+    iconCache.set(key, icon);
+  }
+  return icon;
+}
+
+/** Team colours come from the node palette's icon tokens, by the team's place in the pack; none of them is the danger or the layer colours. */
+export const TEAM_TOKENS = ['--color-icon-primary', '--color-icon-purple', '--color-icon-indigo', '--color-icon-orange'];
+export const teamToken = (index: number): string => TEAM_TOKENS[index % TEAM_TOKENS.length];
+
+function teamIcon(token: string): L.DivIcon {
+  const key = `team|${token}`;
+  let icon = iconCache.get(key);
+  if (!icon) {
+    icon = L.divIcon({
+      className: 'home-node-wrap',
+      html: `<span class="home-team" style="--node-colour:var(${token})"></span>`,
+      iconSize: [12, 12],
+      iconAnchor: [6, 6],
+    });
+    iconCache.set(key, icon);
+  }
+  return icon;
+}
 
 // Zone labels sit on alternating sides of their point so that the zones in the dense middle do not cover each other.
 const ZONE_LABEL: Record<string, { direction: 'left' | 'right' | 'top' | 'bottom'; offset: [number, number] }> = {
@@ -126,7 +176,7 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
   const {
     layers, zones, infraNodes, infraLinks, patients, powerLines = [], selectedId = null, onSelectNode,
     mode = null, blockedNodes = EMPTY, roads, blockedWayIds = NO_WAYS, powerOutZones = EMPTY, waterOutZones = EMPTY, patientMarks,
-    onToggleNode, onTapWay, onToggleZone,
+    onToggleNode, onTapWay, onToggleZone, teams = [], teamTokens, sequence,
   } = overlay;
   const positions = useMemo(() => vertexPositions(sites, zones, infraNodes), [sites, zones, infraNodes]);
   const slots = useMemo(() => offmapSlots(infraLinks), [infraLinks]);
@@ -258,6 +308,33 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
             </Marker>
           );
         })}
+
+      {teams.map((tm, i) => {
+        const detail = `${tm.name}. ${t('HOME.teams.base', { base: lt(tm.baseLabel) })}, ${t('HOME.teams.cars', { n: tm.cars })}`;
+        return (
+          <Marker key={tm.id} position={[tm.baseLat, tm.baseLng]} icon={teamIcon(teamTokens?.[tm.id] ?? teamToken(i))} title={detail} alt={detail} keyboard={false}>
+            <Tooltip permanent direction="right" offset={[8, 12]} className="home-map-label">
+              {tm.name}
+            </Tooltip>
+          </Marker>
+        );
+      })}
+
+      {sequence ? (
+        <>
+          <Polyline positions={[sequence.base, ...sequence.stops.map((s): [number, number] => [s.lat, s.lng])]} pathOptions={{ color: cssColor(sequence.token), weight: 2, dashArray: '6 4', opacity: 0.8 }} interactive={false} />
+          {sequence.stops.map((s) => (
+            <Marker
+              key={s.id}
+              position={[s.lat, s.lng]}
+              icon={stopIcon(s.n, sequence.token, sequence.selectedId === s.id)}
+              title={s.label}
+              alt={s.label}
+              eventHandlers={sequence.onSelect ? { click: () => sequence.onSelect?.(s.id) } : undefined}
+            />
+          ))}
+        </>
+      ) : null}
 
       {layers.patients
         ? patients.map((p) => {

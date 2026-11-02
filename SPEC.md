@@ -488,3 +488,89 @@ Preparedness mode: logo, scope selector, one menu "Medoma" holding the five plat
 Activation. `preparednessActive(state, route)` is a pure function in `src/lib/preparedness.ts`: true when the manual flag is on, or an incident is active, or a scenario is running, or the current route belongs to a resilience module (`/start`, `/home`, `/capacity`, `/incident`, `/evacuation`, `/resources`, `/network` and their children; use the module list, not a hard-coded set). The manual flag `preparednessOn: boolean` lives in the main store, defaults to false, and every change goes through `logEntry()` with the reason "manual", "incident", "scenario" or "route". The Beredskap button sets the flag on and navigates to `/start`. The close control sets the flag off and, if the current route is a resilience route, navigates to `/planning`; if an incident is active or a scenario is running the close control is disabled with a tooltip "Avsluta incidenten eller scenariot först" / "End the incident or scenario first". The scenario presets of § 11.5 therefore open the mode by navigating. A reload on a resilience route keeps the mode because the route alone makes it active.
 
 Tests: `preparednessActive` for each of the four reasons and for none; the nav renders the platform tabs and no resilience tab when inactive, and the reverse when active; vocab parity for the new keys.
+
+## 13. Time and work in Hospital at Home
+
+### 13.1 Purpose
+
+§ 11–12 answer who is affected right now. This section adds the clock, so that a six-hour power outage changes the picture hour by hour, and the work: what the team does about each affected patient, logged like everything else. A disruption can also be created from an incoming message, as resource requests are today.
+
+### 13.2 Disruptions in time
+
+A disruption is now a record in `store-home.ts`, not only a flag: `{ id, kind: 'road' | 'power' | 'water', target: string (way id, road name, InfraNode id or ZoneId), label: LocalizedText, startedAt: clock minutes, expectedEnd: clock minutes | null, source: 'map' | 'preset' | 'message', createdBy: user }`. The sets `blockedLinks`, `blockedNodes`, `powerOutZones`, `waterOutZones` are derived from the active records, so § 11–12 keep working unchanged. A record whose `expectedEnd` is reached by the clock becomes inactive automatically and is logged as "ended (expected)". Each record shows in the panel with its start time and either "ends about HH:MM" / "slut cirka HH:MM" or "no end time" / "ingen sluttid", and a control to end it now.
+
+The shared store clock (the one in the header) is the only time. The `/home` mode bar gets a "+1 h" / "+1 h" control that advances the shared clock by 60 minutes through the existing clock action and logs it; the scenario controls, when a scenario is running, advance it as they do today, and `/home` recomputes on every change.
+
+Battery: for a patient in a power-out zone with `batteryHours`, `batteryEmptyAt = startedAt + batteryHours × 60` (clock minutes, from the earliest active power disruption covering the zone). Status text: "battery until HH:MM" / "batteri till HH:MM"; when the clock has passed it, "battery empty" / "batteri slut" and the row is treated as critical regardless of equipment. The summary gains "N run out within 2 h" / "N får slut inom 2 h". `prioritise` sorts power-out rows by `batteryEmptyAt` ascending instead of `batteryHours`.
+
+### 13.3 Actions per patient
+
+Each affected patient gets a status chain in the style of Evakuering (`StatusChain`): Unhandled → Contacted → Planned → Confirmed ("Ohanterad", "Kontaktad", "Planerad", "Bekräftad"). Actions, each a button in the row's expanded view and each logged with the user, time and patient id:
+
+* Contact / Kontakta – note field (one line), sets Contacted.
+* Move visit / Flytta besök – only for `visitToday`; pick a new slot from the patient's team's free slots (§ 14.3) or "no visit today" / "inget besök i dag"; sets Planned.
+* Send team / Skicka team – pick a team that can reach the patient (§ 14.2); sets Planned and records the team on the patient (`assignedTeam`).
+* Bring in / Ta in – marks the patient for transfer to the site in scope; sets Planned; appears in the Evakuering module as an inbound line "From home" / "Från hemmet" in the patient list, without a move record (log the decision on how it is shown).
+* Confirm / Bekräfta – sets Confirmed.
+
+A bulk control above the list, "Contact all critical" / "Kontakta alla kritiska", sets Contacted on every critical row with the note "bulk contact". Status resets to Unhandled only when the disruption that affected the patient ends; the log keeps the history. A "Call list" / "Ringlista" control opens a print view (plain, A4, @media print) of the prioritised rows with name, street, phone-shaped placeholder "0XX-XXX XX XX", equipment, battery time, status and an empty line for notes; the view carries the fictitious-data marking.
+
+### 13.4 Disruption from message
+
+Like Resources → From message. The pack gains `homeMessages: Message[]` (reuse the existing `Message` type and `MessageThread` component) with three illustrative notices in both languages: a road notice ("Trafikverket: Essingeleden avstängd i båda riktningarna efter olycka vid Fredhäll, beräknad tid 4 timmar"), a power notice ("Ellevio: strömavbrott i delar av Huddinge, beräknad återställning 20:30") and a water notice ("Stockholm Vatten och Avfall: kokningsrekommendation i Solna tills vidare"). Senders are fictitious persons at those organisations; the organisation names are real and the texts are illustrative, which DATA.md § 13 states.
+
+A tab "From message" / "Från meddelande" in the `/home` middle panel lists the messages; opening one prefills a form: kind, target (road name matched against `roads.json` names, zone matched against zone names), start (now), expected duration in hours (parsed when the text contains "N timmar" / "N hours" or a clock time, else empty), and a note with the message id. Create makes a disruption record with `source: 'message'`. Nothing is created automatically; the user confirms.
+
+### 13.5 Läget nu
+
+The start page gets one card "Hospital at Home" / "Sjukhus hemma" in the existing card style: patients at home, affected now, unreachable, battery empty within 2 h, each as a Figure with confidence `illustrative`, and a link to `/home`. Visible only in preparedness mode, like the other resilience content.
+
+### 13.6 Batches and definition of done
+
+Batch 11 – docs (§ 13, § 14 in SPEC.md; § 13, § 14 in DATA.md; the prompt). Done when: present verbatim; nothing else changed.
+
+Batch 12 – disruptions in time (behaviour-changing, own batch). Records, derived sets, expected end, the "+1 h" control, battery deadlines, summary and sorting. Tests: a disruption with expectedEnd ends when the clock passes it; a battery deadline is computed from the earliest covering power disruption; prioritise orders by batteryEmptyAt. Done when: a preset power outage shows battery times; "+1 h" moves them to empty; ending a disruption restores the rows; the audit log shows every step.
+
+Batch 13 – actions (behaviour-changing, own batch). Status chain, the five actions, bulk contact, call list print view, the Evakuering inbound line. Tests: each action sets the right status and logs; status resets when the disruption ends. Done when: a critical row can be taken Unhandled → Confirmed in the app; the print view renders; the inbound line appears in Evakuering.
+
+Batch 14 – from message and Läget nu (additive). § 13.4 and § 13.5. Done when: each of the three messages prefills a correct form; creating from the road message blocks the named road; the Läget nu card shows live figures and links.
+
+## 14. Teams, the platform tabs and a second hospital
+
+### 14.1 Purpose
+
+The question moves from "who can be reached" to "who can reach whom". The Planning tab stops being a stub and shows today's home visits with disruption flags, which is where this function would live in Medoma Center. A second home pack, SUS Lund, shows that nothing is Karolinska-specific.
+
+### 14.2 Teams and cars
+
+The pack gains `homeTeams: HomeTeam[]`: `{ id, name, baseLat, baseLng, baseLabel: LocalizedText, cars: number, phone: string (placeholder) }`. Four teams, bases illustrative at zone centres: ASIH Nord at Solna, ASIH City at Innerstaden norr, ASIH Syd at Söderort, ASIH Sydväst at Botkyrka; two cars each. Bases snap to the road graph like sites. `reachability.ts` gains `teamDistances(graph, team, blocked)` and `impact` gains per patient `reachableBy: TeamId[]` and `nearestTeam: TeamId | null` (by road length). Team markers render on the map in all modes as small squares in the team's colour from the existing node palette, with the base label; blocking updates `reachableBy` live.
+
+The summary gains "N patients whose own team cannot reach them; M of them reachable by another team" / "N patienter som det egna teamet inte når; M av dem nås av annat team". The middle panel, under the summary, lists reassignment suggestions: for each such patient "Reassign to <team>" / "Flytta till <team>", which performs the Send team action from § 13.3. The scope selector does not filter teams; all four are shown at every scope.
+
+### 14.3 Visits and the Planning tab
+
+Patients with `visitToday` get a visit `{ id, patientId, teamId, start: clock minutes (08:00–17:00 in 30-minute steps, deterministic from the seed), durationMin: 45, status: 'planned' | 'moved' | 'cancelled' | 'done' }` in `homeVisits`. Free slots per team are the 30-minute steps 08:00–18:00 not used by its visits; Move visit (§ 13.3) picks among them.
+
+`/planning` becomes a real page in the platform's three-pane style (list 380 px, pane, map): visits grouped by team and sorted by start, each row with time, patient, street, equipment, and when preparedness mode is on, the disruption flag (unreachable, detour, power, water) in the accent colour; selecting a visit shows the patient's details and the actions of § 13.3; the map shows the team's visits as a numbered sequence with the road layer. Without preparedness mode the page is the same minus the flags and the disruption actions, which is the point: the view exists in normal operation and gains the resilience layer when the mode is on. Drag is not required; "Move visit" is the only way to change a slot.
+
+`/patients` becomes a list of the 150 home patients in the platform list style (name, age, street, team, equipment), with the row opening the same detail pane as `/home`; `/activities`, `/employees` and `/reporting` stay stubs.
+
+### 14.4 Audit and roles
+
+Every action from § 13.3 and § 14.2 is attributed to `CURRENT_USER`; the log drawer filters by "Hospital at Home" / "Sjukhus hemma". No new roles.
+
+### 14.5 Second home pack: SUS Lund
+
+Home data is separated from the hospital pack: `homePacks: Record<HomePackId, HomePack>` with `HomePack = { id, name, sites: Array<{ id, name, lat, lng }>, zones, patients, teams, visits, infraNodes, infraLinks, messages, geo: { roads, streets, power, water } (dynamic imports) }`. `karolinska` is the data built so far (sites Solna and Huddinge, reachability sites from scope as before). `lund` is a new pack from DATA.md § 14 with one site, SUS Lund; with the Lund pack active, reachability runs from that site and the scope selector is ignored for `/home` and `/planning` (shown dimmed with a tooltip "Not applicable to SUS Lund" / "Gäller inte SUS Lund"). A pack switch "Hospital" / "Sjukhus" in the `/home` mode bar selects the pack; the choice is in the store and logged. `scripts/fetch-osm.mjs` takes a pack id and bbox and writes under `src/data/packs/geo/<pack>/`; the Karolinska files move there and all imports follow. Lund bbox 55.58, 12.84, 55.93, 13.74; streets around the seven Lund zones. The Lund patients: 150 as in DATA.md § 14, two teams ASIH Lund Nord and ASIH Lund Syd, bases at Lund centrum and Staffanstorp, two cars each.
+
+Lund tests: at baseline at least 95 % of Lund patients snap and have a path from SUS Lund; a power outage in Dalby flags exactly the Dalby patients; blocking every way named "Trafikplats Lund Norra" and "Trafikplats Lund Södra" (OSM names; if those names do not exist in the data, the test prints the ways within 300 m of the two InfraNodes and uses their names, logging it) makes every patient outside Lund delayed or unreachable from SUS Lund.
+
+### 14.6 Batches and definition of done
+
+Batch 15 – teams and cars (behaviour-changing, own batch). § 14.2. Tests: a patient's nearestTeam at baseline; blocking the crossing set of § 12.4 makes Söderort patients reachable only by ASIH Syd and Sydväst from their bases. Done when: team markers render; reassignment suggestions appear and perform Send team; summary line correct.
+
+Batch 16 – visits, Planning and Patients tabs (additive). § 14.3 and § 14.4. Done when: `/planning` shows visits per team with flags in preparedness mode and without them in normal mode; Move visit changes a slot and the sequence on the map; `/patients` lists 150 patients; parity test passes.
+
+Batch 17 – SUS Lund home pack (additive). § 14.5, DATA.md § 14, the fetch script per pack, the switch. Done when: the switch changes patients, infrastructure, teams and map extent; Lund tests pass on real data or fixture; Karolinska behaviour unchanged (all earlier tests pass untouched).
+
+Batch 18 – polish. Screenshots of `/home`, `/planning` and `/start` in both modes, both languages, light and dark under `docs/screenshots/`; README demo story rewritten as one continuous story: open Medoma Center, press Beredskap, see Läget nu, open Sjukhus hemma, create the road disruption from the message, press +1 h twice, contact the critical, move a visit in Planning, switch to SUS Lund; DECISIONS.md complete. Done when: screenshots exist; the story runs end to end in the app; typecheck, tests and build pass.

@@ -7,9 +7,13 @@ import { NO_FILTERS, filterPatients, groupByZone, hasFilters, type HomeFilters }
 import { isPrioritised, prioritise, type Impact, type ImpactReason, type ImpactRow } from '@/lib/reachability';
 import { cn } from '@/lib/utils';
 import { Chip } from '@/components/Chip';
+import { fictionalMarking } from '@/lib/home-sites';
 import { getRoadModel } from '@/lib/roadModel';
+import { formatClock } from '@/lib/time';
 import type { ChipTone } from '@/data/vocab';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { PatientActions } from './PatientActions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 function ToggleChip({ pressed, onClick, children, disabled, title }: { pressed: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean; title?: string }) {
@@ -32,20 +36,24 @@ function ToggleChip({ pressed, onClick, children, disabled, title }: { pressed: 
 
 const REASON_TONE: Record<ImpactReason, ChipTone> = { unreachable: 'red', detour: 'warning', power: 'red', water: 'red' };
 
-function PatientRow({ p, row }: { p: HomePatient; row?: ImpactRow }) {
+function PatientRow({ p, row, expanded, onToggle }: { p: HomePatient; row?: ImpactRow; expanded: boolean; onToggle: () => void }) {
   const reasons = tm('HOME.impact.reasons');
   useStore((s) => s.home.geoReady); // the snap result exists once the geometry has loaded
   const noRoad = getRoadModel()?.patients.get(p.id)?.unsnapped === true;
   const equipment = tm('HOME.equipment');
   const zones = useStore((s) => s.pack.homeZones);
   const zone = zones.find((z) => z.id === p.zone)!;
+  useStore((s) => s.clock); // the row's battery status is recomputed on every clock change
+  const status = useStore((s) => s.home.work[p.id]?.status ?? 'Unhandled');
   return (
-    <li className="space-y-1 border-b border-border px-4 py-2">
+    <li className="border-b border-border">
+      <div role="button" tabIndex={0} aria-expanded={expanded} onClick={onToggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }} className={cn('block w-full cursor-pointer space-y-1 px-4 py-2 text-left hover:bg-bg-muted', expanded && 'bg-bg-muted')}>
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate font-medium">
           {p.familyName}, {p.givenName} <span className="font-normal text-text-secondary tabular">{p.age}</span>
         </span>
         {row && isPrioritised(row) ? <Chip tone="grey" className="border-transparent bg-badge font-medium text-badge-text">{t('HOME.impact.prioritise')}</Chip> : null}
+        {row && status !== 'Unhandled' ? <Chip tone={status === 'Confirmed' ? 'green' : 'grey'}>{tm('HOME.work.status')[status]}</Chip> : null}
         {p.visitToday ? <Chip tone="blue">{t('HOME.list.visitToday')}</Chip> : null}
       </div>
       {noRoad ? (
@@ -72,7 +80,20 @@ function PatientRow({ p, row }: { p: HomePatient; row?: ImpactRow }) {
       <div className="text-small text-text-muted">
         {p.equipment.length ? p.equipment.map((e) => equipment[e]).join(', ') : t('HOME.list.noEquipment')}
         {p.batteryHours !== null ? <span className="ml-3 tabular text-text-secondary">{t('HOME.list.battery', { n: p.batteryHours })}</span> : null}
+        {row?.power && row.batteryEmptyAt != null ? (
+          row.batteryEmpty ? (
+            <Chip tone="red" className="ml-2">{t('HOME.time.batteryEmpty')}</Chip>
+          ) : (
+            <span className="ml-2 tabular font-medium text-text">{t('HOME.time.batteryUntil', { hhmm: formatClock(row.batteryEmptyAt) })}</span>
+          )
+        ) : null}
       </div>
+      </div>
+      {expanded && row?.affected ? (
+        <div className="border-t border-border bg-bg-muted px-4 pb-3">
+          <PatientActions patientId={p.id} reachableBy={row.reachableBy} />
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -84,12 +105,12 @@ interface HomePatientListProps {
   active: boolean;
 }
 
-function SectionList({ title, rows, patients }: { title: string; rows?: ImpactRow[]; patients?: HomePatient[] }) {
+function SectionList({ title, rows, patients, expandedId, onToggle }: { title: string; rows?: ImpactRow[]; patients?: HomePatient[]; expandedId: string | null; onToggle: (id: string) => void }) {
   if ((rows ?? patients ?? []).length === 0) return null;
   return (
     <section>
       <h3 className="bg-bg-muted px-4 py-1.5 text-body font-medium">{title}</h3>
-      <ul>{rows ? rows.map((r) => <PatientRow key={r.patient.id} p={r.patient} row={r} />) : patients!.map((p) => <PatientRow key={p.id} p={p} />)}</ul>
+      <ul>{rows ? rows.map((r) => <PatientRow key={r.patient.id} p={r.patient} row={r} expanded={expandedId === r.patient.id} onToggle={() => onToggle(r.patient.id)} />) : patients!.map((p) => <PatientRow key={p.id} p={p} expanded={expandedId === p.id} onToggle={() => onToggle(p.id)} />)}</ul>
     </section>
   );
 }
@@ -97,7 +118,11 @@ function SectionList({ title, rows, patients }: { title: string; rows?: ImpactRo
 /** Left pane (SPEC.md § 11.6): one row per patient grouped by zone, with the zone, equipment, visit-today and affected-only filters. */
 export function HomePatientList({ patients, impact, active }: HomePatientListProps) {
   const zones = useStore((s) => s.pack.homeZones);
+  const packId = useStore((s) => s.pack.homePackId);
   const [filters, setFilters] = useState<HomeFilters>(NO_FILTERS);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const toggleRow = (id: string) => setExpandedId((cur) => (cur === id ? null : id));
+  const contactAllCritical = useStore((s) => s.contactAllCritical);
   const set = (patch: Partial<HomeFilters>) => setFilters((f) => ({ ...f, ...patch }));
   const affected = useMemo(() => new Set(impact.rows.filter((r) => r.affected).map((r) => r.patient.id)), [impact]);
   const filtered = useMemo(() => filterPatients(patients, filters, affected), [patients, filters, affected]);
@@ -117,7 +142,17 @@ export function HomePatientList({ patients, impact, active }: HomePatientListPro
     <div>
       <div className="sticky top-0 z-10 space-y-2 border-b border-border bg-surface px-4 py-3">
         <h2 className="text-heading">{t('HOME.list.title', { n: filtered.length })}</h2>
-        <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
+        <p className="text-small text-text-muted">{fictionalMarking(packId)}</p>
+        {active ? (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" disabled={!impact.rows.some((r) => r.critical)} onClick={contactAllCritical}>
+              {t('HOME.work.bulk')}
+            </Button>
+            <Link to="/home/ringlista" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+              {t('HOME.work.callList')}
+            </Link>
+          </div>
+        ) : null}
         <div className="flex gap-2">
           <Select value={filters.zone} onValueChange={(v) => set({ zone: v })}>
             <SelectTrigger size="sm" className="min-w-0 flex-1" aria-label={t('HOME.list.filters.zone')}>
@@ -176,9 +211,9 @@ export function HomePatientList({ patients, impact, active }: HomePatientListPro
       ) : (
         sections ? (
           <>
-            <SectionList title={t('HOME.impact.groups.affected', { n: sections.affected.length })} rows={sections.affected} />
-            <SectionList title={t('HOME.impact.groups.detour', { n: sections.detour.length })} rows={sections.detour} />
-            <SectionList title={t('HOME.impact.groups.others', { n: sections.others.length })} patients={sections.others} />
+            <SectionList title={t('HOME.impact.groups.affected', { n: sections.affected.length })} rows={sections.affected} expandedId={expandedId} onToggle={toggleRow} />
+            <SectionList title={t('HOME.impact.groups.detour', { n: sections.detour.length })} rows={sections.detour} expandedId={expandedId} onToggle={toggleRow} />
+            <SectionList title={t('HOME.impact.groups.others', { n: sections.others.length })} patients={sections.others} expandedId={expandedId} onToggle={toggleRow} />
           </>
         ) : (
           groups.map((g) => (
@@ -188,7 +223,7 @@ export function HomePatientList({ patients, impact, active }: HomePatientListPro
               </h3>
               <ul>
                 {g.patients.map((p) => (
-                  <PatientRow key={p.id} p={p} />
+                  <PatientRow key={p.id} p={p} expanded={expandedId === p.id} onToggle={() => toggleRow(p.id)} />
                 ))}
               </ul>
             </section>

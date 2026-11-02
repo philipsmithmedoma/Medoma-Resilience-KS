@@ -45,3 +45,21 @@ Nätverk: skriptet i bunt 6 är det enda som får anropa internet, och bara http
 [SPEC.md § 12 – see SPEC.md § 12]
 
 [DATA.md § 12 – see DATA.md § 12]
+
+## Time, teams and Lund – bunt 11–18 in one session (branch `home-ops`)
+
+The prompt below was given in Swedish. The two documents it embeds (SPEC.md § 13–14 and DATA.md § 13–14) are not repeated here; they are appended verbatim to SPEC.md and DATA.md in batch 11.
+
+Läs först i sin helhet: CLAUDE.md, SPEC.md (särskilt § 11–12), DATA.md (särskilt § 11–12), DESIGN.md, DESIGN-KS.md, DESIGN-DARK.md, DESIGN-LANG.md, DECISIONS.md och PROMPTS.md. Läs sedan den faktiska koden och återanvänd den – anta aldrig. Utgå från branchen real-geo om den finns och inte är mergad, annars från main; säg i PR-beskrivningen vilket. Ställ inga frågor; beslutsprotokollet i CLAUDE.md gäller och varje val specen inte gör loggas i DECISIONS.md under rubriken "## Time, teams and Lund build".
+
+Skapa branchen home-ops från utgångspunkten. Bygg buntarna 11–18 i SPEC.md § 13.6 och § 14.6 i ordning på den branchen. Varje bunt behandlas som en enhet: färdigställ den, kör npm run typecheck, npm test och npm run build, gå igenom buntens definition of done i den körande appen, committa med ett meddelande som namnger bunten, och börja först därefter på nästa. Alla befintliga tester ska fortsätta gå igenom; testerna i § 12.4 får inte ändras. Avsluta med en pull request vars beskrivning innehåller de åtta checklistorna med resultat per punkt, DECISIONS.md-posterna och datafilernas storlekar, och skriv ut PR-länken.
+
+Bunt 11 är bara dokument: lägg till texten under "SPEC.md § 13" och "SPEC.md § 14" ordagrant sist i SPEC.md, texten under "DATA.md § 13" och "DATA.md § 14" sist i DATA.md, och denna prompt i PROMPTS.md. Committa som "docs: spec and data for time, teams and Lund".
+
+Nätverk: bara scripts/fetch-osm.mjs får anropa internet, och bara https://overpass-api.de/api/interpreter, nu även för Lund (§ 14.5). Samma fallback som i § 12 gäller om Overpass inte nås: skript och frågor på plats, kommandot i PR-beskrivningen, fixtur för testerna.
+
+Allt som hamnar i appen går via vocab med engelska nycklar och sv/en-tabeller. Siffror som visas i UI bär konfidens och källa enligt DATA.md. Patienter, team, bilar, besök och meddelanden är syntetiska och märkta som i dag.
+
+[SPEC.md § 13–14 – see SPEC.md § 13 and § 14]
+
+[DATA.md § 13–14 – see DATA.md § 13 and § 14]

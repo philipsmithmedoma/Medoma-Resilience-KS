@@ -77,7 +77,8 @@ export function linksOf(id: string, links: InfraLink[]): InfraLink[] {
  * What the map fits on load (SPEC.md § 12.6 batch 9): the ten zones, each as the box around its circle. Sites, markers and
  * arrow tips outside that are left to the user, so that the zone labels get the room.
  */
-export function homeFitPoints(overlay: { zones: HomeZone[] }): LatLng[] {
+export function homeFitPoints(overlay: { zones: HomeZone[]; fitPoints?: LatLng[] }): LatLng[] {
+  if (overlay.fitPoints) return overlay.fitPoints;
   const points: LatLng[] = [];
   for (const z of overlay.zones) {
     const dLat = z.radiusKm / 111.32;

@@ -31,6 +31,8 @@ import type {
 } from './types';
 import { PATIENTS_BY_SITE } from './patients';
 import { HOME_PATIENTS } from './home-patients';
+import { HOME_TEAMS } from './home-teams';
+import { buildVisits } from './home-visits';
 import { en, sv, VEHICLES, type Vocab } from '../vocab';
 
 /** A text in both languages (DESIGN-LANG.md § 3). */
@@ -808,6 +810,38 @@ export const MESSAGES: Message[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// SPEC.md § 13.4, DATA.md § 13 – three illustrative notices. The organisations are real, the senders are fictitious and the events never happened.
+export const HOME_MESSAGES: Message[] = [
+  {
+    id: 'hmsg-road',
+    author: 'Gunnar Salo',
+    role: 'Trafikledare, Trafikverket',
+    roleEn: 'Traffic controller, Trafikverket',
+    at: '14:12',
+    text: 'Trafikverket: Essingeleden avstängd i båda riktningarna efter olycka vid Fredhäll, beräknad tid 4 timmar',
+    textEn: 'Trafikverket: Essingeleden closed in both directions after an accident at Fredhäll, estimated time 4 hours',
+  },
+  {
+    id: 'hmsg-power',
+    author: 'Irene Falkman',
+    role: 'Driftledare, Ellevio',
+    roleEn: 'Operations controller, Ellevio',
+    at: '14:18',
+    text: 'Ellevio: strömavbrott i delar av Huddinge, beräknad återställning 20:30',
+    textEn: 'Ellevio: power outage in parts of Huddinge, estimated restoration 20:30',
+  },
+  {
+    id: 'hmsg-water',
+    author: 'Bo Strandman',
+    role: 'Driftlarm, Stockholm Vatten och Avfall',
+    roleEn: 'Operations alarm, Stockholm Vatten och Avfall',
+    at: '14:25',
+    text: 'Stockholm Vatten och Avfall: kokningsrekommendation i Solna tills vidare',
+    textEn: 'Stockholm Vatten och Avfall: boil-water advisory in Solna until further notice',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // § 7 People (all fictional)
 export const STAFF: Staff[] = [
   { name: 'Eva Lind', title: 'Kapacitetskoordinator, Stab Produktion', profession: 'Supp', nodeId: 'karolinska' },
@@ -1506,6 +1540,8 @@ export const HOME_PRESETS: HomeDisruptionPreset[] = [
   { key: 'water', name: tx('Vattenstörning', 'Water disruption'), blockedNodes: [], powerOutZones: [], waterOutZones: ['solna'] },
 ];
 
+const HOME_VISITS = buildVisits(HOME_PATIENTS, HOME_TEAMS, 20261102 + 2);
+
 // ---------------------------------------------------------------------------
 export const KAROLINSKA_PACK: DataPack = {
   nodes: NODES,
@@ -1538,6 +1574,10 @@ export const KAROLINSKA_PACK: DataPack = {
   infraLinks: INFRA_LINKS,
   homeSources: HOME_SOURCES,
   homePresets: HOME_PRESETS,
+  homeTeams: HOME_TEAMS,
+  homeVisits: HOME_VISITS,
+  homeMessages: HOME_MESSAGES,
+  homePackId: 'karolinska',
 };
 
 export function loadPack(): DataPack {
