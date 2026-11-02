@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import type { ScenarioKey } from '@/data/types';
+import type { HomeDisruptionPreset, ScenarioKey } from '@/data/types';
 import { useStore } from '@/data/store';
 import { lt, t, tm } from '@/lib/i18n';
 import { fmt, fmtDec } from '@/lib/format';
@@ -10,10 +10,11 @@ import { StatusChip } from '@/components/Chip';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 const KATASTROF_THRESHOLD = 60;
+type HomePresetKey = HomeDisruptionPreset['key'];
 
 export function poolSiteLabel(site: string, nodes: Array<{ id: string; shortName: string }>): string {
   if (site === 'solna' || site === 'huddinge') return tm('SITE_LABELS')[site];
@@ -30,6 +31,8 @@ export function poolSiteLabel(site: string, nodes: Array<{ id: string; shortName
 export function ScenarioPanel() {
   const panel = useStore((s) => s.scenarioPanel);
   const presets = useStore((s) => s.pack.scenarios);
+  const homePresets = useStore((s) => s.pack.homePresets);
+  const applyHomePreset = useStore((s) => s.applyHomePreset);
   const scenario = useStore((s) => s.scenario);
   const nodes = useStore((s) => s.nodes);
   const clockRunning = useStore((s) => s.clockRunning);
@@ -41,7 +44,7 @@ export function ScenarioPanel() {
   const applyRecommendation = useStore((s) => s.applyRecommendation);
   const holdClock = useStore((s) => s.holdClock);
   const navigate = useNavigate();
-  const [key, setKey] = useState<ScenarioKey>('masskada');
+  const [key, setKey] = useState<ScenarioKey | HomePresetKey>('masskada');
   const [params, setParams] = useState<Record<string, number | string>>({});
   const [confirmKatastrof, setConfirmKatastrof] = useState(false);
   const selectId = useId();
@@ -60,16 +63,26 @@ export function ScenarioPanel() {
     return () => holdClock(false);
   }, [confirmKatastrof, holdClock]);
 
-  const preset = presets.find((p) => p.key === key)!;
+  const preset = presets.find((p) => p.key === key);
+  const homePreset = homePresets.find((p) => p.key === key);
   const running = scenario !== null;
-  const choose = (k: ScenarioKey) => {
+  const choose = (k: ScenarioKey | HomePresetKey) => {
     setKey(k);
-    setParams({ ...presets.find((p) => p.key === k)!.params });
+    setParams({ ...(presets.find((p) => p.key === k)?.params ?? {}) });
   };
   const start = () => {
-    startScenario(key, params, true);
-    toast(t('SCENARIO.started', { name: tm('SCENARIO_NAMES')[key] }));
-    if (key === 'siteevac') {
+    // The three Hospital at Home presets set flags and open the module; they have no ticks (SPEC.md § 11.5).
+    if (homePreset) {
+      applyHomePreset(homePreset.key);
+      toast(t('SCENARIO.started', { name: lt(homePreset.name) }));
+      closeScenarioPanel();
+      navigate('/home');
+      return;
+    }
+    if (!preset) return;
+    startScenario(preset.key, params, true);
+    toast(t('SCENARIO.started', { name: tm('SCENARIO_NAMES')[preset.key] }));
+    if (preset.key === 'siteevac') {
       closeScenarioPanel();
       navigate('/evakuering');
     }
@@ -106,7 +119,7 @@ export function ScenarioPanel() {
               <>
                 <div className="space-y-1">
                   <label htmlFor={selectId}>{t('SCENARIO.choose')}</label>
-                  <Select value={key} onValueChange={(v) => choose(v as ScenarioKey)}>
+                  <Select value={key} onValueChange={(v) => choose(v as ScenarioKey | HomePresetKey)}>
                     <SelectTrigger id={selectId} className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -116,12 +129,21 @@ export function ScenarioPanel() {
                           {tm('SCENARIO_NAMES')[p.key]}
                         </SelectItem>
                       ))}
+                      <SelectGroup>
+                        <SelectLabel>{t('HOME.presets.group')}</SelectLabel>
+                        {homePresets.map((p) => (
+                          <SelectItem key={p.key} value={p.key}>
+                            {lt(p.name)}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
+                {homePreset ? <p>{t(`HOME.presets.${homePreset.key}`)}</p> : null}
                 <section className="space-y-3">
-                  <h3 className="text-body font-medium">{t('SCENARIO.params')}</h3>
-                  {preset.paramDefs.map((def) => (
+                  {preset ? <h3 className="text-body font-medium">{t('SCENARIO.params')}</h3> : null}
+                  {(preset?.paramDefs ?? []).map((def) => (
                     <div key={def.key} className="grid grid-cols-[200px_minmax(0,1fr)] items-center gap-3">
                       <label htmlFor={`${selectId}-${def.key}`}>{lt(def.label)}</label>
                       {def.type === 'select' ? (

@@ -221,6 +221,7 @@ export const sv = {
     homeReset: 'Återställde alla störningar',
     homeObject: 'Sjukhus hemma',
     homeDetail: '{n} av {total} patienter påverkade',
+    homePreset: 'Aktiverade störningsscenario',
     demoReset: 'Återställde demon',
     columns: { time: 'Tid', actor: 'Aktör', action: 'Åtgärd', object: 'Objekt', detail: 'Detalj' },
   },
@@ -776,6 +777,12 @@ export const sv = {
       prioritise: 'Prioritera',
       groups: { affected: 'Påverkade ({n})', detour: 'Nås via omväg ({n})', others: 'Övriga ({n})' },
     },
+    presets: {
+      group: 'Sjukhus hemma',
+      bridge: 'Stänger Essingeleden och Centralbron och öppnar Sjukhus hemma.',
+      power: 'Slår ut elen i Söderort och Huddinge och öppnar Sjukhus hemma.',
+      water: 'Stör vattnet i Solna och Sundbyberg och öppnar Sjukhus hemma.',
+    },
     equipment: {
       Oxygen: 'Syrgas',
       'IV infusion': 'Infusion',
@@ -1140,6 +1147,7 @@ export const en: Vocab = {
     homeReset: 'Reset all disruptions',
     homeObject: 'Hospital at Home',
     homeDetail: '{n} of {total} patients affected',
+    homePreset: 'Activated disruption scenario',
     demoReset: 'Reset the demo',
     columns: { time: 'Time', actor: 'Actor', action: 'Action', object: 'Object', detail: 'Detail' },
   },
@@ -1687,6 +1695,12 @@ export const en: Vocab = {
       reasons: { unreachable: 'Cannot be reached by car', detour: 'Reached via detour', power: 'Without power', water: 'Water disruption' },
       prioritise: 'Prioritise',
       groups: { affected: 'Affected ({n})', detour: 'Reached via detour ({n})', others: 'Others ({n})' },
+    },
+    presets: {
+      group: 'Hospital at Home',
+      bridge: 'Closes Essingeleden and Centralbron and opens Hospital at Home.',
+      power: 'Cuts the power in the southern suburbs and Huddinge and opens Hospital at Home.',
+      water: 'Disrupts the water in Solna and Sundbyberg and opens Hospital at Home.',
     },
     equipment: {
       Oxygen: 'Oxygen',

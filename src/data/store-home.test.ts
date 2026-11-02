@@ -123,3 +123,39 @@ describe('Hospital at Home disruptions (SPEC.md § 11.5)', () => {
     expect(disruptionCount(s().home)).toBe(0);
   });
 });
+
+describe('Hospital at Home presets (SPEC.md § 11.5)', () => {
+  beforeEach(() => s().reset());
+  const last = () => s().log[s().log.length - 1];
+
+  it('"Bro avstängd" closes Essingeleden and Centralbron', () => {
+    s().applyHomePreset('bridge');
+    expect([...s().home.blockedNodes].sort()).toEqual(['r-centralbron', 'r-essingeleden']);
+    expect(disruptionCount(s().home)).toBe(2);
+    expect(last()).toMatchObject({ action: 'Aktiverade störningsscenario', object: 'Bro avstängd', detail: '0 av 150 patienter påverkade' });
+  });
+
+  it('"Elavbrott" cuts the power in Söderort and Huddinge and switches the electricity layer on', () => {
+    s().applyHomePreset('power');
+    expect([...s().home.powerOutZones].sort()).toEqual(['huddinge', 'soderort']);
+    expect(s().home.layers.el).toBe(true);
+    expect(last()).toMatchObject({ object: 'Elavbrott', detail: '40 av 150 patienter påverkade' });
+  });
+
+  it('"Vattenstörning" disrupts the water in Solna and switches the water layer on', () => {
+    s().applyHomePreset('water');
+    expect([...s().home.waterOutZones]).toEqual(['solna']);
+    expect(s().home.layers.water).toBe(true);
+    expect(last()).toMatchObject({ object: 'Vattenstörning', detail: '25 av 150 patienter påverkade' });
+  });
+
+  it('replaces earlier disruptions and the mode, and logs once', () => {
+    s().togglePowerOut('taby');
+    s().setHomeMode('roads');
+    const n = s().log.length;
+    s().applyHomePreset('water');
+    expect(s().home.powerOutZones.size).toBe(0);
+    expect(s().home.mode).toBeNull();
+    expect(s().log).toHaveLength(n + 1);
+  });
+});

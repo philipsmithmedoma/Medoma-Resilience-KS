@@ -541,3 +541,18 @@ Spec: SPEC.md § 11.6, CLAUDE.md
 Decision: At the default zoom the inner-city bridges are 15–17 px apart, so the node markers are 18 px (was 20 px) and `NodeMap` gets the optional `scrollWheelZoom` prop, switched on for Hospital at Home (the page does not scroll, and zooming in is how a presenter separates Västerbron from Liljeholmsbron). Other maps are unchanged.
 Rejected: Spreading the markers apart – their positions are the sourced coordinates; a higher default zoom – the whole region must be in view at first.
 Spec: SPEC.md § 11.5–11.6
+
+## 2026-11-02 – Batch 5 – The three presets sit in the scenario panel, apart from `pack.scenarios`
+Decision: "Bro avstängd" / "Bridge closed", "Elavbrott" / "Power outage" and "Vattenstörning" / "Water disruption" are `pack.homePresets` and appear in the scenario panel's select under a group "Sjukhus hemma" after the six existing scenarios. Choosing one shows a sentence about what it does; "Starta" calls `applyHomePreset`, which replaces the current disruptions with the preset's (bridge: Essingeleden and Centralbron closed; power: Söderort and Huddinge; water: Solna och Sundbyberg), clears the mode and the selection, switches on the layer the preset acts on, writes one log entry as Eva Lind ("Aktiverade störningsscenario – {name}, N av 150 patienter påverkade") and navigates to `/home`. No scenario state and no ticks are created. While another scenario is running the panel shows its running view, so a preset is chosen when none runs.
+Rejected: Adding the keys to `pack.scenarios` and `ScenarioKey` – an existing test pins that list to six keys and the scenario engine's records are keyed by it; one log entry per closed element – a preset is one decision.
+Spec: SPEC.md § 11.5
+
+## 2026-11-02 – Batch 5 – How the vocab parity test covers the new keys
+Decision: The existing parity test already compares every key and placeholder of `sv` and `en`, so the new `HOME`, `STUB`, `MODULES` and `AUDIT` keys are covered by it. `vocab-home.test.ts` adds two things the key comparison cannot: it reads the source of every Hospital at Home file, collects each literal key passed to `t()`, `tn()` and `tm()` and asserts that it resolves to a string (or, for `tn`, a `_one`/`_other` pair; for `tm`, a branch with equal keys) in both languages, and it enumerates the keys built from data (modules, equipment, infrastructure kinds, layers, modes, instructions, presets, reasons). It also pins the spec's exact labels.
+Rejected: Relying on the generic test alone – a typo in a `t()` call would only show at run time in one language.
+Spec: SPEC.md § 11.7 batch 5, DESIGN-LANG.md § 1
+
+## 2026-11-02 – Batch 5 – Screenshots show the page without map tiles; README gets "Steg 6"
+Decision: `docs/screenshots/home/` holds seven screenshots of `/home` at 1280 px: layers on with a selected node in light/Swedish, dark/Swedish and light/English, and the three presets (bridge, power, water) in the combinations light/Swedish, dark/Swedish, light/English and dark/English. The build sandbox cannot reach OpenStreetMap, so the tile pane is empty (the map background shows through); markers, lines, circles and dots are drawn as in a live run. The README's presenter script gains "Steg 6 – Sjukhus hemma" after the five chapters; it is not a sixth chapter card on Start because SPEC.md § 8 defines five and § 11.7 asks for a README step only.
+Rejected: A sixth chapter on Start – changes SPEC.md § 8 and the Start page's equal-width layout; committing screenshots with fake tiles – nothing in them may look like data that is not there.
+Spec: SPEC.md § 11.7 batch 5

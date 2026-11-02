@@ -40,6 +40,8 @@ export interface HomeActions {
   toggleWaterOut: (zone: ZoneId) => void;
   /** Clears every disruption and writes one log entry; nothing happens when there is none. */
   resetHomeDisruptions: () => void;
+  /** A scenario preset of the flag-setting kind (SPEC.md § 11.5): replaces the disruptions with the preset's and writes one log entry. */
+  applyHomePreset: (key: 'bridge' | 'power' | 'water') => void;
 }
 
 export function initialHome(): HomeState {
@@ -130,6 +132,26 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       if (disruptionCount(home) === 0) return;
       set((s) => ({ home: { ...s.home, blockedLinks: new Set(), blockedNodes: new Set(), powerOutZones: new Set(), waterOutZones: new Set() } }));
       logEntry(t('AUDIT.homeReset'), t('AUDIT.homeObject'), detail());
+    },
+
+    applyHomePreset: (key) => {
+      const { pack, logEntry } = get();
+      const preset = pack.homePresets.find((p) => p.key === key);
+      if (!preset) return;
+      set((s) => ({
+        home: {
+          ...s.home,
+          blockedNodes: new Set(preset.blockedNodes),
+          blockedLinks: new Set(),
+          powerOutZones: new Set(preset.powerOutZones),
+          waterOutZones: new Set(preset.waterOutZones),
+          mode: null,
+          selectedNode: null,
+          // The layer the preset acts on is switched on so that the cause is visible.
+          layers: { ...s.home.layers, roads: s.home.layers.roads || preset.blockedNodes.length > 0, el: s.home.layers.el || preset.powerOutZones.length > 0, water: s.home.layers.water || preset.waterOutZones.length > 0 },
+        },
+      }));
+      logEntry(t('AUDIT.homePreset'), lt(preset.name), detail());
     },
   };
 };
