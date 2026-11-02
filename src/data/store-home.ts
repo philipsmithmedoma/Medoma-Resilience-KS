@@ -3,9 +3,10 @@
 // to the audit log through logEntry() like every other action.
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
-import type { InfraLayer, ZoneId } from './types';
+import type { DataPack, InfraLayer, InfraNode, ZoneId } from './types';
 import { lt, t } from '@/lib/i18n';
 import { getRoadModel } from '@/lib/roadModel';
+import { getAppliedNodes } from '@/lib/osmNodes';
 import { sitesInScope } from '@/lib/scope';
 import { disruptionCount, impact } from '@/lib/reachability';
 
@@ -34,6 +35,8 @@ export interface HomeState {
   wholeRoad: boolean;
   /** The road geometry has loaded (it is a dynamic import), so the road graph can answer. */
   geoReady: boolean;
+  /** The infrastructure nodes with OpenStreetMap positions once the geometry has loaded (SPEC.md § 12.5); the pack's before. */
+  infraNodes: InfraNode[];
 }
 
 export interface HomeActions {
@@ -46,7 +49,8 @@ export interface HomeActions {
   toggleBlockedWay: (id: string) => void;
   toggleBlockedRoad: (key: string) => void;
   setWholeRoad: (on: boolean) => void;
-  setHomeGeoReady: () => void;
+  /** The geometry has loaded; `infraNodes` are the pack's nodes with their OpenStreetMap positions. */
+  setHomeGeoReady: (infraNodes?: InfraNode[]) => void;
   togglePowerOut: (zone: ZoneId) => void;
   toggleWaterOut: (zone: ZoneId) => void;
   /** Clears every disruption and writes one log entry; nothing happens when there is none. */
@@ -55,7 +59,7 @@ export interface HomeActions {
   applyHomePreset: (key: 'bridge' | 'power' | 'water') => void;
 }
 
-export function initialHome(): HomeState {
+export function initialHome(pack: Pick<DataPack, 'infraNodes'>): HomeState {
   return {
     layers: { patients: true, roads: true, el: false, water: false },
     mode: null,
@@ -67,6 +71,7 @@ export function initialHome(): HomeState {
     selectedNode: null,
     wholeRoad: false,
     geoReady: getRoadModel() !== null,
+    infraNodes: getAppliedNodes()?.nodes ?? pack.infraNodes,
   };
 }
 
@@ -102,7 +107,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
           ...s.home,
           layers: { ...s.home.layers, [layer]: on },
           // A node of a layer that is switched off cannot stay selected.
-          selectedNode: !on && layer !== 'patients' && s.pack.infraNodes.find((n) => n.id === s.home.selectedNode)?.layer === layer ? null : s.home.selectedNode,
+          selectedNode: !on && layer !== 'patients' && s.home.infraNodes.find((n) => n.id === s.home.selectedNode)?.layer === layer ? null : s.home.selectedNode,
         },
       })),
 
@@ -139,7 +144,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
 
     setWholeRoad: (on) => set((s) => ({ home: { ...s.home, wholeRoad: on } })),
 
-    setHomeGeoReady: () => set((s) => (s.home.geoReady ? s : { home: { ...s.home, geoReady: true } })),
+    setHomeGeoReady: (infraNodes) => set((s) => ({ home: { ...s.home, geoReady: true, infraNodes: infraNodes ?? s.home.infraNodes } })),
 
     togglePowerOut: (zone) => {
       const { pack, home, logEntry } = get();

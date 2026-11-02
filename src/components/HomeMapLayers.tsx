@@ -8,6 +8,7 @@ import { isSchematic, linkedVertices, offmapEnd, offmapRotation, offmapSlots, ve
 import { cssColor } from '@/lib/theme';
 import type { RoadCollection, RoadProps } from '@/lib/roadGraph';
 import { RoadsLayer } from './RoadsLayer';
+import type { PowerLine } from '@/lib/osmNodes';
 
 /** What the Hospital at Home page hands to NodeMap (SPEC.md § 11.6): layers, zones, infrastructure and patient dots. */
 export interface HomeOverlay {
@@ -16,6 +17,8 @@ export interface HomeOverlay {
   infraNodes: InfraNode[];
   infraLinks: InfraLink[];
   patients: HomePatient[];
+  /** 400 and 220 kV lines from power.json, drawn in the el layer with their voltage as a label (SPEC.md § 12.5). */
+  powerLines?: PowerLine[];
   /** The selected infrastructure node: everything it is not linked to is dimmed. */
   selectedId?: string | null;
   /** Click on a node (selects it) or on the empty map (null). Without it the nodes take no clicks. */
@@ -55,6 +58,7 @@ export function homeFitPoints(overlay: HomeOverlay, sites: CareNode[]): LatLng[]
   const points: LatLng[] = sites.map((s) => [s.lat, s.lng]);
   for (const z of overlay.zones) points.push([z.lat, z.lng]);
   for (const n of overlay.infraNodes) if (!n.noMarker) points.push([n.lat, n.lng]);
+  for (const l of overlay.powerLines ?? []) points.push(...l.positions);
   const positions = vertexPositions(sites, overlay.zones, overlay.infraNodes);
   const slots = offmapSlots(overlay.infraLinks);
   for (const l of overlay.infraLinks) {
@@ -123,7 +127,7 @@ function ClearOnMapClick({ onClear }: { onClear: () => void }) {
 /** Leaflet children of NodeMap: zone points and circles, infrastructure links and nodes per layer, off-map arrows and the patient dots. */
 export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
   const {
-    layers, zones, infraNodes, infraLinks, patients, selectedId = null, onSelectNode,
+    layers, zones, infraNodes, infraLinks, patients, powerLines = [], selectedId = null, onSelectNode,
     mode = null, blockedNodes = EMPTY, roads, blockedWayIds = NO_WAYS, powerOutZones = EMPTY, waterOutZones = EMPTY, patientMarks,
     onToggleNode, onTapWay, onToggleZone,
   } = overlay;
@@ -146,6 +150,18 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
   return (
     <>
       {onSelectNode && mode === null ? <ClearOnMapClick onClear={() => selectedId && onSelectNode(null)} /> : null}
+
+      {layers.el
+        ? powerLines.map((l) => (
+            <Polyline key={`pl-${l.id}`} positions={l.positions} pathOptions={{ color: cssColor(LAYER_TOKEN.el), weight: l.highest >= 400 ? 3 : 2, opacity: linked !== null ? 0.3 : 0.9 }} interactive={false}>
+              {l.label ? (
+                <Tooltip permanent className="home-map-label">
+                  {l.label}
+                </Tooltip>
+              ) : null}
+            </Polyline>
+          ))
+        : null}
 
       {roads && layers.roads ? <RoadsLayer roads={roads} blocked={blockedWayIds} interactive={mode === 'roads' && Boolean(onTapWay)} onTap={onTapWay} /> : null}
 

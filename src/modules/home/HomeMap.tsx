@@ -5,6 +5,7 @@ import { blockedWayIdSet, type Impact } from '@/lib/reachability';
 import { getRoadModel } from '@/lib/roadModel';
 import { roadKey, type RoadProps } from '@/lib/roadGraph';
 import type { GeoData } from '@/lib/geoData';
+import { powerLines } from '@/lib/osmNodes';
 import { NodeMap } from '@/components/NodeMap';
 import type { HomeOverlay, PatientMark } from '@/components/HomeMapLayers';
 import { LayerChips } from './LayerChips';
@@ -16,6 +17,8 @@ export function HomeMap({ impact, geo }: { impact: Impact; geo: GeoData | null }
   const pack = useStore((s) => s.pack);
   const nodes = useStore((s) => s.nodes);
   const home = useStore((s) => s.home);
+  const infraNodes = home.infraNodes;
+  const lines = useMemo(() => (geo ? powerLines(geo) : []), [geo]);
   const selectHomeNode = useStore((s) => s.selectHomeNode);
   const toggleBlockedNode = useStore((s) => s.toggleBlockedNode);
   const toggleBlockedWay = useStore((s) => s.toggleBlockedWay);
@@ -49,7 +52,8 @@ export function HomeMap({ impact, geo }: { impact: Impact; geo: GeoData | null }
     () => ({
       layers: home.layers,
       zones: pack.homeZones,
-      infraNodes: pack.infraNodes,
+      infraNodes,
+      powerLines: lines,
       infraLinks: pack.infraLinks,
       patients: pack.homePatients,
       selectedId: home.selectedNode,
@@ -65,7 +69,7 @@ export function HomeMap({ impact, geo }: { impact: Impact; geo: GeoData | null }
       onTapWay,
       onToggleZone: home.mode === 'el' ? togglePowerOut : toggleWaterOut,
     }),
-    [home, pack, geo, blockedWayIds, onTapWay, patientMarks, selectHomeNode, toggleBlockedNode, togglePowerOut, toggleWaterOut],
+    [home, pack, geo, infraNodes, lines, blockedWayIds, onTapWay, patientMarks, selectHomeNode, toggleBlockedNode, togglePowerOut, toggleWaterOut],
   );
   return (
     <div className="flex h-full min-w-0 flex-col">

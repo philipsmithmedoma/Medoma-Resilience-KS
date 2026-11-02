@@ -16,7 +16,8 @@ export function HomePage() {
   const incident = useStore((s) => s.incident);
   const pack = useStore((s) => s.pack);
   const selectedId = useStore((s) => s.home.selectedNode);
-  const selected = pack.infraNodes.find((n) => n.id === selectedId) ?? null;
+  const infraNodes = useStore((s) => s.home.infraNodes);
+  const selected = infraNodes.find((n) => n.id === selectedId) ?? null;
   const mode = useStore((s) => s.home.mode);
   const geo = useHomeGeo();
   const { impact, active } = useHomeImpact();

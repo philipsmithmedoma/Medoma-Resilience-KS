@@ -125,7 +125,7 @@ export function initialData(): DataState {
     scenario: null,
     scenarioPanel: { open: false, key: null },
     freedByScenario: 0,
-    home: initialHome(),
+    home: initialHome(pack),
     ids: 100,
   };
 }

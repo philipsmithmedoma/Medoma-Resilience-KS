@@ -18,12 +18,13 @@ function figureText(f: InfraFigure): string {
 /** What a link end is called in the "Linked to" list: a site, a zone or another infrastructure node. */
 function useVertexName() {
   const pack = useStore((s) => s.pack);
+  const infraNodes = useStore((s) => s.home.infraNodes);
   const sites = tm('SCOPE_LABELS');
   return (id: string): { name: string; node?: InfraNode } => {
     if (id === 'solna' || id === 'huddinge') return { name: sites[id] };
     const zone = pack.homeZones.find((z) => z.graphNode === id);
     if (zone) return { name: lt(zone.name) };
-    const node = pack.infraNodes.find((n) => n.id === id);
+    const node = infraNodes.find((n) => n.id === id);
     return { name: node ? lt(node.name) : id, node };
   };
 }
@@ -69,7 +70,8 @@ export function NodePanel({ node }: { node: InfraNode }) {
   const links = linksOf(node.id, pack.infraLinks);
   const layerLabel = tm('HOME.layers')[node.layer];
   const kinds = tm('HOME.kinds');
-  const common = WORKS.has(node.id) ? pack.infraNodes.find((n) => n.id === COMMON_SOURCE_ID) : undefined;
+  const infraNodes = useStore((s) => s.home.infraNodes);
+  const common = WORKS.has(node.id) ? infraNodes.find((n) => n.id === COMMON_SOURCE_ID) : undefined;
   return (
     <div className="space-y-4 px-4 py-4">
       <div className="flex items-center gap-2">

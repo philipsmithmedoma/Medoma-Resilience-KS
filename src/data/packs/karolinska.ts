@@ -1206,7 +1206,7 @@ export const INFRA_NODES: InfraNode[] = [
   infra({
     id: 'w-gorvaln', layer: 'water', kind: 'waterworks', name: tx('Görvälnverket (Norrvatten)', 'Görvälnverket (Norrvatten)'),
     lat: 59.4349, lng: 17.7873, verified: true,
-    coord: ['estimate', 'Görväln area, Järfälla; Places returned the adjacent Görväln House, the works is at Vattenverksvägen 20 on Skäftingeholmen'],
+    coord: ['estimate', 'Fallback estimate, used when OpenStreetMap has no matching object (DATA.md § 12)'],
     role: tx(
       'Norrvattens ytvattenverk vid Mälaren i Järfälla. Producerar dricksvatten till de 14 medlemskommunerna i norra Storstockholm, bland dem Solna och Sundbyberg: omkring 700 000 invånare, flera stora sjukhus och Arlanda. Går nära maxkapacitet under varma dagar; ett nytt verk byggs intill.',
       "Norrvatten's surface-water works on Mälaren in Järfälla. Produces drinking water for the 14 member municipalities in northern Greater Stockholm, including Solna and Sundbyberg: about 700 000 people, several large hospitals and Arlanda. Runs near maximum capacity on warm days; a new works is being built beside it.",
@@ -1264,7 +1264,7 @@ export const INFRA_NODES: InfraNode[] = [
   infra({
     id: 'e-overby', layer: 'el', kind: 'transmission', name: tx('Överby 400 kV (Sollentuna)', 'Överby 400 kV (Sollentuna)'),
     lat: 59.4757, lng: 17.8844, verified: true,
-    coord: ['estimate', "Överby locality; the station is on Vattenfall's property at Överby"],
+    coord: ['estimate', 'Fallback estimate, used when OpenStreetMap has no matching object (DATA.md § 12)'],
     role: tx(
       'Svenska kraftnäts stamnätsnod i Sollentuna. En ny gasisolerad 400 kV-station byggs för att ansluta nya 400 kV-ledningar mot Odensala, Beckomberga och Hamra. Hamra–Överby beskrivs av Svenska kraftnät som en viktig huvudmatning in i Stockholms nät.',
       "Svenska kraftnät transmission node in Sollentuna. A new gas-insulated 400 kV station is being built to connect new 400 kV lines towards Odensala, Beckomberga and Hamra. Hamra–Överby is described by Svenska kraftnät as an important main feed into Stockholm's grid.",
@@ -1276,7 +1276,7 @@ export const INFRA_NODES: InfraNode[] = [
   }),
   infra({
     id: 'e-beckomberga', layer: 'el', kind: 'transmission', name: tx('Beckomberga (Bromma)', 'Beckomberga (Bromma)'),
-    lat: 59.3571, lng: 17.9003, verified: true, coord: ['estimate', 'Beckomberga sublocality'],
+    lat: 59.3571, lng: 17.9003, verified: true, coord: ['estimate', 'Fallback estimate, used when OpenStreetMap has no matching object (DATA.md § 12)'],
     role: tx(
       'Befintlig 220 kV-station i västra Stockholm; en ny 400 kV-station planeras här som en del av Storstockholm Väst, där ledningen Överby–Beckomberga höjs från 220 till 400 kV och vidare ledningar planeras mot Bredäng och Kolbotten.',
       'Existing 220 kV transmission station in western Stockholm; a new 400 kV station is planned here as part of Storstockholm Väst, with the line Överby–Beckomberga raised from 220 to 400 kV and onward lines towards Bredäng and Kolbotten.',
@@ -1288,7 +1288,7 @@ export const INFRA_NODES: InfraNode[] = [
   }),
   infra({
     id: 'e-hagby', layer: 'el', kind: 'transmission', name: tx('Hagby 400 kV (Täby)', 'Hagby 400 kV (Täby)'),
-    lat: 59.4721, lng: 18.0212, verified: true, coord: ['estimate', 'Hagby locality'],
+    lat: 59.4721, lng: 18.0212, verified: true, coord: ['estimate', 'Fallback estimate, used when OpenStreetMap has no matching object (DATA.md § 12)'],
     role: tx(
       'Befintlig 400 kV-station nordost om Stockholm, matad av 400 kV-ledningen från Odensala.',
       'Existing 400 kV station north-east of Stockholm, fed by the 400 kV line from Odensala.',
@@ -1301,7 +1301,7 @@ export const INFRA_NODES: InfraNode[] = [
   infra({
     id: 'e-skanstull', layer: 'el', kind: 'transmission', name: tx('Skanstull (Citylänkens ändpunkt)', 'Skanstull (City Link terminal)'),
     lat: 59.3029, lng: 18.0795, verified: true,
-    coord: ['estimate', "Taken from Skanstullsbron; the station's own position is not verified"],
+    coord: ['estimate', 'Fallback estimate, used when OpenStreetMap has no matching object (DATA.md § 12)'],
     role: tx(
       'Ändpunkt för 400 kV-kabelsystemet Anneberg–Skanstull i Svenska kraftnäts program Stockholms Ström, som matar innerstaden från norr.',
       "Terminal of the 400 kV cable system Anneberg–Skanstull in Svenska kraftnät's Stockholms Ström programme, feeding the inner city from the north.",
@@ -1405,6 +1405,36 @@ export const INFRA_NODES: InfraNode[] = [
   }),
 ];
 
+/**
+ * How the pack's nodes find their OpenStreetMap object (SPEC.md § 12.5): the object whose `name` contains `term`
+ * (case-insensitive) in power.json or water.json gives the node its position.
+ */
+export const OSM_MATCHES: Array<{ nodeId: string; term: string; file: 'power' | 'water' }> = [
+  { nodeId: 'w-gorvaln', term: 'Görväln', file: 'water' },
+  { nodeId: 'e-overby', term: 'Överby', file: 'power' },
+  { nodeId: 'e-beckomberga', term: 'Beckomberga', file: 'power' },
+  { nodeId: 'e-hagby', term: 'Hagby', file: 'power' },
+  { nodeId: 'e-skanstull', term: 'Skanstull', file: 'power' },
+  { nodeId: 'e-kolbotten', term: 'Kolbotten', file: 'power' },
+];
+
+/** Kolbotten has no coordinate until OpenStreetMap supplies one (DATA.md § 11.2); it is added to the nodes when it matches. */
+export const KOLBOTTEN: Omit<InfraNode, 'lat' | 'lng' | 'coordConfidence' | 'coordSource'> = {
+  id: 'e-kolbotten',
+  layer: 'el',
+  kind: 'transmission',
+  name: tx('Kolbotten', 'Kolbotten'),
+  verified: true,
+  role: tx(
+    'Mål för de planerade 400 kV-ledningarna från Beckomberga i Svenska kraftnäts Storstockholm Väst, tillsammans med Bredäng. Stationens egen roll är inte verifierad här; läget kommer från OpenStreetMap.',
+    "Destination of the planned 400 kV lines from Beckomberga in Svenska kraftnät's Storstockholm Väst, together with Bredäng. The station's own role is not verified here; its position comes from OpenStreetMap.",
+  ),
+  status: tx(
+    'Namnet finns i Svenska kraftnäts samrådsunderlag och tioårsplan (S-H7, S-H9). Roll och tidplan: ska verifieras.',
+    "The name is in Svenska kraftnät's consultation documents and 10-year plan (S-H7, S-H9). Role and timeline: to verify.",
+  ),
+};
+
 const noLabel = tx('', '');
 const link = (
   id: string,
@@ -1439,7 +1469,6 @@ export const INFRA_LINKS: InfraLink[] = [
     { dir: 'N', text: tx('Norrvattens reservförsörjning', 'Norrvatten reserve supply') },
   ),
   // --- Electricity: planned lines are dashed and not verified as existing connections ---------------------
-  link('el-overby-beckomberga', 'el', 'e-overby', 'e-beckomberga', 'solid', true, tx('220 kV i dag, 400 kV planerad', '220 kV today, 400 kV planned')),
   link('el-overby-hamra', 'el', 'e-overby', 'e-overby', 'solid', true, noLabel, { dir: 'N', text: tx('mot Hamra, huvudmatning', 'to Hamra, main feed') }),
   link('el-overby-odensala', 'el', 'e-overby', 'e-overby', 'dashed', false, tx('400 kV planerad', '400 kV planned'), { dir: 'N', text: tx('mot Odensala', 'to Odensala') }),
   link('el-hagby-odensala', 'el', 'e-hagby', 'e-hagby', 'solid', true, noLabel, { dir: 'N', text: tx('från Odensala, 400 kV', 'from Odensala, 400 kV') }),
