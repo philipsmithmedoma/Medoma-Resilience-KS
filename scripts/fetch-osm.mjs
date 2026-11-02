@@ -10,14 +10,14 @@
 //   node scripts/fetch-osm.mjs [pack] --out DIR      write somewhere other than src/data/packs/geo/<pack> (to try the script out)
 //   node scripts/fetch-osm.mjs [pack] --write-queries   write the query files under scripts/overpass/ and stop (no network)
 //
-// This script is the only code in the repository that talks to the internet, and only to OVERPASS below. The app
+// This script is the only code in the repository that talks to the internet, and only to OVERPASS below (default overpass-api.de; set OVERPASS_URL to use a mirror). The app
 // never calls Overpass; the files it writes are committed.
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OUTPUTS, PACKS, buildQuery, geoReadme } from './osm-convert.mjs';
 
-const OVERPASS = 'https://overpass-api.de/api/interpreter';
+const OVERPASS = process.env.OVERPASS_URL || 'https://overpass-api.de/api/interpreter';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const queryDir = path.join(here, 'overpass');
 const args = process.argv.slice(2);

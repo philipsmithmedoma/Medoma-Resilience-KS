@@ -770,3 +770,10 @@ Spec: SPEC.md § 14.6 batch 18, § 12.7
 Decision: No test written before this build was edited (the 201 tests of the base branch are byte-identical, § 12.4's among them); the new tests are in new files. `SPEC.md`, `DATA.md` and `PROMPTS.md` changed only in batch 11. The Overpass data for Karolinska and Lund is still not fetched; the PR description carries `node scripts/fetch-osm.mjs karolinska` and `node scripts/fetch-osm.mjs lund` for a local run, followed by `node scripts/generate-patients.mjs`.
 Rejected: Hand-editing the generated files.
 Spec: Prompt for batches 11–18
+
+## OpenStreetMap data
+
+## 2026-11-02 – The Overpass endpoint is configurable
+Decision: `scripts/fetch-osm.mjs` reads the Overpass endpoint from the environment variable `OVERPASS_URL` and uses `https://overpass-api.de/api/interpreter` when it is not set, so a mirror can be used when the main instance answers 503 or not at all. The container that ran the first fetches could not reach overpass-api.de (HTTP 503, connection reset) or overpass.kumi.systems (no answer). The app still never calls Overpass; only this script does, and the files it writes are committed.
+Rejected: Hard-coding a mirror – the default stays the public main instance; a command-line flag – an environment variable also works through `npm run fetch:osm`.
+Spec: SPEC.md § 12.2
