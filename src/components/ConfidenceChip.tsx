@@ -50,7 +50,8 @@ export function ConfidenceChip({ figure, showSource = false, className }: Confid
 }
 
 export function ConfidencePopover({ figure, children }: { figure: Figure; children: React.ReactNode }) {
-  const sources = useStore((s) => s.pack.sources);
+  const pack = useStore((s) => s.pack);
+  const sources = [...pack.sources, ...pack.homeSources]; // S1–S22 and S-H1–S-H14
   const since = useStore((s) => s.ehrOutageSince);
   const source = figure.source ? sources.find((s) => s.key === figure.source) : undefined;
   const mirror = isMirror(figure);

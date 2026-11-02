@@ -57,3 +57,18 @@ export function offmapSlots(links: InfraLink[]): Map<string, { k: number; n: num
 export function isSchematic(link: InfraLink): boolean {
   return !link.verified || link.style === 'dashed' || link.style === 'dotted';
 }
+
+/** The vertices linked to `id` (and `id` itself): what stays undimmed when a node is selected. */
+export function linkedVertices(id: string, links: InfraLink[]): Set<string> {
+  const out = new Set<string>([id]);
+  for (const l of links) {
+    if (l.a === id) out.add(l.b);
+    if (l.b === id) out.add(l.a);
+  }
+  return out;
+}
+
+/** The links that touch `id`, for the "Linked to" list. */
+export function linksOf(id: string, links: InfraLink[]): InfraLink[] {
+  return links.filter((l) => l.a === id || l.b === id);
+}

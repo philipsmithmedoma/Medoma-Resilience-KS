@@ -4,7 +4,7 @@ import { useStore } from '@/data/store';
 import { SOURCE_ANCHORS } from '@/data/vocab';
 import { t, tm } from '@/lib/i18n';
 import { fmt, fmtDec } from '@/lib/format';
-import { collectFigures, type FigureEntry } from '@/lib/sources';
+import { collectFigures, collectHomeFigures, type FigureEntry } from '@/lib/sources';
 import { PageTitle, SectionHeading } from '@/components/PageTitle';
 import { StatusChip } from '@/components/Chip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,6 +20,7 @@ export function SourcesPage() {
   const pack = useStore((s) => s.pack);
   const location = useLocation();
   const entries = useMemo(() => collectFigures(pack), [pack]);
+  const homeFigures = useMemo(() => collectHomeFigures(pack), [pack]);
   const verified = entries.filter((e) => e.figure.confidence === 'verified' || e.figure.confidence === 'reported');
   const estimates = entries.filter((e) => e.figure.confidence === 'estimate');
   const illustrative = entries.filter((e) => e.figure.confidence === 'illustrative');
@@ -35,7 +36,7 @@ export function SourcesPage() {
       const t = window.setTimeout(() => el.classList.remove('bg-orange-light'), 1500);
       return () => window.clearTimeout(t);
     }
-  }, [location.hash, entries]);
+  }, [location.hash, entries, homeFigures]);
 
   const grouped = (list: FigureEntry[]) =>
     sections.map((section) => ({ section, rows: list.filter((e) => e.section === section) })).filter((g) => g.rows.length > 0);
@@ -154,6 +155,62 @@ export function SourcesPage() {
                 ))}
               </Fragment>
             ))}
+          </TableBody>
+        </Table>
+      </section>
+
+      <section>
+        <SectionHeading>{t('SOURCES.homeHeading')}</SectionHeading>
+        <p className="mb-3 max-w-[900px] text-text-secondary">{t('SOURCES.homeIntro')}</p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('SOURCES.columns.figure')}</TableHead>
+              <TableHead className="text-right">{t('SOURCES.columns.value')}</TableHead>
+              <TableHead>{t('SOURCES.columns.confidence')}</TableHead>
+              <TableHead>{t('SOURCES.columns.date')}</TableHead>
+              <TableHead>{t('SOURCES.columns.link')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody lang="sv">
+            {pack.homeSources.map((src) => {
+              const rows = homeFigures.filter((e) => e.figure.source === src.key);
+              return (
+                <Fragment key={src.key}>
+                  <TableRow id={src.key} className="scroll-mt-4 bg-bg-muted hover:bg-bg-muted">
+                    <TableCell colSpan={3} className="whitespace-normal font-medium">
+                      {src.key}: {src.name}
+                    </TableCell>
+                    <TableCell className="whitespace-normal">{src.date}</TableCell>
+                    <TableCell>
+                      {src.url ? (
+                        <a href={src.url} target="_blank" rel="noreferrer" className="text-primary-text hover:text-primary-hover hover:underline">
+                          {t('SOURCES.open')}
+                        </a>
+                      ) : (
+                        <span className="text-text-muted">{t('SOURCES.noLink')}</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  {rows.map((e, i) => (
+                    <TableRow key={`${src.key}-${i}`}>
+                      <TableCell className="whitespace-normal pl-6">
+                        {e.label}
+                        {e.figure.basis ? <span className="block text-small text-text-muted">{e.figure.basis}</span> : null}
+                      </TableCell>
+                      <TableCell className="text-right tabular whitespace-normal">
+                        {e.valueMax !== undefined ? `${fmt(e.figure.value ?? 0)}–${fmt(e.valueMax)}` : fmt(e.figure.value ?? 0)} {e.unit}
+                      </TableCell>
+                      <TableCell>
+                        <StatusChip status={tm('CONFIDENCE_LABELS')[e.figure.confidence]} label={tm('CONFIDENCE_LABELS')[e.figure.confidence]} />
+                      </TableCell>
+                      <TableCell>{e.figure.asOf ?? src.date}</TableCell>
+                      <TableCell />
+                    </TableRow>
+                  ))}
+                </Fragment>
+              );
+            })}
           </TableBody>
         </Table>
       </section>

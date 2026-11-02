@@ -66,3 +66,17 @@ export function collectFigures(pack: DataPack): FigureEntry[] {
 
   return out;
 }
+
+export interface HomeFigureEntry {
+  label: string;
+  figure: Figure;
+  unit: string;
+  valueMax?: number;
+}
+
+/** Figures on the Hospital at Home infrastructure nodes (DATA.md § 11), kept apart from collectFigures because their keys are S-H1…S-H14. */
+export function collectHomeFigures(pack: DataPack): HomeFigureEntry[] {
+  return pack.infraNodes.flatMap((n) =>
+    (n.figures ?? []).map((f) => ({ label: `${lt(n.name)}: ${lt(f.label)}`, figure: f, unit: lt(f.unit), valueMax: f.valueMax })),
+  );
+}

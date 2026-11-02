@@ -16,7 +16,7 @@ function IconButton({ label, onClick, primary, children }: { label: string; onCl
           type="button"
           aria-label={label}
           onClick={onClick}
-          className={cn('flex size-8 items-center justify-center rounded-md hover:bg-bg-muted', primary ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-text')}
+          className={cn('flex size-7 items-center justify-center rounded-md hover:bg-bg-muted min-[1600px]:size-8', primary ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-text')}
         >
           {children}
         </button>
@@ -55,7 +55,7 @@ export function ClockControl() {
   return (
     <div className="flex items-center gap-1">
       {chip ? <Chip tone="blue">{chip}</Chip> : null}
-      <span className="mx-1 text-body font-medium tabular" aria-label={t('CLOCK.ariaClock', { hhmm: formatClock(clock) })}>
+      <span className="mx-0.5 text-body font-medium tabular min-[1600px]:mx-1" aria-label={t('CLOCK.ariaClock', { hhmm: formatClock(clock) })}>
         {formatClock(clock)}
         {day > 1 ? <span className="ml-1 font-normal text-text-secondary">{t('CLOCK.day', { n: day })}</span> : null}
       </span>

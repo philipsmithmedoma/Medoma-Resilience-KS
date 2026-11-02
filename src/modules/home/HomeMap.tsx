@@ -11,11 +11,21 @@ export function HomeMap() {
   const pack = useStore((s) => s.pack);
   const nodes = useStore((s) => s.nodes);
   const layers = useStore((s) => s.home.layers);
+  const selectedId = useStore((s) => s.home.selectedNode);
+  const selectHomeNode = useStore((s) => s.selectHomeNode);
   // Only the two Karolinska sites are care nodes on this map; the region's hospitals are not part of the picture.
   const sites = useMemo(() => nodes.filter((n) => n.id === 'solna' || n.id === 'huddinge'), [nodes]);
   const overlay = useMemo<HomeOverlay>(
-    () => ({ layers, zones: pack.homeZones, infraNodes: pack.infraNodes, infraLinks: pack.infraLinks, patients: pack.homePatients }),
-    [layers, pack],
+    () => ({
+      layers,
+      zones: pack.homeZones,
+      infraNodes: pack.infraNodes,
+      infraLinks: pack.infraLinks,
+      patients: pack.homePatients,
+      selectedId,
+      onSelectNode: selectHomeNode,
+    }),
+    [layers, pack, selectedId, selectHomeNode],
   );
   return (
     <div className="flex h-full min-w-0 flex-col">

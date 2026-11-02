@@ -413,3 +413,12 @@ html .leaflet-bar a:hover {
 .leaflet-tooltip.home-map-label::before {
   display: none;
 }
+.home-node-dim {
+  opacity: 0.25;
+}
+.home-node-selected {
+  box-shadow: 0 0 0 3px var(--color-primary);
+}
+.leaflet-tooltip.home-map-label-dim {
+  opacity: 0.35;
+}

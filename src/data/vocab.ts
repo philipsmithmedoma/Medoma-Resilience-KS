@@ -4,6 +4,7 @@
 // Non-linguistic constants (ids, enum lists, tones, tints) follow the tables.
 import type {
   AcceptsLevel,
+  HomeEquipment,
   BeredskapsLage,
   CareLevel,
   Confidence,
@@ -30,7 +31,22 @@ import type {
 // ---------------------------------------------------------------------------
 // Swedish (default)
 export const sv = {
-  MODULES: { flow: 'Läget nu', home: 'Sjukhus hemma', capacity: 'Kapacitet', incident: 'Incident', evacuation: 'Evakuering', resources: 'Resurser', network: 'Nätverk', sources: 'Källor', start: 'Start' },
+  MODULES: {
+    flow: 'Läget nu',
+    home: 'Sjukhus hemma',
+    capacity: 'Kapacitet',
+    incident: 'Incident',
+    evacuation: 'Evakuering',
+    resources: 'Resurser',
+    network: 'Nätverk',
+    sources: 'Källor',
+    start: 'Start',
+    patients: 'Patienter',
+    activities: 'Aktiviteter',
+    planning: 'Planering',
+    employees: 'Medarbetare',
+    reporting: 'Rapportering',
+  },
 
   SCOPE_LABELS: {
     karolinska: 'Karolinska',
@@ -686,6 +702,13 @@ export const sv = {
   },
 
   // Källor (SPEC.md § 6.10)
+  STUB: {
+    text: 'Den här modulen finns i Medoma i dag och ligger utanför prototypen.',
+    link: 'Gå till Sjukhus hemma',
+    menu: 'Medoma',
+    menuAria: 'Medomas plattformsmoduler',
+  },
+
   HOME: {
     title: 'Sjukhus hemma',
     mapAria: 'Karta över patienter i hemmet och deras infrastruktur',
@@ -710,9 +733,38 @@ export const sv = {
       bridge: 'Bro',
       unverifiedNode: 'Ej verifierad nod',
     },
+    equipment: {
+      Oxygen: 'Syrgas',
+      'IV infusion': 'Infusion',
+      Monitoring: 'Övervakning',
+      'Home ventilator': 'Hemrespirator',
+      'Home dialysis': 'Hemdialys',
+    },
+    list: {
+      title: 'Patienter ({n})',
+      filters: { zone: 'Område', equipment: 'Utrustning', all: 'Alla', visitToday: 'Besök i dag', affectedOnly: 'Endast påverkade' },
+      affectedOnlyHint: 'Går att välja när en störning är satt på kartan.',
+      noMatch: 'Inga patienter matchar filtren.',
+      clearFilters: 'Rensa filter',
+      visitToday: 'Besök i dag',
+      battery: 'Batteri {n} h',
+      noEquipment: 'Ingen utrustning',
+    },
+    panel: {
+      empty: 'Välj en nod på kartan för att se vad den är och vad den försörjer.',
+      linkedTo: 'Kopplad till',
+      noLinks: 'Inga kopplingar.',
+      status: 'Status',
+      position: 'Läge på kartan',
+      commonSource: 'Gemensam råvattenkälla',
+      offmap: 'Utanför kartan: {text}',
+      deselect: 'Avmarkera',
+    },
   },
 
   SOURCES: {
+    homeHeading: 'Sjukhus hemma: infrastruktur',
+    homeIntro: 'Källor till kartlagren för vatten, el och vägar. Nodernas läge är från Google Places (avläst 2026-11-02) om inget annat anges i panelen; dragningen av varje förbindelse är schematisk.',
     title: 'Källor',
     intro: 'Alla uppgifter i demon är antingen verifierade mot öppna källor, rapporterade av Medoma, estimat med angiven grund eller illustrativa scenariovärden.',
     verifiedTable: 'Verifierade och rapporterade uppgifter',
@@ -852,7 +904,22 @@ export type Vocab = typeof sv;
 // ---------------------------------------------------------------------------
 // English. Proper nouns, ward names, abbreviations and the region's legal terms stay Swedish (DESIGN-LANG.md § 4).
 export const en: Vocab = {
-  MODULES: { flow: 'Live status', home: 'Hospital at Home', capacity: 'Capacity', incident: 'Incident', evacuation: 'Evacuation', resources: 'Resources', network: 'Network', sources: 'Sources', start: 'Start' },
+  MODULES: {
+    flow: 'Live status',
+    home: 'Hospital at Home',
+    capacity: 'Capacity',
+    incident: 'Incident',
+    evacuation: 'Evacuation',
+    resources: 'Resources',
+    network: 'Network',
+    sources: 'Sources',
+    start: 'Start',
+    patients: 'Patients',
+    activities: 'Activities',
+    planning: 'Planning',
+    employees: 'Employees',
+    reporting: 'Reporting',
+  },
 
   SCOPE_LABELS: {
     karolinska: 'Karolinska',
@@ -1504,6 +1571,13 @@ export const en: Vocab = {
     asihLabel: 'ASIH',
   },
 
+  STUB: {
+    text: 'This module exists in Medoma today and is outside the scope of this prototype.',
+    link: 'Go to Hospital at Home',
+    menu: 'Medoma',
+    menuAria: 'Medoma platform modules',
+  },
+
   HOME: {
     title: 'Hospital at Home',
     mapAria: 'Map of patients at home and the infrastructure they depend on',
@@ -1528,9 +1602,38 @@ export const en: Vocab = {
       bridge: 'Bridge',
       unverifiedNode: 'Unverified node',
     },
+    equipment: {
+      Oxygen: 'Oxygen',
+      'IV infusion': 'IV infusion',
+      Monitoring: 'Monitoring',
+      'Home ventilator': 'Home ventilator',
+      'Home dialysis': 'Home dialysis',
+    },
+    list: {
+      title: 'Patients ({n})',
+      filters: { zone: 'Area', equipment: 'Equipment', all: 'All', visitToday: 'Visit today', affectedOnly: 'Affected only' },
+      affectedOnlyHint: 'Available once a disruption is set on the map.',
+      noMatch: 'No patients match the filters.',
+      clearFilters: 'Clear filters',
+      visitToday: 'Visit today',
+      battery: 'Battery {n} h',
+      noEquipment: 'No equipment',
+    },
+    panel: {
+      empty: 'Select a node on the map to see what it is and what it supplies.',
+      linkedTo: 'Linked to',
+      noLinks: 'No links.',
+      status: 'Status',
+      position: 'Position on the map',
+      commonSource: 'Common raw-water source',
+      offmap: 'Off the map: {text}',
+      deselect: 'Clear selection',
+    },
   },
 
   SOURCES: {
+    homeHeading: 'Hospital at Home: infrastructure',
+    homeIntro: 'Sources for the water, electricity and road layers. Node positions are from Google Places (read 2026-11-02) unless the panel says otherwise; the routing of every link is schematic.',
     title: 'Sources',
     intro: 'Every figure in the demo is either verified against open sources, reported by Medoma, an estimate with a stated basis or an illustrative scenario value.',
     verifiedTable: 'Verified and reported figures',
@@ -1697,6 +1800,15 @@ export const MODULE_DEFS: ModuleDef[] = [
   { key: 'network', path: '/natverk' },
 ];
 
+/** The five Medoma platform modules (SPEC.md § 11.2): stub pages in the nav before the prototype's modules. */
+export const PLATFORM_DEFS: ModuleDef[] = [
+  { key: 'patients', path: '/patients' },
+  { key: 'activities', path: '/activities' },
+  { key: 'planning', path: '/planning' },
+  { key: 'employees', path: '/employees' },
+  { key: 'reporting', path: '/reporting' },
+];
+
 export const NODE_TYPES: NodeType[] = ['Hospital', 'Care hub', 'Field hospital', 'Home care', 'Capacity class', 'Transport'];
 export const NODE_STATUSES: NodeStatus[] = ['Operational', 'Degraded', 'Standing up', 'Offline'];
 export const SHARING_LEVELS: SharingLevel[] = ['Full', 'Capacity only', 'None'];
@@ -1706,6 +1818,7 @@ export const CARE_LEVELS: CareLevel[] = ['Ward', 'Monitored', 'Intensive'];
 export const ACCEPTS_LEVELS: AcceptsLevel[] = ['Ward', 'Monitored', 'Intensive', 'Home'];
 export const TRANSPORT_NEEDS: TransportNeed[] = ['Walking', 'Wheelchair', 'Stretcher', 'Ambulance', 'Intensive care transport'];
 export const EQUIPMENT: Equipment[] = ['Oxygen', 'IV infusion', 'Monitoring'];
+export const HOME_EQUIPMENT: HomeEquipment[] = ['Oxygen', 'IV infusion', 'Monitoring', 'Home ventilator', 'Home dialysis'];
 export const MOVE_STATUSES: MoveStatus[] = ['Planned', 'Accepted', 'Transport assigned', 'Departed', 'Arrived', 'Handed over'];
 export const PRIORITIES: Priority[] = ['Low', 'Normal', 'High', 'Critical'];
 export const REQUEST_STATUSES: RequestStatus[] = ['Requested', 'Accepted', 'Allocated', 'Dispatched', 'Received', 'Rejected'];

@@ -481,3 +481,33 @@ Spec: SPEC.md § 11.5–11.6, DESIGN-DARK.md § 3
 Decision: With "Sjukhus hemma" the header overflowed 1280 px (1385 px in Swedish, wider in English). Below 1536 px the three decorative icons (chat, support, documentation) are hidden and the cluster gap is 4 px; below 1600 px the module gap is 24 px instead of 32 and the nav's left margin is 16 px. Measured with a headless browser, nothing scrolls horizontally in either language at 1280, 1360, 1440, 1536, 1600 and 1920 px. This supersedes the 32 px gap at 1280 px that KS batch 1 required; the batch 3 nav work re-measures with the platform tabs.
 Rejected: A horizontal scroll in the nav – violates the minimum-viewport rule; hiding the language or theme toggle – they are features.
 Spec: SPEC.md § 11.2 ("all tabs must fit at the 1280 px minimum viewport"), DESIGN-KS.md § 2
+
+## 2026-11-02 – Batch 3 – The five platform tabs collapse into a "Medoma" menu below 2100 px
+Decision: SPEC.md § 11.2's fallback applies. With the five platform tabs inline the nav needs about 590 px more than the six prototype tabs; it only fits above 2100 px, so below that the five tabs are one overflow menu labelled "Medoma" (a dropdown of five links; it carries the active top bar while a stub page is open), followed by the 1 px divider and the prototype's modules. To make that fit at the 1280 px minimum in both languages the nav was tightened by breakpoint, superseding batch 2's values: below 1600 px the header padding is 12 px, the module gap 16 px, the left margin 8 px, the clock buttons and theme toggle 28 px and the cluster gap 2 px; the three decorative icons appear from 1680 px, the module gap is 24 px from 1600 px and 32 px from 1760 px. Measured in a headless browser: nothing scrolls horizontally at 1280, 1366, 1440, 1536, 1600, 1680, 1760, 1920, 2100 and 2560 px in Swedish or English. In English at 1280 px the nav has 0 to 2 px to spare.
+Rejected: Inline platform tabs with smaller type – DESIGN.md fixes 16/500; hiding the language toggle – it is a feature; a horizontally scrolling nav – violates the minimum-viewport rule.
+Spec: SPEC.md § 11.2
+
+## 2026-11-02 – Batch 3 – Stub routes reuse the first prototype's old paths
+Decision: The five stubs live at `/patients`, `/activities`, `/planning`, `/employees` and `/reporting`; the first prototype's redirects from those paths to Start are removed because the paths now render a page. The stub text and link come from `STUB` in vocab; the title is the module label.
+Rejected: New paths such as `/plattform/patienter` – the old paths are the natural ones and nothing else uses them.
+Spec: SPEC.md § 11.2, § 3
+
+## 2026-11-02 – Batch 3 – Selection, dimming and the panel
+Decision: Selecting an infrastructure node is view state (`home.selectedNode`, not logged). A click on a marker selects it, a second click or a click on the empty map clears it, and switching off the node's layer clears it. Dimmed: links that do not touch the node (15 % opacity), nodes, zone points and zone labels that are not linked to it (25–35 %), and patient dots in zones that are not linked (10 % instead of 30 %). The panel shows the layer tag and kind, the name, the role, "Kopplad till" (other infrastructure nodes are links that select them, sites and zones are plain text, an off-map arrow reads "Utanför kartan: …", each with the link's label), the status (red and bold when the node is unverified), the node's figures with their confidence chip and source, and the position with its confidence chip and basis. The three works (Görvälnverket, Lovö, Norsborg) also show the common raw-water source (Östra Mälaren) as its own paragraph, as DATA.md § 11.1 says it is "shown as the status text on the three works".
+Rejected: Selecting zones and patients as well – the spec selects infrastructure; a marker for Östra Mälaren and the reserve supply – DATA.md gives them no marker of their own.
+Spec: SPEC.md § 11.5–11.6, DATA.md § 11.1
+
+## 2026-11-02 – Batch 3 – Position basis texts are shown in the wording of DATA.md
+Decision: `coordSource` is one string in the spec and the pack keeps DATA.md's English wording ("Görväln area, Järfälla; Places returned the adjacent Görväln House …"); the panel shows it as written with `lang="en"` under the confidence chip, in Swedish mode as well. The chip and the heading are translated.
+Rejected: Translating every basis text into a second string field – the spec types the field as a plain string and the texts are source notes, not UI copy.
+Spec: SPEC.md § 11.3, § 11.4
+
+## 2026-11-02 – Batch 3 – Source keys S-H1…S-H14 get their own section on Källor
+Decision: Källor gains a section "Sjukhus hemma: infrastruktur" listing S-H1…S-H14 with anchors (`/kallor#S-H12`) and every infrastructure figure under its source; the confidence popover looks a figure's source up in both source lists. `collectFigures` is unchanged, so the existing source test still pins S1–S22.
+Rejected: Merging the lists – breaks the existing test and mixes the hospital's figures with the infrastructure's.
+Spec: SPEC.md § 11.3, DESIGN-KS.md § 4, § 9
+
+## 2026-11-02 – Batch 3 – List filters are local; "Endast påverkade" waits for batch 4
+Decision: The patient list keeps its zone, equipment, visit-today and affected-only filters in component state (they are not scenario state and not logged). The affected-only chip is disabled, with a title explaining why, until a disruption exists (batch 4 passes the affected ids). Rows show name, age, area, team, equipment with battery hours and a "Besök i dag" chip; groups are the zones in pack order and patients are sorted by family and given name.
+Rejected: Filters in the store – nothing else reads them, and a demo reset would clear what the presenter set.
+Spec: SPEC.md § 11.6
