@@ -18,6 +18,11 @@ export function ImpactPanel({ impact }: { impact: Impact }) {
   const clock = useStore((s) => s.clock);
   const endHomeDisruption = useStore((s) => s.endHomeDisruption);
   const active = activeDisruptions(home.disruptions);
+  const sendTeam = useStore((s) => s.sendTeam);
+  const teams = pack.homeTeams;
+  const teamName = (id: string) => teams.find((x) => x.id === id)?.name ?? id;
+  // Reassignment suggestions (SPEC.md § 14.2): patients whose own team cannot reach them and another team can; one already sent is done.
+  const suggestions = impact.reassignments.filter((a) => home.work[a.patientId]?.assignedTeam !== a.toTeam);
 
   const facts: string[] = [];
   if (summary.unreachable > 0) {
@@ -35,6 +40,7 @@ export function ImpactPanel({ impact }: { impact: Impact }) {
     facts.push(tn('HOME.impact.facts.water', summary.waterOut));
     facts.push(t('HOME.impact.facts.dialysis', { n: summary.dialysis }));
   }
+  if (summary.teamCannotReach > 0) facts.push(t('HOME.teams.cannotReach', { n: summary.teamCannotReach, m: summary.teamReassignable }));
 
   return (
     <div className="space-y-4 px-4 py-4">
@@ -74,6 +80,27 @@ export function ImpactPanel({ impact }: { impact: Impact }) {
           </ul>
         ) : null}
       </section>
+      {suggestions.length > 0 ? (
+        <section className="space-y-2" aria-label={t('HOME.teams.suggestions')}>
+          <h3 className="text-body font-medium">{t('HOME.teams.suggestions')}</h3>
+          <ul className="space-y-2">
+            {suggestions.map((a) => {
+              const p = pack.homePatients.find((x) => x.id === a.patientId)!;
+              return (
+                <li key={a.patientId} className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate">
+                    {p.familyName}, {p.givenName}
+                    <span className="block text-small text-text-secondary">{teamName(a.ownTeam)}</span>
+                  </span>
+                  <Button size="sm" variant="secondary" onClick={() => sendTeam(a.patientId, a.toTeam)}>
+                    {t('HOME.teams.reassign', { team: teamName(a.toTeam) })}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

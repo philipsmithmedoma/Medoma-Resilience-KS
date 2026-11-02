@@ -1,9 +1,9 @@
 // Hospital at Home reachability and impact – SPEC.md § 11.5 and § 12.3. Pure: Dijkstra by length over the road graph from
 // the sites in scope, a status per patient, one row per affected patient and their priority order. Zones keep their role
 // for power and water outages only.
-import type { DataPack, HomePatient, SiteId, ZoneId } from '@/data/types';
-import { blockedWayFlags, dijkstra, pathWayNames } from './roadGraph';
-import { getRoadModel, sourceVertices, type RoadModel } from './roadModel';
+import type { DataPack, HomePatient, HomeTeam, SiteId, TeamId, ZoneId } from '@/data/types';
+import { blockedWayFlags, dijkstra, pathWayNames, snapToGraph, type RoadGraph } from './roadGraph';
+import { getRoadModel, sourceVertices, teamDistancesFrom, type RoadModel } from './roadModel';
 import { batteryEmptyAt } from './disruptions';
 
 export const BOTH_SITES: SiteId[] = ['solna', 'huddinge'];
@@ -46,6 +46,22 @@ export function blockedFlags(model: RoadModel, state: Disruptions, pack: RoadPac
   return blockedWayFlags(model.graph, { ways: state.blockedWays, roads: state.blockedRoads, names });
 }
 
+/**
+ * Distances in metres from a team's base over the graph with the given ways blocked (SPEC.md § 14.2). The base snaps to the
+ * graph like a site; all Infinity when no road lies within 1.5 km of it.
+ */
+export function teamDistances(graph: RoadGraph, team: Pick<HomeTeam, 'baseLat' | 'baseLng'>, blocked?: Uint8Array): Float64Array {
+  return teamDistancesFrom(graph, snapToGraph(graph, team.baseLat, team.baseLng), blocked);
+}
+
+/** Which teams reach a patient by road, and which is nearest by road length (SPEC.md § 14.2). */
+export interface TeamReach {
+  reachableBy: TeamId[];
+  nearestTeam: TeamId | null;
+  /** Metres by road from each team that reaches the patient. */
+  distanceM: Record<TeamId, number>;
+}
+
 export type ImpactReason = 'unreachable' | 'detour' | 'power' | 'water';
 
 export interface ImpactRow {
@@ -63,6 +79,9 @@ export interface ImpactRow {
   batteryEmptyAt?: number | null;
   /** The clock has passed `batteryEmptyAt`; the row is then critical whatever the equipment. */
   batteryEmpty?: boolean;
+  /** The teams that reach the patient and the nearest one (SPEC.md § 14.2); absent in rows built without a road model. */
+  reachableBy?: TeamId[];
+  nearestTeam?: TeamId | null;
 }
 
 /** The window of the summary line "N run out within 2 h" (SPEC.md § 13.2). */
@@ -84,11 +103,26 @@ export interface ImpactSummary {
   earliestBatteryEmptyAt: number | null;
   waterOut: number;
   dialysis: number; // water-critical among those with a water disruption
+  /** Patients whose own team reached them before the roads closed and no longer does (SPEC.md § 14.2). */
+  teamCannotReach: number;
+  /** Of those, the ones another team still reaches. */
+  teamReassignable: number;
+}
+
+/** A patient whose own team no longer reaches them, with the team that could take over (SPEC.md § 14.2). */
+export interface Reassignment {
+  patientId: string;
+  ownTeam: TeamId;
+  toTeam: TeamId;
 }
 
 export interface Impact {
   rows: ImpactRow[]; // pack order; one row per patient with at least one flag
   summary: ImpactSummary;
+  /** For every patient with a road: the teams that reach them now. Empty without a road model or without teams. */
+  teamReach: Map<string, TeamReach>;
+  /** The patients whose own team cannot reach them but another team does, in pack order. */
+  reassignments: Reassignment[];
 }
 
 /** OSM ids of every way the state closes (by id, by road or through a node), for drawing them in the danger colour. */
@@ -108,7 +142,7 @@ export function blockedWayIdSet(model: RoadModel, state: Disruptions, pack: Road
  * patient is not a row here.
  */
 export function impact(
-  pack: Pick<DataPack, 'homeZones' | 'homePatients' | 'infraNodes'>,
+  pack: Pick<DataPack, 'homeZones' | 'homePatients' | 'infraNodes'> & Partial<Pick<DataPack, 'homeTeams'>>,
   state: Disruptions,
   scopeSites: SiteId[],
   model: RoadModel | null = getRoadModel(),
@@ -122,6 +156,32 @@ export function impact(
   if (model && roadsClosed) {
     base = model.baseline(sites);
     now = dijkstra(model.graph, sourceVertices(model, sites), blockedFlags(model, state, pack)).dist;
+  }
+
+  // Teams (SPEC.md § 14.2): who reaches each patient now, and before anything was closed.
+  const teams = pack.homeTeams ?? [];
+  const teamReach = new Map<string, TeamReach>();
+  const ownCannot: Array<{ patientId: string; ownTeam: TeamId; toTeam: TeamId | null }> = [];
+  if (model && teams.length) {
+    const baseTeams = model.teamBaseline();
+    const flags = roadsClosed ? blockedFlags(model, state, pack) : undefined;
+    const nowTeams = new Map(teams.map((tm) => [tm.id, flags ? teamDistancesFrom(model.graph, model.teams[tm.id], flags) : baseTeams.get(tm.id)!]));
+    for (const p of pack.homePatients) {
+      const snap = model.patients.get(p.id);
+      if (!snap || snap.unsnapped) continue;
+      const distanceM: Record<TeamId, number> = {};
+      for (const tm of teams) {
+        const d = nowTeams.get(tm.id)![snap.vertex];
+        if (Number.isFinite(d)) distanceM[tm.id] = d;
+      }
+      const reachableBy = teams.map((tm) => tm.id).filter((id) => id in distanceM);
+      const nearestTeam = reachableBy.length ? reachableBy.reduce((a, b) => (distanceM[b] < distanceM[a] ? b : a)) : null;
+      teamReach.set(p.id, { reachableBy, nearestTeam, distanceM });
+      const own = teams.find((tm) => tm.name === p.team);
+      if (own && roadsClosed && Number.isFinite(baseTeams.get(own.id)![snap.vertex]) && !reachableBy.includes(own.id)) {
+        ownCannot.push({ patientId: p.id, ownTeam: own.id, toTeam: nearestTeam });
+      }
+    }
   }
 
   const rows: ImpactRow[] = [];
@@ -149,7 +209,7 @@ export function impact(
     const start = power ? state.powerStart?.get(p.zone) : undefined;
     const emptyAt = start !== undefined && p.batteryHours !== null ? batteryEmptyAt(start, p.batteryHours) : null;
     const batteryEmpty = emptyAt !== null && clock !== null && clock >= emptyAt;
-    rows.push({ patient: p, reasons, unreachable, delayed, power, water, affected, critical: affected && (p.elCritical || p.waterCritical || batteryEmpty), batteryEmptyAt: emptyAt, batteryEmpty });
+    rows.push({ patient: p, reasons, unreachable, delayed, power, water, affected, critical: affected && (p.elCritical || p.waterCritical || batteryEmpty), batteryEmptyAt: emptyAt, batteryEmpty, reachableBy: teamReach.get(p.id)?.reachableBy, nearestTeam: teamReach.get(p.id)?.nearestTeam });
   }
 
   const unreachableRows = rows.filter((r) => r.unreachable);
@@ -173,8 +233,11 @@ export function impact(
     earliestBatteryEmptyAt: emptyAts.length ? Math.min(...emptyAts) : null,
     waterOut: waterRows.length,
     dialysis: waterRows.filter((r) => r.patient.waterCritical).length,
+    teamCannotReach: ownCannot.length,
+    teamReassignable: ownCannot.filter((c) => c.toTeam !== null).length,
   };
-  return { rows, summary };
+  const reassignments = ownCannot.filter((c): c is Reassignment => c.toTeam !== null);
+  return { rows, summary, teamReach, reassignments };
 }
 
 /**

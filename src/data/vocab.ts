@@ -754,6 +754,13 @@ export const sv = {
   },
 
   HOME: {
+    teams: {
+      cannotReach: '{n} patienter som det egna teamet inte når; {m} av dem nås av annat team',
+      suggestions: 'Förslag på ombokning',
+      reassign: 'Flytta till {team}',
+      base: 'Bas: {base}',
+      cars: '{n} bilar',
+    },
     tabs: { label: 'Panel', panel: 'Läge', messages: 'Från meddelande' },
     disruptionKinds: { road: 'Väg', power: 'El', water: 'Vatten' },
     fromMessage: {
@@ -796,6 +803,7 @@ export const sv = {
       slot: 'Ny tid',
       noVisit: 'inget besök i dag',
       noSlots: 'Inga lediga tider',
+      noTeam: 'Inget team når patienten',
       team: 'Team',
       selectTeam: 'Välj team',
       bulk: 'Kontakta alla kritiska',
@@ -1787,6 +1795,13 @@ export const en: Vocab = {
   },
 
   HOME: {
+    teams: {
+      cannotReach: '{n} patients whose own team cannot reach them; {m} of them reachable by another team',
+      suggestions: 'Reassignment suggestions',
+      reassign: 'Reassign to {team}',
+      base: 'Base: {base}',
+      cars: '{n} cars',
+    },
     tabs: { label: 'Panel', panel: 'Status', messages: 'From message' },
     disruptionKinds: { road: 'Road', power: 'Power', water: 'Water' },
     fromMessage: {
@@ -1829,6 +1844,7 @@ export const en: Vocab = {
       slot: 'New time',
       noVisit: 'no visit today',
       noSlots: 'No free times',
+      noTeam: 'No team can reach the patient',
       team: 'Team',
       selectTeam: 'Select team',
       bulk: 'Contact all critical',

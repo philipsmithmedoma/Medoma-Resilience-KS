@@ -90,7 +90,7 @@ function PatientRow({ p, row, expanded, onToggle }: { p: HomePatient; row?: Impa
       </div>
       {expanded && row?.affected ? (
         <div className="border-t border-border bg-bg-muted px-4 pb-3">
-          <PatientActions patientId={p.id} />
+          <PatientActions patientId={p.id} reachableBy={row.reachableBy} />
         </div>
       ) : null}
     </li>

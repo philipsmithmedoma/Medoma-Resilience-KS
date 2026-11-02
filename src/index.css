@@ -434,3 +434,12 @@ html .leaflet-bar a:hover {
     color: #000;
   }
 }
+
+.home-team {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: var(--node-colour);
+  border: 1.5px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--node-colour);
+}

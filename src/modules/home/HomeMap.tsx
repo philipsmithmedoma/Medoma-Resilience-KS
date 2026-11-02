@@ -70,6 +70,7 @@ export function HomeMap({ impact, geo }: { impact: Impact; geo: GeoData | null }
       onToggleNode: toggleBlockedNode,
       onTapWay,
       onToggleZone: home.mode === 'el' ? togglePowerOut : toggleWaterOut,
+      teams: pack.homeTeams,
     }),
     [home, pack, geo, infraNodes, lines, blockedWayIds, onTapWay, patientMarks, selectHomeNode, toggleBlockedNode, togglePowerOut, toggleWaterOut],
   );

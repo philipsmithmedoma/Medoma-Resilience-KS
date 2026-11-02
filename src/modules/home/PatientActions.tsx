@@ -15,7 +15,7 @@ type Form = null | 'contact' | 'move' | 'team';
  * The status chain and the five actions of one patient (SPEC.md § 13.3): Contact, Move visit (only with a visit today),
  * Send team, Bring in, Confirm. Used in the expanded row of /home and in the detail pane of /planning.
  */
-export function PatientActions({ patientId }: { patientId: string }) {
+export function PatientActions({ patientId, reachableBy }: { patientId: string; reachableBy?: string[] }) {
   const pack = useStore((s) => s.pack);
   const work = useStore((s) => s.home.work[patientId]);
   const visits = useStore((s) => s.home.visits);
@@ -38,6 +38,8 @@ export function PatientActions({ patientId }: { patientId: string }) {
   const visit = visits.find((v) => v.patientId === patientId);
   const visitTeam = pack.homeTeams.find((x) => x.id === (work?.assignedTeam ?? visit?.teamId));
   const slots = visit && visitTeam ? freeSlots(effectiveVisits(visits, allWork).filter((v) => v.id !== visit.id), visitTeam, clock) : [];
+  // Send team offers the teams that can reach the patient (SPEC.md § 14.2); without road data every team.
+  const teamOptions = reachableBy ? pack.homeTeams.filter((x) => reachableBy.includes(x.id)) : pack.homeTeams;
   const done = () => setForm(null);
   const toggle = (f: Exclude<Form, null>) => setForm(form === f ? null : f);
 
@@ -118,11 +120,12 @@ export function PatientActions({ patientId }: { patientId: string }) {
               <SelectValue placeholder={t('HOME.work.selectTeam')} />
             </SelectTrigger>
             <SelectContent>
-              {pack.homeTeams.map((x) => (
+              {teamOptions.map((x) => (
                 <SelectItem key={x.id} value={x.id}>
                   {x.name} ({lt(x.baseLabel)})
                 </SelectItem>
               ))}
+              {teamOptions.length === 0 ? <div className="px-2 py-1.5 text-small text-text-secondary">{t('HOME.work.noTeam')}</div> : null}
             </SelectContent>
           </Select>
           <Button
