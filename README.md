@@ -24,10 +24,11 @@ Kräver Node 22. Minsta bredd 1280 px. Kartunderlaget hämtas från OpenStreetMa
 | `src/data/packs/types.ts` | Domänmodellen och `DataPack`-gränssnittet. |
 | `src/data/vocab.ts` | Alla svenska UI-strängar och etiketter för enum-värden. |
 | `src/data/store*.ts` | Zustand-store med slices för incident, evakuering, resurser, nätverk, Läget nu och scenario. Varje tillståndsändring loggas med scenarioklockans tid. |
-| `src/data/packs/geo/` | OpenStreetMap-data (`roads.json`, `streets.json`, `power.json`, `water.json`) eller, tills de hämtats, fixturen. README där anger källa, datum och ODbL. |
-| `scripts/` | `fetch-osm.mjs` (Overpass till GeoJSON, `npm run fetch:osm`), `overpass/*.overpassql`, `generate-patients.mjs`, `make-geo-fixtures.mjs`. |
-| `src/lib/` | Rena moduler med tester: `forecast.ts`, `placement.ts`, `scenario.ts`, `flow.ts`, `capacity.ts`, `suggest.ts`, `parse.ts`, `figure.ts`, `format.ts`, `reachability.ts` och `roadGraph.ts` (väggraf, Dijkstra och påverkan för Sjukhus hemma), `osmNodes.ts`. |
-| `src/modules/` | Sidorna: `start`, `flow` (Läget nu), `home` (Sjukhus hemma), `capacity`, `incident`, `evacuation`, `resources`, `network`, `sources` (Källor), `scenario` (panelen). |
+| `src/data/packs/home-packs.ts`, `lund.ts`, `home-teams.ts`, `home-visits.ts` | Hemsjukvårdens datapaket (`homePacks`: Karolinska och SUS Lund), team, dagens besök och växeln mellan paketen. |
+| `src/data/packs/geo/<paket>/` | OpenStreetMap-data (`roads.json`, `streets.json`, `power.json`, `water.json`) eller, tills de hämtats, fixturen, per hemsjukvårdspaket (`karolinska`, `lund`). README där anger källa, datum och ODbL. |
+| `scripts/` | `fetch-osm.mjs [paket]` (Overpass till GeoJSON, `node scripts/fetch-osm.mjs karolinska` eller `lund`, valfritt `--bbox s,w,n,e`), `overpass/*.overpassql` och `overpass/lund/`, `generate-patients.mjs` (Karolinska och Lund), `make-geo-fixtures.mjs [paket]`. |
+| `src/lib/` | Rena moduler med tester: `forecast.ts`, `placement.ts`, `scenario.ts`, `flow.ts`, `capacity.ts`, `suggest.ts`, `parse.ts`, `figure.ts`, `format.ts`, `reachability.ts` och `roadGraph.ts` (väggraf, Dijkstra, påverkan och teamens räckvidd för Sjukhus hemma), `osmNodes.ts`, `disruptions.ts` (störningar i tid och batteritider), `planning.ts`, `disruption-message.ts`, `home-sites.ts`. |
+| `src/modules/` | Sidorna: `start`, `flow` (Läget nu), `home` (Sjukhus hemma, Planering och Patienter), `capacity`, `incident`, `evacuation`, `resources`, `network`, `sources` (Källor), `scenario` (panelen). |
 | `DATA.md` | Läsbar källa för datapaketet med källförteckning (S1–S22). |
 | `SPEC.md`, `DESIGN.md`, `DESIGN-KS.md` | Beteende och utseende. |
 | `DECISIONS.md` | Varje val som specen inte gör, med avvisat alternativ. |
@@ -50,7 +51,7 @@ Navigationen har två lägen. I normal drift visas Medomas fem plattformsflikar,
 
 ## Presentatörsmanus
 
-Startsidan (logotypen) har fem kapitel, och Sjukhus hemma visas som steg 6 nedan. Varje kapitel återställer demon, sätter omfattning och sida och startar vid behov ett scenario, så kapitlen kan visas i valfri ordning.
+Startsidan (logotypen) har fem kapitel, och berättelsen om tid, team och ett andra sjukhus (Sjukhus hemma) står efter dem. Varje kapitel återställer demon, sätter omfattning och sida och startar vid behov ett scenario, så kapitlen kan visas i valfri ordning.
 
 ### Vad man säger om chipen
 
@@ -110,11 +111,27 @@ Klicka **Starta kapitel** på Regional omfördelning. Nätverk öppnas för Regi
 - Klicka **Utför** på Etablera vårdhubb Flemingsberg: noden dyker upp i tabellen som Under uppstart, i omfattningsväljaren och på kartan, och går i drift efter fyra tick med 40 platser som tar emot patienter.
 - Peka på Utskrivningsklara till ASIH och Tidigarelägg utskrivningar som Karolinskas egna bidrag.
 
-### Steg 6 – Sjukhus hemma
+### Berättelsen i ett svep – tid, team och ett andra sjukhus
 
-Sjukhus hemma ligger i navigationen direkt efter Läget nu (`/home`). Det är inget kapitel på startsidan utan ett sjätte steg som visas efter de fem, eller på egen hand. De 150 patienterna är fiktiva och märkta så, de bor på gator (gatunamn och husnummer är illustrativa) och antalet bär chipet Illustrativt.
+En sammanhängande demo på ungefär tio minuter, utan kapitelknapparna. Starta på `/` i en fräsch laddning (Demo, Återställ demon). Varje steg är kontrollerat i den körande appen från början till slut.
 
-**Den riktiga kartan.** Vägnätet (motorväg till sekundärväg), broar, tunnlar, 400/220 kV-stationer och -ledningar och vattenverk kommer från OpenStreetMap, inte från handritade korridorer. Datafilerna hämtas lokalt med `npm run fetch:osm` (det enda som anropar internet, och bara Overpass) och checkas in; kör därefter `node scripts/generate-patients.mjs` så att patienterna hamnar på de riktiga gatorna. Tills filerna finns använder appen en handritad fixtur med samma schema: kartan, broarna och beräkningarna fungerar, men positionerna är påhittade och elnodernas lägen står som Illustrativt. Med riktiga data står de som Uppgift med källan "OpenStreetMap, datum", och kartans källrad får ODbL-texten.
+1. **Öppna Medoma Center.** `/` går till Patienter, plattformens vanliga lista över de 150 hemmapatienterna (namn, ålder, gata, team, utrustning). Navigationen visar de fem plattformsflikarna och knappen **Beredskap**; inga resiliensmoduler syns. Säg att Planering och Patienter är riktiga sidor i normal drift och att resiliensen kommer ovanpå.
+2. **Tryck Beredskap.** Du hamnar på Start: röd indikator **Beredskapsläge**, flikarna Läget nu, Sjukhus hemma, Kapacitet med flera, och kortet **Sjukhus hemma** med fyra siffror (patienter i hemmet, påverkade nu, onåbara med bil, batteri slut inom 2 h), alla Illustrativt, och länken **Öppna Sjukhus hemma**.
+3. **Se Läget nu.** Klicka fliken Läget nu: sjukhusets egen bild (vårdplatser, akuten, IVA) med chipen. Det är den bilden hemsjukvården hänger på.
+4. **Öppna Sjukhus hemma.** Kartan passas mot zonerna, de fyra teamen ritas som små kvadrater (ASIH Nord, City, Syd, Sydväst) och patienterna som punkter. Mittpanelen har två flikar: **Läge** och **Från meddelande**.
+5. **Skapa vägstörningen från meddelandet.** Fliken **Från meddelande**: tre illustrativa notiser (Trafikverket, Ellevio, Stockholm Vatten och Avfall; organisationerna finns, avsändarna är fiktiva). Klicka **Skapa störning** under Trafikverket-notisen: formuläret är förifyllt med Väg, Essingeleden, start nu, 4 timmar och anteckningen "Meddelande hmsg-road". Klicka **Skapa**. Essingeleden stängs, störningen visas i Läge med "från 14:4x, slut cirka 18:4x" och **Avsluta nu**, och loggen får en rad. Inget skapas av sig självt. Essingeleden ensam stänger ingen patient inne, den ger omvägar; gör därför samma sak med Ellevio-notisen (Huddinge, återställning 20:30) så att patienter blir utan el.
+6. **Tryck +1 h två gånger.** Knappen i lägesraden över kartan flyttar den delade klockan 60 minuter varje gång och loggar det. Patientraderna visar "batteri till HH:MM" och, när klockan passerat, **batteri slut** (raden blir kritisk oavsett utrustning). Sammanfattningen säger "N får slut inom 2 h". Störningar med sluttid avslutas av sig själva när klockan når den ("Störning avslutad (beräknad tid nådd)").
+7. **Kontakta de kritiska.** **Kontakta alla kritiska** sätter Kontaktad på varje kritisk rad med anteckningen "samlad kontakt" (en loggrad). Öppna en rad och gå kedjan själv: **Kontakta** (anteckning), **Skicka team** (bara de team som når patienten), **Ta in** (patienten visas i Evakuering som "Från hemmet", utan flytt), **Bekräfta**. **Ringlista** öppnar en utskriftsvy (A4) med prioriterad ordning, telefonplatshållare och en tom rad för anteckningar. Statusen går tillbaka till Ohanterad först när störningen som drabbade patienten tagit slut; loggen behåller historiken.
+8. **Flytta ett besök i Planering.** Menyn Medoma, **Planering**: dagens besök grupperade per team och sorterade på tid, störningsflaggor (Nås inte med bil, Utan el, Omväg) i varningsfärg, och kartan visar valt teams besök som numrerad följd över vägnätet. Välj ett besök, **Flytta besök**, välj en ledig tid: besöket byter plats i listan och följden på kartan ritas om. Utan Beredskap är sidan densamma utan flaggorna och med bara Flytta besök.
+9. **Byt till SUS Lund.** Tillbaka i Sjukhus hemma, växeln **Sjukhus** över kartan: Karolinska eller **SUS Lund**. Patienter, infrastruktur (Ringsjöverket, Hurva, Barsebäck, Trafikplats Lund Norra och Södra), team (ASIH Lund Nord och Syd), besök, meddelanden och kartutsnitt byts; omfattningsväljaren dimmas ("Gäller inte SUS Lund"), eftersom Lund har en enda site. Skapa störningen Trafikplatser avstängda (Kapacitet, Scenario) och visa att alla utanför Lund blir onåbara: samma produkt, ett annat sjukhus. Växeln loggas. Källor har en egen tabell för SUS Lund (S-L1–S-L5).
+
+Skärmbilder av `/start`, `/home` och `/planning` i båda språken, ljust och mörkt, och av Planering i normal drift ligger under `docs/screenshots/ops/` (kartan utan underlagsplattor, eftersom bilderna tas utan nätverk). Läget är på för `/start` och `/home` av själva rutten, så de visas bara i beredskapsläge; Planering visas i båda lägena.
+
+### Bakom kartan – Sjukhus hemma i detalj
+
+Sjukhus hemma ligger i navigationen direkt efter Läget nu (`/home`). Det är inget kapitel på startsidan utan berättelsen ovan, eller en egen genomgång. De 150 patienterna är fiktiva och märkta så, de bor på gator (gatunamn och husnummer är illustrativa) och antalet bär chipet Illustrativt.
+
+**Den riktiga kartan.** Vägnätet (motorväg till sekundärväg), broar, tunnlar, 400/220 kV-stationer och -ledningar och vattenverk kommer från OpenStreetMap, inte från handritade korridorer. Datafilerna hämtas lokalt med `node scripts/fetch-osm.mjs karolinska` (det enda som anropar internet, och bara Overpass) och checkas in under `src/data/packs/geo/karolinska/`; kör därefter `node scripts/generate-patients.mjs` så att patienterna hamnar på de riktiga gatorna. Tills filerna finns använder appen en handritad fixtur med samma schema: kartan, broarna och beräkningarna fungerar, men positionerna är påhittade och elnodernas lägen står som Illustrativt. Med riktiga data står de som Uppgift med källan "OpenStreetMap, datum", och kartans källrad får ODbL-texten.
 
 - Öppna **Sjukhus hemma**. Kartan passas mot de tio zonerna. Slå på **El** och **Vatten**: heldragna linjer är verifierade förbindelser, streckade är schematiska, elledningarna bär sin spänning (400 kV, 220 kV) och pilar visar vart ledningar fortsätter utanför kartan. Regionnätet (70–220 kV) är det enda ihåliga: det är luckan att fylla först, och panelen säger det med röd text.
 - Klicka på en nod, till exempel Essingeleden: allt som inte hänger ihop med den tonas ned, och mittpanelen visar vad noden är, vad den är kopplad till, status och uppgifter med chip och källa (140 000–170 000 fordon per dygn, S-H12). Källorna S-H1–S-H14 finns på Källor.
