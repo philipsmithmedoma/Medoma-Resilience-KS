@@ -735,6 +735,7 @@ export const sv = {
       tunnel: 'Tunnel',
     },
     unverified: 'Ej verifierad',
+    attribution: 'Väg- och elnätsdata © OpenStreetMap contributors, ODbL',
     legend: {
       title: 'Teckenförklaring',
       patient: 'Patient',
@@ -1654,6 +1655,7 @@ export const en: Vocab = {
       tunnel: 'Tunnel',
     },
     unverified: 'Not verified',
+    attribution: 'Road and power data © OpenStreetMap contributors, ODbL',
     legend: {
       title: 'Legend',
       patient: 'Patient',

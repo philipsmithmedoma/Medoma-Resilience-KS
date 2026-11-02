@@ -18,6 +18,8 @@ export function HomeMap({ impact, geo }: { impact: Impact; geo: GeoData | null }
   const nodes = useStore((s) => s.nodes);
   const home = useStore((s) => s.home);
   const infraNodes = home.infraNodes;
+  // The ODbL attribution is for OpenStreetMap data; the fixture that stands in for it is not OpenStreetMap's.
+  const osmData = geo !== null && Object.values(geo.source).includes('osm');
   const lines = useMemo(() => (geo ? powerLines(geo) : []), [geo]);
   const selectHomeNode = useStore((s) => s.selectHomeNode);
   const toggleBlockedNode = useStore((s) => s.toggleBlockedNode);
@@ -78,7 +80,7 @@ export function HomeMap({ impact, geo }: { impact: Impact; geo: GeoData | null }
         <ModeChips />
       </div>
       <div className="min-h-0 flex-1" role="region" aria-label={t('HOME.mapAria')}>
-        <NodeMap nodes={sites} home={overlay} scrollWheelZoom className="h-full" />
+        <NodeMap nodes={sites} home={overlay} scrollWheelZoom fitPadding={24} attributionExtra={osmData ? t('HOME.attribution') : undefined} className="h-full" />
       </div>
       <div className="border-t border-border px-4 py-2">
         <MapLegend />

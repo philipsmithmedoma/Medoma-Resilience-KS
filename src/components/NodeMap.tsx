@@ -7,7 +7,8 @@ import { t, tm } from '@/lib/i18n';
 import { fmt } from '@/lib/format';
 import { cssColor, useTheme } from '@/lib/theme';
 import { cn } from '@/lib/utils';
-import { HomeMapLayers, homeFitPoints, type HomeOverlay } from './HomeMapLayers';
+import { HomeMapLayers, type HomeOverlay } from './HomeMapLayers';
+import { homeFitPoints } from '@/lib/home-geo';
 
 interface NodeMapProps {
   nodes: CareNode[];
@@ -16,6 +17,10 @@ interface NodeMapProps {
   center?: [number, number];
   zoom?: number;
   className?: string;
+  /** Pixels of padding when the map fits its points; 40 by default, 24 on Hospital at Home. */
+  fitPadding?: number;
+  /** Extra attribution after the tile attribution (the ODbL text for OpenStreetMap data). */
+  attributionExtra?: string;
   /** Wheel zoom; off on the pages that scroll, on for Hospital at Home where the inner-city nodes are close together. */
   scrollWheelZoom?: boolean;
   onSelect?: (nodeId: string) => void;
@@ -23,7 +28,7 @@ interface NodeMapProps {
   home?: HomeOverlay;
 }
 
-function FitBounds({ nodes, extra, center, zoom }: { nodes: CareNode[]; extra?: Array<[number, number]>; center?: [number, number]; zoom?: number }) {
+function FitBounds({ nodes, extra, center, zoom, padding }: { nodes: CareNode[]; extra?: Array<[number, number]>; center?: [number, number]; zoom?: number; padding: number }) {
   const map = useMap();
   useEffect(() => {
     if (center) {
@@ -39,7 +44,7 @@ function FitBounds({ nodes, extra, center, zoom }: { nodes: CareNode[]; extra?: 
         [Math.min(...lats), Math.min(...lngs)],
         [Math.max(...lats), Math.max(...lngs)],
       ],
-      { padding: [40, 40], animate: false },
+      { padding: [padding, padding], animate: false },
     );
     // Fit once per node set size; later node additions re-fit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -51,7 +56,7 @@ function FitBounds({ nodes, extra, center, zoom }: { nodes: CareNode[]; extra?: 
  * DESIGN-KS.md § 8 maps: OpenStreetMap tiles, circle markers (radius 10) coloured by status and labelled
  * with the short name; ASIH as a soft 25 km circle centred on Stockholm with its label at the top.
  */
-export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, scrollWheelZoom = false, onSelect, home }: NodeMapProps) {
+export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, scrollWheelZoom = false, fitPadding = 40, attributionExtra, onSelect, home }: NodeMapProps) {
   // Leaflet paints SVG paths with literal colours: resolve the tokens for the current theme.
   useTheme((s) => s.theme);
   const PRIMARY = cssColor('--color-primary');
@@ -60,11 +65,11 @@ export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, 
   const areas = nodes.filter((n) => n.radiusKm !== undefined);
   const selected = nodes.find((n) => n.id === selectedId);
   const from = nodes.find((n) => n.id === lineFrom);
-  const fitExtra = useMemo(() => (home ? homeFitPoints(home, markers) : undefined), [home, markers]);
+  const fitExtra = useMemo(() => (home ? homeFitPoints(home) : undefined), [home]);
   return (
     <MapContainer center={center ?? [59.35, 18.0]} zoom={zoom ?? 9} scrollWheelZoom={scrollWheelZoom} className={cn('h-full w-full', className)} attributionControl>
-      <TileLayer attribution={t('EVAC.map.attribution')} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <FitBounds nodes={markers} extra={fitExtra} center={center} zoom={zoom} />
+      <TileLayer key={attributionExtra ?? ''} attribution={attributionExtra ? `${t('EVAC.map.attribution')} | ${attributionExtra}` : t('EVAC.map.attribution')} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <FitBounds nodes={home ? [] : markers} extra={fitExtra} center={center} zoom={zoom} padding={fitPadding} />
       {areas.map((n) => {
         const isSelected = n.id === selectedId;
         return (

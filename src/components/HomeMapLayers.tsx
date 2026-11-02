@@ -4,7 +4,7 @@ import { Circle, CircleMarker, Marker, Polyline, Tooltip, useMapEvents } from 'r
 import type { CareNode, HomePatient, HomeZone, InfraLayer, InfraLink, InfraNode } from '@/data/types';
 import type { HomeLayerKey, HomeMode } from '@/data/store-home';
 import { lt, t, tm } from '@/lib/i18n';
-import { isSchematic, linkedVertices, offmapEnd, offmapRotation, offmapSlots, vertexPositions, type LatLng } from '@/lib/home-geo';
+import { isSchematic, linkedVertices, offmapEnd, offmapRotation, offmapSlots, vertexPositions } from '@/lib/home-geo';
 import { cssColor } from '@/lib/theme';
 import type { RoadCollection, RoadProps } from '@/lib/roadGraph';
 import { RoadsLayer } from './RoadsLayer';
@@ -50,24 +50,21 @@ export const LAYER_TOKEN: Record<InfraLayer, string> = {
   roads: '--color-text-secondary',
 };
 
+// Zone labels sit on alternating sides of their point so that the zones in the dense middle do not cover each other.
+const ZONE_LABEL: Record<string, { direction: 'left' | 'right' | 'top' | 'bottom'; offset: [number, number] }> = {
+  solna: { direction: 'left', offset: [-6, 0] },
+  innerstaden: { direction: 'right', offset: [6, -6] },
+  bromma: { direction: 'left', offset: [-6, 0] },
+  sodermalm: { direction: 'left', offset: [-6, -3] },
+  soderort: { direction: 'bottom', offset: [0, 6] },
+  huddinge: { direction: 'right', offset: [6, 0] },
+  botkyrka: { direction: 'bottom', offset: [0, 6] },
+  nacka: { direction: 'right', offset: [6, 0] },
+  lidingo: { direction: 'right', offset: [6, 0] },
+  taby: { direction: 'top', offset: [0, -6] },
+};
 const DASH_SCHEMATIC = '8 6';
 const DASH_DOTTED = '2 6';
-
-/** Every point the page should fit in view: zones with their radius, infrastructure markers, sites and arrow ends. */
-export function homeFitPoints(overlay: HomeOverlay, sites: CareNode[]): LatLng[] {
-  const points: LatLng[] = sites.map((s) => [s.lat, s.lng]);
-  for (const z of overlay.zones) points.push([z.lat, z.lng]);
-  for (const n of overlay.infraNodes) if (!n.noMarker) points.push([n.lat, n.lng]);
-  for (const l of overlay.powerLines ?? []) points.push(...l.positions);
-  const positions = vertexPositions(sites, overlay.zones, overlay.infraNodes);
-  const slots = offmapSlots(overlay.infraLinks);
-  for (const l of overlay.infraLinks) {
-    const from = positions.get(l.a);
-    const slot = slots.get(l.id);
-    if (l.offmap && from && slot) points.push(offmapEnd(from, l.offmap.dir, slot.k, slot.n));
-  }
-  return points;
-}
 
 const iconCache = new Map<string, L.DivIcon>();
 
@@ -226,7 +223,7 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
             pathOptions={{ color: NEUTRAL, weight: 1.5, fillColor: SURFACE, fillOpacity: dim ? 0.3 : 1, opacity: dim ? 0.3 : 1 }}
             interactive={false}
           >
-            <Tooltip permanent direction="bottom" offset={[0, 4]} className={dim ? 'home-map-label home-map-label-dim' : 'home-map-label'}>
+            <Tooltip permanent direction={(ZONE_LABEL[z.id] ?? { direction: 'bottom' }).direction} offset={(ZONE_LABEL[z.id] ?? { offset: [0, 4] }).offset} className={dim ? 'home-map-label home-map-label-dim' : 'home-map-label'}>
               {lt(z.name)}
             </Tooltip>
           </CircleMarker>

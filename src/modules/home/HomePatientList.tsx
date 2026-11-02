@@ -63,7 +63,10 @@ function PatientRow({ p, row }: { p: HomePatient; row?: ImpactRow }) {
         </div>
       ) : null}
       <div className="flex items-center gap-3 text-small text-text-secondary">
-        <span className="truncate">{lt(zone.name)}</span>
+        <span className="truncate">
+          {p.street} {p.houseNo}
+          <span className="text-text-muted"> {lt(zone.name)}</span>
+        </span>
         <span className="ml-auto whitespace-nowrap">{p.team}</span>
       </div>
       <div className="text-small text-text-muted">
