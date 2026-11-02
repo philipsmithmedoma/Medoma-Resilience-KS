@@ -11,6 +11,7 @@ import { NodeDetailPage } from '@/modules/network/NodeDetailPage';
 import { HomePage } from '@/modules/home/HomePage';
 import { PlatformStubPage } from '@/modules/home/PlatformStubPage';
 import { PLATFORM_DEFS } from '@/data/vocab';
+import { RootRedirect } from './RootRedirect';
 import { SourcesPage } from '@/modules/sources/SourcesPage';
 
 export interface RouteDef {
@@ -20,7 +21,9 @@ export interface RouteDef {
 
 /** SPEC.md § 3 routes (hash-based). */
 export const routes: RouteDef[] = [
-  { path: '/', element: <StartPage /> },
+  // The root decides by the preparedness state: Start in preparedness mode, the first platform module otherwise.
+  { path: '/', element: <RootRedirect /> },
+  { path: '/start', element: <StartPage /> },
   { path: '/laget-nu', element: <FlowPage tab="overview" /> },
   { path: '/laget-nu/placering', element: <FlowPage tab="placement" /> },
   { path: '/laget-nu/prognos', element: <FlowPage tab="forecast" /> },

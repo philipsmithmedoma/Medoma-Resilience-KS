@@ -33,6 +33,6 @@ export function startChapter(n: number, store: AppStore): ChapterEffect {
       store.openScenarioPanel('mottagande');
       return { route: '/natverk' };
     default:
-      return { route: '/' };
+      return { route: '/start' };
   }
 }

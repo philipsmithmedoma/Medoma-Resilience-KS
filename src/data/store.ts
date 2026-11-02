@@ -33,6 +33,7 @@ import { createResourcesSlice, type ResourcesActions } from './store-resources';
 import { createNetworkSlice, type NetworkActions } from './store-network';
 import { createFlowSlice, type FlowActions } from './store-flow';
 import { createScenarioSlice, type ScenarioActions } from './store-scenario';
+import type { PreparednessReason } from '@/lib/preparedness';
 import { createHomeSlice, initialHome, type HomeActions, type HomeState } from './store-home';
 
 export interface DataState {
@@ -64,6 +65,8 @@ export interface DataState {
   scenarioPanel: { open: boolean; key: ScenarioKey | null };
   freedByScenario: number;
   home: HomeState; // Hospital at Home (SPEC.md § 11.5)
+  /** The manual preparedness flag (SPEC.md § 12.7); the mode itself is derived in lib/preparedness.ts. */
+  preparednessOn: boolean;
   ids: number;
 }
 
@@ -87,6 +90,10 @@ export interface Actions {
   closeScenarioPanel: () => void;
   /** Starts a scenario with its defaults for a chapter; `start` also runs the clock. */
   armScenario: (key: ScenarioKey, start: boolean) => void;
+  /** Sets the manual preparedness flag; every change is logged with the reason "manual". */
+  setPreparedness: (on: boolean) => void;
+  /** Logs a change of the derived mode that the flag did not cause (reason "incident", "scenario" or "route"). */
+  logPreparednessChange: (on: boolean, reason: PreparednessReason) => void;
 }
 
 export type AppStore = DataState & Actions & IncidentActions & EvacuationActions & ResourcesActions & NetworkActions & FlowActions & ScenarioActions & HomeActions;
@@ -126,6 +133,7 @@ export function initialData(): DataState {
     scenarioPanel: { open: false, key: null },
     freedByScenario: 0,
     home: initialHome(pack),
+    preparednessOn: false,
     ids: 100,
   };
 }
@@ -208,6 +216,17 @@ export const useStore = create<AppStore>()((set, get, api) => ({
   openScenarioPanel: (key) => set({ scenarioPanel: { open: true, key } }),
 
   closeScenarioPanel: () => set((s) => ({ scenarioPanel: { open: false, key: s.scenarioPanel.key } })),
+
+  setPreparedness: (on) => {
+    if (get().preparednessOn === on) return;
+    set({ preparednessOn: on });
+    get().logPreparednessChange(on, 'manual');
+  },
+
+  logPreparednessChange: (on, reason) => {
+    const reasons = tm('AUDIT.preparednessReasons');
+    get().logEntry(on ? t('AUDIT.preparednessOn') : t('AUDIT.preparednessOff'), t('AUDIT.preparednessObject'), t('AUDIT.preparednessReason', { reason: reasons[reason] }), undefined, reason);
+  },
 
   armScenario: (key, start) => {
     set({ scenarioPanel: { open: false, key } });

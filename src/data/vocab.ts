@@ -222,6 +222,11 @@ export const sv = {
     homeObject: 'Sjukhus hemma',
     homeDetail: '{n} av {total} patienter påverkade',
     homePreset: 'Aktiverade störningsscenario',
+    preparednessOn: 'Beredskapsläge på',
+    preparednessOff: 'Beredskapsläge av',
+    preparednessObject: 'Navigation',
+    preparednessReason: 'Orsak: {reason}',
+    preparednessReasons: { manual: 'manuellt', incident: 'incident', scenario: 'scenario', route: 'sida' },
     demoReset: 'Återställde demon',
     columns: { time: 'Tid', actor: 'Aktör', action: 'Åtgärd', object: 'Objekt', detail: 'Detalj' },
   },
@@ -712,6 +717,14 @@ export const sv = {
   },
 
   // Källor (SPEC.md § 6.10)
+  PREP: {
+    enter: 'Beredskap',
+    active: 'Beredskapsläge',
+    close: 'Stäng beredskapsläget',
+    closeBlocked: 'Avsluta incidenten eller scenariot först',
+    enterTitle: 'Öppna beredskapsläget',
+  },
+
   STUB: {
     text: 'Den här modulen finns i Medoma i dag och ligger utanför prototypen.',
     link: 'Gå till Sjukhus hemma',
@@ -1149,6 +1162,11 @@ export const en: Vocab = {
     homeObject: 'Hospital at Home',
     homeDetail: '{n} of {total} patients affected',
     homePreset: 'Activated disruption scenario',
+    preparednessOn: 'Preparedness mode on',
+    preparednessOff: 'Preparedness mode off',
+    preparednessObject: 'Navigation',
+    preparednessReason: 'Reason: {reason}',
+    preparednessReasons: { manual: 'manual', incident: 'incident', scenario: 'scenario', route: 'page' },
     demoReset: 'Reset the demo',
     columns: { time: 'Time', actor: 'Actor', action: 'Action', object: 'Object', detail: 'Detail' },
   },
@@ -1630,6 +1648,14 @@ export const en: Vocab = {
     },
     notFound: 'The node does not exist.',
     asihLabel: 'ASIH',
+  },
+
+  PREP: {
+    enter: 'Preparedness',
+    active: 'Preparedness mode',
+    close: 'Close preparedness mode',
+    closeBlocked: 'End the incident or scenario first',
+    enterTitle: 'Open preparedness mode',
   },
 
   STUB: {

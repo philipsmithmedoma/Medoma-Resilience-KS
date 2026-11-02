@@ -44,6 +44,10 @@ Knappen med måne/sol i navigationsfältet växlar mellan ljust och mörkt läge
 
 Knappen "EN" i navigationsfältet växlar till engelska, "SV" tillbaka till svenska. Valet sparas i webbläsaren (`localStorage`, nyckeln `locale`) och svenska är standard. Egennamn, avdelningsnamn, förkortningar, beredskapslägena (med svensk term i parentes) och citerade meddelanden översätts inte; på engelska visas en ordlista under ingressen på startsidan. Alla strängar finns i `src/data/vocab.ts` som två tabeller (`sv`, `en`) med identiska nycklar, och datapaketets spelböcker och scenarier bär `{ sv, en }`-texter.
 
+## Beredskapsläge och navigation
+
+Navigationen har två lägen. I normal drift visas Medomas fem plattformsflikar, en skiljelinje och knappen **Beredskap**; inga resiliensmoduler syns, scenariokontrollerna (spela, stega, återställ) är dolda och roten (`/`) går till `/patients`. Klicka **Beredskap** för beredskapsläget: menyn Medoma, skiljelinjen och flikarna Läget nu, Sjukhus hemma, Kapacitet, Incident, Evakuering, Resurser och Nätverk, en röd indikator **Beredskapsläge** med ett stängkryss, och scenariokontrollerna; roten går då till `/start`. Läget slås också på av en aktiv incident, ett pågående scenario och av att öppna en resiliensrutt direkt (en omladdning på `/home` behåller det). Stängkorset är avstängt medan en incident eller ett scenario pågår och går annars till `/planning` från en resiliensrutt. Varje ändring loggas med orsak (manuellt, incident, scenario, sida). Startsidan med de fem kapitlen ligger på `/start`.
+
 ## Presentatörsmanus
 
 Startsidan (logotypen) har fem kapitel, och Sjukhus hemma visas som steg 6 nedan. Varje kapitel återställer demon, sätter omfattning och sida och startar vid behov ett scenario, så kapitlen kan visas i valfri ordning.
