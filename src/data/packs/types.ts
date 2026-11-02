@@ -219,6 +219,9 @@ export interface Message {
   at: string;
   text: string;
   nodeId?: NodeId;
+  /** English form of a message written for the prototype in both languages (SPEC.md § 13.4); absent for messages that stay Swedish. */
+  textEn?: string;
+  roleEn?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -593,6 +596,8 @@ export interface HomeDisruption {
   /** Set when the record stops being active; the record stays as history. */
   endedAt: number | null;
   endReason: HomeDisruptionEnd | null;
+  /** Free text, e.g. the id of the message the disruption was created from (SPEC.md § 13.4). */
+  note?: string | null;
 }
 
 // Teams, visits and the work on affected patients (SPEC.md § 13.3, § 14.2, § 14.3)
@@ -670,4 +675,6 @@ export interface DataPack {
   // Teams and today's visits (SPEC.md § 14.2, § 14.3)
   homeTeams: HomeTeam[];
   homeVisits: HomeVisit[];
+  /** Illustrative notices that can become disruptions (SPEC.md § 13.4, DATA.md § 13). */
+  homeMessages: Message[];
 }

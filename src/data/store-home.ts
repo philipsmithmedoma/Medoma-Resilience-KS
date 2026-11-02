@@ -100,6 +100,8 @@ export interface NewDisruption {
   label?: LocalizedText;
   expectedEnd?: number | null;
   source: HomeDisruptionSource;
+  /** E.g. the id of the message the disruption was created from. */
+  note?: string | null;
 }
 
 export const WORK_STATUSES: HomeWorkStatus[] = ['Unhandled', 'Contacted', 'Planned', 'Confirmed'];
@@ -183,6 +185,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       createdBy: CURRENT_USER.name,
       endedAt: null,
       endReason: null,
+      note: input.note ?? null,
     };
     set((s) => ({ home: withRecords(s.home, [...s.home.disruptions, record]) }));
     return id;
@@ -305,7 +308,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       const id = addRecord(input);
       if (!id) return null;
       const d = get().home.disruptions.find((x) => x.id === id)!;
-      get().logEntry(t('AUDIT.homeStarted'), lt(d.label), `${detail()} · ${t(`AUDIT.homeSources.${d.source}`)}`, undefined, id);
+      get().logEntry(t('AUDIT.homeStarted'), lt(d.label), [detail(), t(`AUDIT.homeSources.${d.source}`), d.note].filter(Boolean).join(' · '), undefined, id);
       return id;
     },
 

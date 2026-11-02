@@ -690,3 +690,23 @@ Spec: SPEC.md § 13.3
 Decision: "Ringlista" opens `/home/ringlista`, a plain page inside the app shell whose nav, banner and scenario panel are `print:hidden`, with `@page { size: A4 }`; it has a Print button and a link back. It lists the prioritised affected rows (detour-only rows are not affected and not listed). The row's expanded view with the status chain and the five buttons exists for affected rows; a detour-only or unaffected row expands to nothing. The route belongs to the resilience routes because it starts with `/home/`.
 Rejected: A new window with hand-written HTML – no vocab, no theme; actions on every row – the spec says "each affected patient".
 Spec: SPEC.md § 13.3
+
+## 2026-11-04 – Batch 14 – Messages carry both languages as optional `textEn` and `roleEn`; the thread can be read-only
+Decision: `Message` is reused with two optional fields, `textEn` and `roleEn`; `MessageThread` shows them in English mode and keeps the Swedish text for every message that has none (the node messages stay Swedish, DESIGN-LANG.md § 4). The thread gets two optional props, `readOnly` (no input row, the list is a set of notices) and `createLabel` ("Skapa störning"). The three notices are the texts of § 13.4 verbatim; the senders are invented names (Gunnar Salo, Irene Falkman, Bo Strandman), none of them a Karolinska employee, and the pack and the tab say the events never happened.
+Rejected: A second message type – the spec says reuse; English-only translation of the whole thread – out of scope.
+Spec: SPEC.md § 13.4, DATA.md § 13
+
+## 2026-11-04 – Batch 14 – How a notice is read, and what the form does
+Decision: `parseDisruptionMessage` (pure) decides the kind from words (power: strömavbrott, elavbrott, power outage; water: kokningsrekommendation, vattenstörning, boil-water; otherwise road), so the organisation name "Stockholm Vatten och Avfall" does not make a road notice a water one. The target is the longest road name of `roads.json` found in the text, or the zone whose full name or first words ("Solna" for "Solna och Sundbyberg") occur. The duration is "N timmar/hours", or the time from the clock to the next occurrence of a "HH:MM" in the text (20:30 at 14:41 gives 5.82 h, rounded to two decimals; the record ends at start plus the rounded minutes). A road is closed by name, so every way of "Essingeleden" closes; when the road names have not loaded the target stays empty and the user types one (the field has a datalist of the names). The note is "Meddelande <id>" and is stored on the record (`note`) and written to the log detail with the source. Creating a disruption that is already active is ignored with a toast.
+Rejected: A select with every road name – the real data has hundreds; creating from the notice without a form – the spec says the user confirms.
+Spec: SPEC.md § 13.4
+
+## 2026-11-04 – Batch 14 – "Från meddelande" is a tab of the middle panel; the card sits under the key figures
+Decision: The middle panel of `/home` gets two sub-tabs, "Läge" (the existing panel) and "Från meddelande"; creating a disruption switches back to "Läge". The "Sjukhus hemma" card is a full-width `Card` under "Nyckeltal" on the start page, with the four figures as `FigureText` with confidence `illustrative` (basis: the patient-data marking) and a link to `/home`. It renders only when `preparednessActive` is true. The road graph is loaded by the card only while a road is closed, since "unreachable" needs it and nothing else on the start page does; the geometry files stay out of the first load. "Battery empty within 2 h" is the summary's `runOutWithin2h`.
+Rejected: Loading the geometry on every start page visit – § 12.2 keeps it to `/home`; a card per figure – the spec says one card.
+Spec: SPEC.md § 13.5, § 12.2
+
+## 2026-11-04 – Batch 14 – The store is on `window` in development only
+Decision: `main.tsx` assigns the zustand store to `window.__store` when `import.meta.env.DEV`, so a browser script can set and read the demo state while the definition of done is checked. It is absent from the production build.
+Rejected: Importing the store from the script – the dev server serves a second module instance after an edit, and the script then reads another store than the page.
+Spec: CLAUDE.md "A batch is done when ... checked in the running app"
