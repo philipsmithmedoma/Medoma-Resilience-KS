@@ -365,3 +365,212 @@ Batch 3 – module and platform navigation (additive). The three-pane layout, th
 Batch 4 – disruptions and reachability (behaviour-changing, own batch). `store-home.ts`, `reachability.ts` with tests for roadDistances, zoneStatus, impact and prioritise (including: blocking Essingeleden alone leaves Söderort reachable via Centralbron or Västerbron; blocking Essingeleden, Centralbron, Västerbron, Liljeholmsbron and Skanstullsbron makes every zone south of Saltsjö–Mälaren unreachable from Solna but not from Huddinge; a power outage in Huddinge flags exactly the Huddinge patients), map interaction by mode, the result panel, the ordered list. Done when: the five test cases above pass; blocking and unblocking on the map updates patients and panel immediately; reset clears everything; audit log records each toggle.
 
 Batch 5 – presets, parity, polish (additive). The three presets in 11.5; vocab parity test covers every new key; screenshots of `/home` in light and dark and in English under `docs/screenshots/home/`; README demo story gains a step 6 for Hospital at Home. Done when: presets navigate and set state; parity test passes; screenshots exist; typecheck, tests and build pass on the branch.
+
+## 12. Real geography and preparedness mode
+
+### 12.1 Purpose
+
+§ 11 drew the road network as a hand-made corridor graph and placed half of the transmission nodes by estimate. This section replaces both with real geometry from OpenStreetMap so that the map, the bridges and the reachability computation match the Stockholm a preparedness officer knows. Patients stay synthetic, but they now live on real residential streets. Nothing in § 11's interaction model changes; what changes is the data underneath and the graph the reachability runs on. § 12.7 then gives the navigation two states, so that the resilience modules are hidden in normal operation and come forward in preparedness mode.
+
+### 12.2 Data files
+
+`scripts/fetch-osm.mjs` (Node, no dependencies beyond the repo's) runs the Overpass queries in `scripts/overpass/*.overpassql`, converts the answers to GeoJSON, simplifies line geometry with Douglas–Peucker at 8 m tolerance, drops every tag not listed below, and writes:
+
+* `src/data/packs/geo/roads.json` – ways with `highway` in motorway, motorway_link, trunk, trunk_link, primary, primary_link, secondary, secondary_link inside bbox 59.15, 17.65, 59.52, 18.30. Properties kept: `id` (OSM way id), `highway`, `name`, `ref`, `bridge` (true/false), `tunnel` (true/false), `oneway` (true/false), `lanes`. Budget 2.5 MB.
+* `src/data/packs/geo/streets.json` – ways with `highway` in residential, living_street within 2 500 m of each zone centre in § 11.4 (one query with ten `around` clauses). Properties: `id`, `name`. Used only to place patients. Budget 1.0 MB.
+* `src/data/packs/geo/power.json` – `power=substation` nodes and ways (as centroid points) with `voltage` matching 400000 or 220000, and `power=line` ways with `voltage` matching 400000 or 220000, inside bbox 59.10, 17.50, 59.60, 18.40. Properties: `id`, `power`, `name`, `operator`, `voltage`. Budget 0.4 MB.
+* `src/data/packs/geo/water.json` – `man_made=water_works` nodes and ways (centroids) in the same bbox. Properties: `id`, `name`, `operator`.
+* `src/data/packs/geo/README.md` – source, query date, bbox, simplification, and the ODbL attribution "© OpenStreetMap contributors, ODbL".
+
+The queries, verbatim:
+
+```
+// roads.overpassql
+[out:json][timeout:180];
+way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link)$"](59.15,17.65,59.52,18.30);
+out body geom;
+
+```
+
+
+```
+// power.overpassql
+[out:json][timeout:120];
+(
+  node["power"="substation"]["voltage"~"400000|220000"](59.10,17.50,59.60,18.40);
+  way["power"="substation"]["voltage"~"400000|220000"](59.10,17.50,59.60,18.40);
+  way["power"="line"]["voltage"~"400000|220000"](59.10,17.50,59.60,18.40);
+);
+out body geom;
+
+```
+
+
+```
+// water.overpassql
+[out:json][timeout:60];
+(
+  node["man_made"="water_works"](59.10,17.50,59.60,18.40);
+  way["man_made"="water_works"](59.10,17.50,59.60,18.40);
+);
+out body geom;
+
+```
+
+
+```
+// streets.overpassql – one around clause per zone, lat/lon from SPEC § 11.4
+[out:json][timeout:180];
+(
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3597,18.0005);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3312,18.0407);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3383,17.9401);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3125,18.0616);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.2986,18.0459);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.2365,17.9818);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.1988,17.8332);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3100,18.1648);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.3661,18.1352);
+  way["highway"~"^(residential|living_street)$"](around:2500,59.4451,18.0717);
+);
+out body geom;
+
+```
+
+The files are loaded with dynamic `import()` from the `/home` route only, so the initial bundle does not grow. Map attribution gains the ODbL text beside the tile attribution.
+
+### 12.3 Road graph
+
+`src/lib/roadGraph.ts` builds a graph from `roads.json` at load: a vertex for every coordinate shared by two or more ways and for every way end; an edge per way segment between vertices, weighted by haversine length in metres, with `wayId`, `name`, `ref`, `bridge`, `tunnel`, `oneway`; one-way ways give directed edges, all others two directed edges. The two sites and every patient are attached to the graph by snapping to the nearest vertex within 1 500 m (`snapDistance` stored; a patient beyond that is flagged `unsnapped` and treated as unreachable with reason "no road within 1.5 km"). Patients snap to the nearest vertex of the main-road graph; `streets.json` is not part of the graph.
+
+`src/lib/reachability.ts` is rewritten to run Dijkstra by length from each site in scope. Baseline distances are computed once per pack load and memoised. Blocking removes edges: a blocked way id removes all its edges; a blocked road name removes every way sharing that `name` (and `ref` when both are present); a blocked InfraNode of kind bridge/tunnel/junction removes the ways listed in its new `osmWayNames` field (§ 12.5). Status per patient: `unreachable` when no path from any site in scope; `delayed` when the shortest path is at least 25 % longer or 3 km longer than baseline; else `ok`. Zones keep their role for power and water outages only. `impact` and `prioritise` keep their signatures and semantics from § 11.5; `zoneStatus` is replaced by per-patient status and removed.
+
+### 12.4 Interaction and tests
+
+In `roads` mode the map shows `roads.json` as one Leaflet GeoJSON layer: motorway and trunk 3 px, primary 2.5 px, secondary 2 px, bridges with a 1 px lighter casing, tunnels dashed. A tap on a segment blocks that way; the mode bar gets a switch "Block whole road" / "Blockera hela vägen" which makes a tap block every way sharing the name. Blocked ways render in the accent colour. The named InfraNodes from § 11.3 remain as markers for the panel and block their `osmWayNames` set when tapped. The corridor links of § 11.3 are deleted from the pack; the water and el links stay.
+
+The five test cases of § 11.7 batch 4 are rewritten against the real graph:
+
+1. At baseline from Solna and from Huddinge, at least 95 % of patients snap within 1 500 m and have a path.
+2. Blocking every way named "Essingeleden" leaves at least one patient in Söderort reachable from Solna without detour via Huddinge (that is, with scope Solna only).
+3. Blocking the crossing set – every way named Essingeleden, Västerbron, Centralbron, Munkbroleden, Skeppsbron, Söderledstunneln, Katarinavägen, Stadsgårdsleden – makes every patient in Södermalm, Söderort, Huddinge, Botkyrka and Nacka unreachable from Solna. If the test finds a remaining path, it must print the way names on that path and fail; the missing crossing is then added to the set in the test and in DECISIONS.md, not worked around.
+4. The same crossing set leaves every patient in Huddinge and Botkyrka reachable from Huddinge.
+5. A power outage in Huddinge flags exactly the Huddinge patients.
+
+Tests use the committed GeoJSON; if it is absent (Overpass unreachable), they run against `src/data/packs/geo/fixture.json`, a hand-written graph of twenty ways with the same schema, and the PR description says so.
+
+### 12.5 Node coordinates from OSM
+
+`power.json` replaces the estimate coordinates in DATA.md § 11.2: the InfraNodes Överby, Beckomberga, Hagby and Skanstull take the centroid of the OSM substation whose `name` matches (case-insensitive, substring), and a new node Kolbotten is added the same way. Where no match exists the node keeps its estimate and the mismatch is logged. 400 kV and 220 kV lines from `power.json` are drawn in the el layer as polylines labelled by voltage, replacing the hand-drawn el links between nodes (the off-map arrows stay). `water.json` replaces the Görväln estimate with the matched water works centroid. Coordinate confidence for every replaced node becomes `reported` with source "OpenStreetMap, <query date>"; DATA.md § 11 is updated in place and the estimate basis text deleted. InfraNode gains `osmWayNames: string[]` for road nodes (Essingeleden → ["Essingeleden"], Västerbron → ["Västerbron"], Centralbron → ["Centralbron"], Liljeholmsbron → ["Liljeholmsbron"], Skanstullsbron → ["Skanstullsbron"], Norra länken → ["Norra länken"], Södra länken → ["Södra länken"]).
+
+Patients are re-placed by the generator (same seed): each patient lands on a random vertex of a random `streets.json` way within its zone's radius, and gains `street: string` (the way's name) and `houseNo: number` (illustrative, 1–60). The list shows "Street 12" with the existing "Fiktiva patientuppgifter" marking.
+
+### 12.6 Batches and definition of done
+
+Batch 6 – docs, fetch script and data files. Done when: § 12 is in SPEC.md and DATA.md; the script runs end to end and the four GeoJSON files exist within budget, or the fallback in the prompt is in place; README.md in geo/ carries the attribution; typecheck, tests and build pass.
+
+Batch 7 – road graph and reachability (behaviour-changing, own batch). `roadGraph.ts`, the rewritten `reachability.ts`, snapping, the five tests. Done when: tests pass on the real data or on the fixture; a tap on a segment or a named road blocks and unblocks; the panel and list respond as in § 11.6; the corridor links are gone.
+
+Batch 8 – el and water nodes from OSM (additive). § 12.5 for nodes and lines; DATA.md § 11 updated. Done when: no el node renders hollow except e-regionnat; Kolbotten exists; lines render with voltage labels; pack test checks every InfraNode's coordSource.
+
+Batch 9 – patients on streets, polish. Generator change, `street`/`houseNo`, list text, map attribution, the map on `/home` fits its bounds to the zones on load (`fitBounds` with 24 px padding) so zone labels do not collide, screenshots in `docs/screenshots/home/` refreshed, README demo story step 6 updated to mention the real map. Done when: 150 patients lie on streets; the map opens fitted to the zones; parity test passes; typecheck, tests and build pass on the branch.
+
+Batch 10 – preparedness mode (behaviour-changing, own batch, last). § 12.7 in full; the 2 100 px breakpoint and its width-tuned gaps are removed; DECISIONS.md records the removal. Done when: at 1 280 px both nav states fit in sv and en; the button and the close control work with the rules in § 12.7; activating an incident and running a scenario each turn the mode on; opening `/home` directly turns it on; the audit log shows each change with its reason; typecheck, tests and build pass.
+
+### 12.7 Preparedness mode
+
+The navigation has two states instead of a viewport breakpoint. The viewport-based collapse at 2 100 px from § 11.2 is removed.
+
+Normal operation (default): logo, scope selector, the five Medoma platform tabs as tabs, the divider, and one outlined button "Beredskap" / "Preparedness". No resilience module is in the nav. The right cluster keeps the clock, language, theme, Demo and user; the scenario controls (play, step, reset) are hidden. The root route redirects to `/patients`.
+
+Preparedness mode: logo, scope selector, one menu "Medoma" holding the five platform entries, the divider, then Läget nu, Sjukhus hemma, Kapacitet, Incident, Evakuering, Resurser and Nätverk as tabs. The button becomes a filled indicator in the accent colour "Beredskapsläge" / "Preparedness mode" with a close control. The scenario controls are shown. The root route redirects to `/start`. Both states must fit at 1 280 px in both languages without horizontal scroll.
+
+Activation. `preparednessActive(state, route)` is a pure function in `src/lib/preparedness.ts`: true when the manual flag is on, or an incident is active, or a scenario is running, or the current route belongs to a resilience module (`/start`, `/home`, `/capacity`, `/incident`, `/evacuation`, `/resources`, `/network` and their children; use the module list, not a hard-coded set). The manual flag `preparednessOn: boolean` lives in the main store, defaults to false, and every change goes through `logEntry()` with the reason "manual", "incident", "scenario" or "route". The Beredskap button sets the flag on and navigates to `/start`. The close control sets the flag off and, if the current route is a resilience route, navigates to `/planning`; if an incident is active or a scenario is running the close control is disabled with a tooltip "Avsluta incidenten eller scenariot först" / "End the incident or scenario first". The scenario presets of § 11.5 therefore open the mode by navigating. A reload on a resilience route keeps the mode because the route alone makes it active.
+
+Tests: `preparednessActive` for each of the four reasons and for none; the nav renders the platform tabs and no resilience tab when inactive, and the reverse when active; vocab parity for the new keys.
+
+## 13. Time and work in Hospital at Home
+
+### 13.1 Purpose
+
+§ 11–12 answer who is affected right now. This section adds the clock, so that a six-hour power outage changes the picture hour by hour, and the work: what the team does about each affected patient, logged like everything else. A disruption can also be created from an incoming message, as resource requests are today.
+
+### 13.2 Disruptions in time
+
+A disruption is now a record in `store-home.ts`, not only a flag: `{ id, kind: 'road' | 'power' | 'water', target: string (way id, road name, InfraNode id or ZoneId), label: LocalizedText, startedAt: clock minutes, expectedEnd: clock minutes | null, source: 'map' | 'preset' | 'message', createdBy: user }`. The sets `blockedLinks`, `blockedNodes`, `powerOutZones`, `waterOutZones` are derived from the active records, so § 11–12 keep working unchanged. A record whose `expectedEnd` is reached by the clock becomes inactive automatically and is logged as "ended (expected)". Each record shows in the panel with its start time and either "ends about HH:MM" / "slut cirka HH:MM" or "no end time" / "ingen sluttid", and a control to end it now.
+
+The shared store clock (the one in the header) is the only time. The `/home` mode bar gets a "+1 h" / "+1 h" control that advances the shared clock by 60 minutes through the existing clock action and logs it; the scenario controls, when a scenario is running, advance it as they do today, and `/home` recomputes on every change.
+
+Battery: for a patient in a power-out zone with `batteryHours`, `batteryEmptyAt = startedAt + batteryHours × 60` (clock minutes, from the earliest active power disruption covering the zone). Status text: "battery until HH:MM" / "batteri till HH:MM"; when the clock has passed it, "battery empty" / "batteri slut" and the row is treated as critical regardless of equipment. The summary gains "N run out within 2 h" / "N får slut inom 2 h". `prioritise` sorts power-out rows by `batteryEmptyAt` ascending instead of `batteryHours`.
+
+### 13.3 Actions per patient
+
+Each affected patient gets a status chain in the style of Evakuering (`StatusChain`): Unhandled → Contacted → Planned → Confirmed ("Ohanterad", "Kontaktad", "Planerad", "Bekräftad"). Actions, each a button in the row's expanded view and each logged with the user, time and patient id:
+
+* Contact / Kontakta – note field (one line), sets Contacted.
+* Move visit / Flytta besök – only for `visitToday`; pick a new slot from the patient's team's free slots (§ 14.3) or "no visit today" / "inget besök i dag"; sets Planned.
+* Send team / Skicka team – pick a team that can reach the patient (§ 14.2); sets Planned and records the team on the patient (`assignedTeam`).
+* Bring in / Ta in – marks the patient for transfer to the site in scope; sets Planned; appears in the Evakuering module as an inbound line "From home" / "Från hemmet" in the patient list, without a move record (log the decision on how it is shown).
+* Confirm / Bekräfta – sets Confirmed.
+
+A bulk control above the list, "Contact all critical" / "Kontakta alla kritiska", sets Contacted on every critical row with the note "bulk contact". Status resets to Unhandled only when the disruption that affected the patient ends; the log keeps the history. A "Call list" / "Ringlista" control opens a print view (plain, A4, @media print) of the prioritised rows with name, street, phone-shaped placeholder "0XX-XXX XX XX", equipment, battery time, status and an empty line for notes; the view carries the fictitious-data marking.
+
+### 13.4 Disruption from message
+
+Like Resources → From message. The pack gains `homeMessages: Message[]` (reuse the existing `Message` type and `MessageThread` component) with three illustrative notices in both languages: a road notice ("Trafikverket: Essingeleden avstängd i båda riktningarna efter olycka vid Fredhäll, beräknad tid 4 timmar"), a power notice ("Ellevio: strömavbrott i delar av Huddinge, beräknad återställning 20:30") and a water notice ("Stockholm Vatten och Avfall: kokningsrekommendation i Solna tills vidare"). Senders are fictitious persons at those organisations; the organisation names are real and the texts are illustrative, which DATA.md § 13 states.
+
+A tab "From message" / "Från meddelande" in the `/home` middle panel lists the messages; opening one prefills a form: kind, target (road name matched against `roads.json` names, zone matched against zone names), start (now), expected duration in hours (parsed when the text contains "N timmar" / "N hours" or a clock time, else empty), and a note with the message id. Create makes a disruption record with `source: 'message'`. Nothing is created automatically; the user confirms.
+
+### 13.5 Läget nu
+
+The start page gets one card "Hospital at Home" / "Sjukhus hemma" in the existing card style: patients at home, affected now, unreachable, battery empty within 2 h, each as a Figure with confidence `illustrative`, and a link to `/home`. Visible only in preparedness mode, like the other resilience content.
+
+### 13.6 Batches and definition of done
+
+Batch 11 – docs (§ 13, § 14 in SPEC.md; § 13, § 14 in DATA.md; the prompt). Done when: present verbatim; nothing else changed.
+
+Batch 12 – disruptions in time (behaviour-changing, own batch). Records, derived sets, expected end, the "+1 h" control, battery deadlines, summary and sorting. Tests: a disruption with expectedEnd ends when the clock passes it; a battery deadline is computed from the earliest covering power disruption; prioritise orders by batteryEmptyAt. Done when: a preset power outage shows battery times; "+1 h" moves them to empty; ending a disruption restores the rows; the audit log shows every step.
+
+Batch 13 – actions (behaviour-changing, own batch). Status chain, the five actions, bulk contact, call list print view, the Evakuering inbound line. Tests: each action sets the right status and logs; status resets when the disruption ends. Done when: a critical row can be taken Unhandled → Confirmed in the app; the print view renders; the inbound line appears in Evakuering.
+
+Batch 14 – from message and Läget nu (additive). § 13.4 and § 13.5. Done when: each of the three messages prefills a correct form; creating from the road message blocks the named road; the Läget nu card shows live figures and links.
+
+## 14. Teams, the platform tabs and a second hospital
+
+### 14.1 Purpose
+
+The question moves from "who can be reached" to "who can reach whom". The Planning tab stops being a stub and shows today's home visits with disruption flags, which is where this function would live in Medoma Center. A second home pack, SUS Lund, shows that nothing is Karolinska-specific.
+
+### 14.2 Teams and cars
+
+The pack gains `homeTeams: HomeTeam[]`: `{ id, name, baseLat, baseLng, baseLabel: LocalizedText, cars: number, phone: string (placeholder) }`. Four teams, bases illustrative at zone centres: ASIH Nord at Solna, ASIH City at Innerstaden norr, ASIH Syd at Söderort, ASIH Sydväst at Botkyrka; two cars each. Bases snap to the road graph like sites. `reachability.ts` gains `teamDistances(graph, team, blocked)` and `impact` gains per patient `reachableBy: TeamId[]` and `nearestTeam: TeamId | null` (by road length). Team markers render on the map in all modes as small squares in the team's colour from the existing node palette, with the base label; blocking updates `reachableBy` live.
+
+The summary gains "N patients whose own team cannot reach them; M of them reachable by another team" / "N patienter som det egna teamet inte når; M av dem nås av annat team". The middle panel, under the summary, lists reassignment suggestions: for each such patient "Reassign to <team>" / "Flytta till <team>", which performs the Send team action from § 13.3. The scope selector does not filter teams; all four are shown at every scope.
+
+### 14.3 Visits and the Planning tab
+
+Patients with `visitToday` get a visit `{ id, patientId, teamId, start: clock minutes (08:00–17:00 in 30-minute steps, deterministic from the seed), durationMin: 45, status: 'planned' | 'moved' | 'cancelled' | 'done' }` in `homeVisits`. Free slots per team are the 30-minute steps 08:00–18:00 not used by its visits; Move visit (§ 13.3) picks among them.
+
+`/planning` becomes a real page in the platform's three-pane style (list 380 px, pane, map): visits grouped by team and sorted by start, each row with time, patient, street, equipment, and when preparedness mode is on, the disruption flag (unreachable, detour, power, water) in the accent colour; selecting a visit shows the patient's details and the actions of § 13.3; the map shows the team's visits as a numbered sequence with the road layer. Without preparedness mode the page is the same minus the flags and the disruption actions, which is the point: the view exists in normal operation and gains the resilience layer when the mode is on. Drag is not required; "Move visit" is the only way to change a slot.
+
+`/patients` becomes a list of the 150 home patients in the platform list style (name, age, street, team, equipment), with the row opening the same detail pane as `/home`; `/activities`, `/employees` and `/reporting` stay stubs.
+
+### 14.4 Audit and roles
+
+Every action from § 13.3 and § 14.2 is attributed to `CURRENT_USER`; the log drawer filters by "Hospital at Home" / "Sjukhus hemma". No new roles.
+
+### 14.5 Second home pack: SUS Lund
+
+Home data is separated from the hospital pack: `homePacks: Record<HomePackId, HomePack>` with `HomePack = { id, name, sites: Array<{ id, name, lat, lng }>, zones, patients, teams, visits, infraNodes, infraLinks, messages, geo: { roads, streets, power, water } (dynamic imports) }`. `karolinska` is the data built so far (sites Solna and Huddinge, reachability sites from scope as before). `lund` is a new pack from DATA.md § 14 with one site, SUS Lund; with the Lund pack active, reachability runs from that site and the scope selector is ignored for `/home` and `/planning` (shown dimmed with a tooltip "Not applicable to SUS Lund" / "Gäller inte SUS Lund"). A pack switch "Hospital" / "Sjukhus" in the `/home` mode bar selects the pack; the choice is in the store and logged. `scripts/fetch-osm.mjs` takes a pack id and bbox and writes under `src/data/packs/geo/<pack>/`; the Karolinska files move there and all imports follow. Lund bbox 55.58, 12.84, 55.93, 13.74; streets around the seven Lund zones. The Lund patients: 150 as in DATA.md § 14, two teams ASIH Lund Nord and ASIH Lund Syd, bases at Lund centrum and Staffanstorp, two cars each.
+
+Lund tests: at baseline at least 95 % of Lund patients snap and have a path from SUS Lund; a power outage in Dalby flags exactly the Dalby patients; blocking every way named "Trafikplats Lund Norra" and "Trafikplats Lund Södra" (OSM names; if those names do not exist in the data, the test prints the ways within 300 m of the two InfraNodes and uses their names, logging it) makes every patient outside Lund delayed or unreachable from SUS Lund.
+
+### 14.6 Batches and definition of done
+
+Batch 15 – teams and cars (behaviour-changing, own batch). § 14.2. Tests: a patient's nearestTeam at baseline; blocking the crossing set of § 12.4 makes Söderort patients reachable only by ASIH Syd and Sydväst from their bases. Done when: team markers render; reassignment suggestions appear and perform Send team; summary line correct.
+
+Batch 16 – visits, Planning and Patients tabs (additive). § 14.3 and § 14.4. Done when: `/planning` shows visits per team with flags in preparedness mode and without them in normal mode; Move visit changes a slot and the sequence on the map; `/patients` lists 150 patients; parity test passes.
+
+Batch 17 – SUS Lund home pack (additive). § 14.5, DATA.md § 14, the fetch script per pack, the switch. Done when: the switch changes patients, infrastructure, teams and map extent; Lund tests pass on real data or fixture; Karolinska behaviour unchanged (all earlier tests pass untouched).
+
+Batch 18 – polish. Screenshots of `/home`, `/planning` and `/start` in both modes, both languages, light and dark under `docs/screenshots/`; README demo story rewritten as one continuous story: open Medoma Center, press Beredskap, see Läget nu, open Sjukhus hemma, create the road disruption from the message, press +1 h twice, contact the critical, move a visit in Planning, switch to SUS Lund; DECISIONS.md complete. Done when: screenshots exist; the story runs end to end in the app; typecheck, tests and build pass.

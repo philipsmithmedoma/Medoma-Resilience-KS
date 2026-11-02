@@ -8,7 +8,7 @@ export function LocaleToggle() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button type="button" aria-label={label} onClick={toggleLocale} className="flex h-8 items-center rounded-md px-1.5 text-[13px] leading-[18px] font-medium text-primary-text hover:bg-bg-muted">
+        <button type="button" aria-label={label} onClick={toggleLocale} className="flex h-8 items-center rounded-md px-1.5 group-data-[prep=true]:px-1 text-[13px] leading-[18px] font-medium text-primary-text hover:bg-bg-muted">
           {t('LABELS.otherLocaleCode')}
         </button>
       </TooltipTrigger>

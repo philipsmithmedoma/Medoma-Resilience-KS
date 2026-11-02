@@ -21,7 +21,7 @@ export function DemoControls() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" className="group-data-[prep=true]:px-2">
           {t('LABELS.demo')}
         </Button>
       </PopoverTrigger>
@@ -34,7 +34,7 @@ export function DemoControls() {
           variant="secondary"
           onClick={() => {
             reset();
-            navigate('/');
+            navigate('/start');
             toast(t('LABELS.demoReset'));
           }}
         >

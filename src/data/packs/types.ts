@@ -219,6 +219,9 @@ export interface Message {
   at: string;
   text: string;
   nodeId?: NodeId;
+  /** English form of a message written for the prototype in both languages (SPEC.md § 13.4); absent for messages that stay Swedish. */
+  textEn?: string;
+  roleEn?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -437,6 +440,8 @@ export interface AuditEntry {
   object: string;
   detail?: string;
   ref?: string;
+  /** The module the entry belongs to, for the log drawer's filter (SPEC.md § 14.4). */
+  area?: 'home';
 }
 
 export type Profession = 'Doc' | 'Nrs' | 'AsPr' | 'Supp';
@@ -514,7 +519,9 @@ export interface HomePatient {
   givenName: string;
   age: number;
   zone: ZoneId;
-  lat: number; // synthetic, within the zone radius
+  street: string; // the street the patient lives on (OpenStreetMap, or the fixture's) – SPEC.md § 12.5
+  houseNo: number; // illustrative, 1–60
+  lat: number; // synthetic, a vertex of a street within the zone radius
   lng: number;
   team: string; // illustrative ASIH team name
   equipment: HomeEquipment[];
@@ -548,6 +555,8 @@ export interface InfraNode {
   coordSource: string;
   figures?: InfraFigure[]; // e.g. vehicles per day, each with confidence and source
   noMarker?: boolean; // drawn as an arrow or as status text on other nodes, not as a marker
+  /** Road nodes: the OpenStreetMap way names this node blocks when it is closed (SPEC.md § 12.5). */
+  osmWayNames?: string[];
 }
 
 export interface InfraLink {
@@ -568,6 +577,103 @@ export interface HomeDisruptionPreset {
   blockedNodes: string[];
   powerOutZones: ZoneId[];
   waterOutZones: ZoneId[];
+  /** The sentence the scenario panel shows; a pack without one uses the Karolinska texts of the vocab. */
+  description?: LocalizedText;
+}
+
+/** A disruption as a record in time (SPEC.md § 13.2); the blocked and outage sets are derived from the active ones. */
+export type HomeDisruptionKind = 'road' | 'power' | 'water';
+export type HomeDisruptionSource = 'map' | 'preset' | 'message';
+/** What `target` names: an OSM way id, a road key (`name` or `name|ref`), a road InfraNode id, or a ZoneId. */
+export type HomeDisruptionTargetKind = 'way' | 'road' | 'node' | 'zone';
+export type HomeDisruptionEnd = 'manual' | 'expected' | 'reset' | 'replaced';
+export interface HomeDisruption {
+  id: string;
+  kind: HomeDisruptionKind;
+  target: string;
+  targetKind: HomeDisruptionTargetKind;
+  label: LocalizedText;
+  startedAt: number; // clock minutes
+  expectedEnd: number | null; // clock minutes
+  source: HomeDisruptionSource;
+  createdBy: string;
+  /** Set when the record stops being active; the record stays as history. */
+  endedAt: number | null;
+  endReason: HomeDisruptionEnd | null;
+  /** Free text, e.g. the id of the message the disruption was created from (SPEC.md § 13.4). */
+  note?: string | null;
+}
+
+// Teams, visits and the work on affected patients (SPEC.md § 13.3, § 14.2, § 14.3)
+export type TeamId = string;
+export interface HomeTeam {
+  id: TeamId;
+  name: string; // "ASIH Nord"; HomePatient.team carries the same string
+  baseLat: number;
+  baseLng: number;
+  baseLabel: LocalizedText;
+  cars: number;
+  phone: string; // placeholder "0XX-XXX XX XX"
+}
+
+export type HomeVisitStatus = 'planned' | 'moved' | 'cancelled' | 'done';
+export interface HomeVisit {
+  id: string;
+  patientId: string;
+  teamId: TeamId;
+  start: number; // minutes since 00:00 of the demo day, 08:00–17:00 in 30-minute steps
+  durationMin: number;
+  status: HomeVisitStatus;
+}
+
+/** The status chain of an affected patient (SPEC.md § 13.3): Ohanterad, Kontaktad, Planerad, Bekräftad. */
+export type HomeWorkStatus = 'Unhandled' | 'Contacted' | 'Planned' | 'Confirmed';
+export interface HomeWork {
+  status: HomeWorkStatus;
+  note: string | null;
+  assignedTeam: TeamId | null;
+  /** The site the patient is brought in to ("Ta in"); shown in Evakuering as an inbound line, without a move record. */
+  bringInSite: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Home packs (SPEC.md § 14.5): the Hospital at Home data of one hospital, kept apart from the hospital pack.
+export type HomePackId = 'karolinska' | 'lund';
+export interface HomeSite {
+  id: string; // 'solna', 'huddinge' (Karolinska care nodes) or 'suslund'
+  name: string;
+  lat: number;
+  lng: number;
+}
+export type GeoFileKind = 'roads' | 'streets' | 'power' | 'water';
+/** The OpenStreetMap file of a pack (absent until it has been fetched) and the fixture that stands in for it; both are dynamic imports. */
+export interface GeoLoader {
+  osm?: () => Promise<{ default: unknown }>;
+  fixture: () => Promise<{ default: unknown }>;
+}
+export interface HomeOsmMatch {
+  nodeId: string;
+  term: string;
+  file: 'power' | 'water';
+}
+export interface HomePack {
+  id: HomePackId;
+  name: string;
+  sites: HomeSite[];
+  zones: HomeZone[];
+  patients: HomePatient[];
+  teams: HomeTeam[];
+  visits: HomeVisit[];
+  infraNodes: InfraNode[];
+  infraLinks: InfraLink[];
+  messages: Message[];
+  /** Beyond § 14.5's list: the scenario presets and the sources of this pack's infrastructure (DECISIONS.md). */
+  presets: HomeDisruptionPreset[];
+  sources: SourceRef[];
+  /** How nodes take positions from OpenStreetMap, and nodes that exist only once OpenStreetMap has a match (Kolbotten). */
+  osmMatches: HomeOsmMatch[];
+  osmExtra: Record<string, Omit<InfraNode, 'lat' | 'lng' | 'coordConfidence' | 'coordSource'>>;
+  geo: Record<GeoFileKind, GeoLoader>;
 }
 
 // ---------------------------------------------------------------------------
@@ -610,4 +716,11 @@ export interface DataPack {
   infraLinks: InfraLink[];
   homeSources: SourceRef[]; // DATA.md § 11.4 (S-H1…S-H14), kept apart from `sources` (DATA.md § 9)
   homePresets: HomeDisruptionPreset[];
+  // Teams and today's visits (SPEC.md § 14.2, § 14.3)
+  homeTeams: HomeTeam[];
+  homeVisits: HomeVisit[];
+  /** Illustrative notices that can become disruptions (SPEC.md § 13.4, DATA.md § 13). */
+  homeMessages: Message[];
+  /** The home pack the home members above belong to (SPEC.md § 14.5); the store swaps them when the pack switch is used. */
+  homePackId: HomePackId;
 }

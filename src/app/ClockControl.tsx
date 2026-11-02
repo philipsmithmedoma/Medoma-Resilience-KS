@@ -16,7 +16,7 @@ function IconButton({ label, onClick, primary, children }: { label: string; onCl
           type="button"
           aria-label={label}
           onClick={onClick}
-          className={cn('flex size-7 items-center justify-center rounded-md hover:bg-bg-muted min-[1600px]:size-8', primary ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-text')}
+          className={cn('flex size-7 items-center justify-center rounded-md hover:bg-bg-muted group-data-[prep=true]:size-6', primary ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-text')}
         >
           {children}
         </button>
@@ -27,7 +27,7 @@ function IconButton({ label, onClick, primary, children }: { label: string; onCl
 }
 
 /** DESIGN-KS.md § 3 – the scenario clock: time, play/pause, step one tick, reset; scenario chip while running. */
-export function ClockControl() {
+export function ClockControl({ scenarioControls = true }: { scenarioControls?: boolean }) {
   const clock = useStore((s) => s.clock);
   const running = useStore((s) => s.clockRunning);
   const scenario = useStore((s) => s.scenario);
@@ -54,26 +54,31 @@ export function ClockControl() {
 
   return (
     <div className="flex items-center gap-1">
-      {chip ? <Chip tone="blue">{chip}</Chip> : null}
-      <span className="mx-0.5 text-body font-medium tabular min-[1600px]:mx-1" aria-label={t('CLOCK.ariaClock', { hhmm: formatClock(clock) })}>
+      {/* The chip needs about 200 px; it shows from 1700 px, and the scenario name stays in the time's title and in the panel. */}
+      {chip && scenarioControls ? <Chip tone="blue" className="hidden min-[1700px]:inline-flex">{chip}</Chip> : null}
+      <span className="mx-0.5 group-data-[prep=true]:mx-0 text-body font-medium tabular" aria-label={t('CLOCK.ariaClock', { hhmm: formatClock(clock) })} title={chip ?? undefined}>
         {formatClock(clock)}
         {day > 1 ? <span className="ml-1 font-normal text-text-secondary">{t('CLOCK.day', { n: day })}</span> : null}
       </span>
-      <IconButton label={running ? t('CLOCK.pause') : t('CLOCK.play')} onClick={() => setClockRunning(!running)} primary={running}>
-        {running ? <PauseIcon className="size-5" strokeWidth={1.5} aria-hidden /> : <PlayIcon className="size-5" strokeWidth={1.5} aria-hidden />}
-      </IconButton>
-      <IconButton label={dayTicks ? t('CLOCK.stepDay') : t('CLOCK.step')} onClick={stepClock}>
-        <SkipForwardIcon className="size-5" strokeWidth={1.5} aria-hidden />
-      </IconButton>
-      <IconButton
-        label={t('CLOCK.reset')}
-        onClick={() => {
-          resetClock();
-          toast(t('CLOCK.clockReset'));
-        }}
-      >
-        <RotateCcwIcon className="size-5" strokeWidth={1.5} aria-hidden />
-      </IconButton>
+      {scenarioControls ? (
+        <>
+        <IconButton label={running ? t('CLOCK.pause') : t('CLOCK.play')} onClick={() => setClockRunning(!running)} primary={running}>
+          {running ? <PauseIcon className="size-5" strokeWidth={1.5} aria-hidden /> : <PlayIcon className="size-5" strokeWidth={1.5} aria-hidden />}
+        </IconButton>
+        <IconButton label={dayTicks ? t('CLOCK.stepDay') : t('CLOCK.step')} onClick={stepClock}>
+          <SkipForwardIcon className="size-5" strokeWidth={1.5} aria-hidden />
+        </IconButton>
+        <IconButton
+          label={t('CLOCK.reset')}
+          onClick={() => {
+            resetClock();
+            toast(t('CLOCK.clockReset'));
+          }}
+        >
+          <RotateCcwIcon className="size-5" strokeWidth={1.5} aria-hidden />
+        </IconButton>
+        </>
+      ) : null}
     </div>
   );
 }

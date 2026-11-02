@@ -1,7 +1,7 @@
 // Generates src/data/packs/patients.ts once, deterministically (SPEC.md § 6.7): 40 patients per site,
 // wards from DATA.md § 5.1, the first prototype's distribution constraints, ages 24–91, 12 home care
 // eligible per site. Run: node scripts/generate-patients.mjs
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -184,13 +184,38 @@ function position(lat, lng, radiusKm) {
   return [Number((lat + dLat).toFixed(5)), Number((lng + dLng).toFixed(5))];
 }
 
+// SPEC.md § 12.5: each patient lands on a random vertex of a random street within the zone's radius. The streets come from
+// src/data/packs/geo/karolinska/streets.json (scripts/fetch-osm.mjs) or, until that has been fetched, from fixture-streets.json.
+// Placement has its own random stream, so equipment, batteries and visits are the same whichever file is used.
+const geoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/data/packs/geo');
+const geoDir = path.join(geoRoot, 'karolinska');
+const streetsFile = existsSync(path.join(geoDir, 'streets.json')) ? 'streets.json' : 'fixture-streets.json';
+const streetFeatures = JSON.parse(readFileSync(path.join(geoDir, streetsFile), 'utf8')).features.filter((f) => f.properties.name);
+console.log(`Placing home patients on ${streetFeatures.length} streets from ${streetsFile}`);
+const rand3 = mulberry32(HOME_SEED + 1);
+const kmBetween = (lat1, lng1, lat2, lng2) => Math.hypot((lat2 - lat1) * KM_PER_DEG_LAT, (lng2 - lng1) * KM_PER_DEG_LAT * Math.cos((lat1 * Math.PI) / 180));
+// A street vertex counts for a zone when it is within the zone's radius and the zone's centre is the nearest of the ten
+// centres: neighbouring zones overlap (Innerstaden and Södermalm are 2.4 km apart), and a patient of Södermalm must not
+// live in Norrmalm.
+function onStreet(zlat, zlng, radiusKm) {
+  const nearestIsThisZone = (lat, lng) => HOME_ZONES.every(([, olat, olng]) => kmBetween(lat, lng, zlat, zlng) <= kmBetween(lat, lng, olat, olng) + 1e-9);
+  const candidates = streetFeatures
+    .map((f) => ({ name: f.properties.name, vertices: f.geometry.coordinates.filter(([lng, lat]) => kmBetween(zlat, zlng, lat, lng) <= radiusKm && nearestIsThisZone(lat, lng)) }))
+    .filter((s) => s.vertices.length > 0);
+  if (candidates.length === 0) throw new Error(`No street within ${radiusKm} km of ${zlat}, ${zlng}`);
+  const street = candidates[Math.floor(rand3() * candidates.length)];
+  const [lng, lat] = street.vertices[Math.floor(rand3() * street.vertices.length)];
+  return { street: street.name, lat, lng, houseNo: 1 + Math.floor(rand3() * 60) };
+}
+
 const homePatients = [];
 for (const [zone, zlat, zlng, radiusKm, count, team] of HOME_ZONES) {
   for (let i = 0; i < count; i++) {
     const main = pickMain();
     const dialysis = rand2() < 0.05;
     const equipment = [...(main ? [main] : []), ...(dialysis ? ['Home dialysis'] : [])];
-    const [lat, lng] = position(zlat, zlng, radiusKm);
+    position(zlat, zlng, radiusKm); // keeps the main random stream where it was; the position now comes from a street
+    const { street, lat, lng, houseNo } = onStreet(zlat, zlng, radiusKm);
     const { familyName, givenName } = homeName();
     homePatients.push({
       id: `hp-${homePatients.length + 1}`,
@@ -198,6 +223,8 @@ for (const [zone, zlat, zlng, radiusKm, count, team] of HOME_ZONES) {
       givenName,
       age: randInt2(24, 91),
       zone,
+      street,
+      houseNo,
       lat,
       lng,
       team,
@@ -221,3 +248,92 @@ ${homePatients.map(line).join('\n')}
 const homeTarget = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/data/packs/home-patients.ts');
 writeFileSync(homeTarget, homeOut);
 console.log(`Wrote ${homePatients.length} home patients to ${homeTarget}`);
+
+// ---------------------------------------------------------------------------
+// SUS Lund (DATA.md § 14, SPEC.md § 14.5): 150 synthetic home care patients for the second home pack, a third seeded
+// generator that writes src/data/packs/home-patients-lund.ts. Own random streams: the Karolinska output above is unaffected.
+const LUND_SEED = 20261017;
+const rL = mulberry32(LUND_SEED);
+const rLpos = mulberry32(LUND_SEED + 1);
+const randIntL = (min, max) => min + Math.floor(rL() * (max - min + 1));
+// zone id, centre, radius (km), patients, ASIH team (DATA.md § 14)
+const LUND_ZONES = [
+  ['lund', 55.706, 13.192, 2.5, 60, 'ASIH Lund Nord'],
+  ['kavlinge', 55.792, 13.112, 1.5, 15, 'ASIH Lund Nord'],
+  ['lomma', 55.695, 13.055, 2.0, 15, 'ASIH Lund Nord'],
+  ['staffanstorp', 55.642, 13.212, 1.5, 15, 'ASIH Lund Syd'],
+  ['dalby', 55.666, 13.352, 1.5, 15, 'ASIH Lund Syd'],
+  ['eslov', 55.838, 13.305, 2.0, 20, 'ASIH Lund Nord'],
+  ['horby', 55.851, 13.66, 1.5, 10, 'ASIH Lund Nord'],
+];
+const lundDir = path.join(geoRoot, 'lund');
+const lundStreetsFile = existsSync(path.join(lundDir, 'streets.json')) ? 'streets.json' : 'fixture-streets.json';
+const lundStreetFeatures = JSON.parse(readFileSync(path.join(lundDir, lundStreetsFile), 'utf8')).features.filter((f) => f.properties.name);
+console.log(`Placing Lund patients on ${lundStreetFeatures.length} streets from ${lundStreetsFile}`);
+const usedL = new Set([...usedNames, ...homePatients.map((p) => `${p.givenName} ${p.familyName}`)]);
+function lundName() {
+  for (;;) {
+    const familyName = FAMILY[Math.floor(rL() * FAMILY.length)];
+    const givenName = GIVEN[Math.floor(rL() * GIVEN.length)];
+    const key = `${givenName} ${familyName}`;
+    if (staffNames.has(key) || usedL.has(key)) continue;
+    usedL.add(key);
+    return { familyName, givenName };
+  }
+}
+function pickMainL() {
+  let x = rL() * 100;
+  for (const [w, name] of MAIN_EQUIPMENT) {
+    if (x < w) return name;
+    x -= w;
+  }
+  return null;
+}
+function onStreetLund(zlat, zlng, radiusKm) {
+  const nearestIsThisZone = (lat, lng) => LUND_ZONES.every(([, olat, olng]) => kmBetween(lat, lng, zlat, zlng) <= kmBetween(lat, lng, olat, olng) + 1e-9);
+  const candidates = lundStreetFeatures
+    .map((f) => ({ name: f.properties.name, vertices: f.geometry.coordinates.filter(([lng, lat]) => kmBetween(zlat, zlng, lat, lng) <= radiusKm && nearestIsThisZone(lat, lng)) }))
+    .filter((s) => s.vertices.length > 0);
+  if (candidates.length === 0) throw new Error(`No street within ${radiusKm} km of ${zlat}, ${zlng}`);
+  const street = candidates[Math.floor(rLpos() * candidates.length)];
+  const [lng, lat] = street.vertices[Math.floor(rLpos() * street.vertices.length)];
+  return { street: street.name, lat, lng, houseNo: 1 + Math.floor(rLpos() * 60) };
+}
+const lundPatients = [];
+for (const [zone, zlat, zlng, radiusKm, count, team] of LUND_ZONES) {
+  for (let i = 0; i < count; i++) {
+    const main = pickMainL();
+    const dialysis = rL() < 0.05;
+    const equipment = [...(main ? [main] : []), ...(dialysis ? ['Home dialysis'] : [])];
+    const { street, lat, lng, houseNo } = onStreetLund(zlat, zlng, radiusKm);
+    const { familyName, givenName } = lundName();
+    lundPatients.push({
+      id: `lp-${lundPatients.length + 1}`,
+      familyName,
+      givenName,
+      age: randIntL(24, 91),
+      zone,
+      street,
+      houseNo,
+      lat,
+      lng,
+      team,
+      equipment,
+      batteryHours: main ? randIntL(...BATTERY_HOURS[main]) : null,
+      visitToday: rL() < 0.4,
+      elCritical: main === 'Oxygen' || main === 'IV infusion' || main === 'Home ventilator',
+      waterCritical: dialysis,
+    });
+  }
+}
+const lundOut = `// Generated by scripts/generate-patients.mjs (seed ${LUND_SEED}). Do not edit by hand.
+// Synthetic Hospital at Home patients for the SUS Lund pack (DATA.md § 14). Nothing here is a real person.
+import type { HomePatient } from './types';
+
+export const LUND_PATIENTS: HomePatient[] = [
+${lundPatients.map(line).join('\n')}
+];
+`;
+const lundTarget = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/data/packs/home-patients-lund.ts');
+writeFileSync(lundTarget, lundOut);
+console.log(`Wrote ${lundPatients.length} Lund patients to ${lundTarget}`);

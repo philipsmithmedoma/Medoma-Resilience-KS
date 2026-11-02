@@ -140,7 +140,7 @@ export function ScenarioPanel() {
                     </SelectContent>
                   </Select>
                 </div>
-                {homePreset ? <p>{t(`HOME.presets.${homePreset.key}`)}</p> : null}
+                {homePreset ? <p>{homePreset.description ? lt(homePreset.description) : t(`HOME.presets.${homePreset.key}`)}</p> : null}
                 <section className="space-y-3">
                   {preset ? <h3 className="text-body font-medium">{t('SCENARIO.params')}</h3> : null}
                   {(preset?.paramDefs ?? []).map((def) => (

@@ -1,8 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { useStore } from './store';
 import { NO_DISRUPTIONS, disruptionCount, impact } from '@/lib/reachability';
+import { loadRoadModel } from '@/lib/roadModel';
 
 const s = () => useStore.getState();
+
+// The road graph (OpenStreetMap data, or the fixture) decides how many patients a closed road affects.
+beforeAll(async () => {
+  await loadRoadModel(useStore.getState().pack);
+  useStore.getState().setHomeGeoReady();
+});
 
 describe('Hospital at Home view state (SPEC.md § 11.5)', () => {
   beforeEach(() => s().reset());
@@ -64,15 +71,20 @@ describe('Hospital at Home disruptions (SPEC.md § 11.5)', () => {
     expect(last().action).toBe('Öppnade');
   });
 
-  it('blocks a road link and ignores ids that are not road nodes or links', () => {
+  it('closes one way by its OSM id and a whole road by its name, and ignores ids that are not road nodes', () => {
     const n = s().log.length;
-    s().toggleBlockedLink('rl-norra-lanken-lidingo');
-    expect(s().home.blockedLinks.has('rl-norra-lanken-lidingo')).toBe(true);
-    expect(last().detail).toBe('5 av 150 patienter påverkade');
+    s().toggleBlockedWay('9000004'); // Norra länken in the fixture
+    expect(s().home.blockedWays.has('9000004')).toBe(true);
+    expect(last()).toMatchObject({ action: 'Stängde', object: 'Norra länken' });
+    s().toggleBlockedRoad('Uppsalavägen|E4');
+    expect(s().home.blockedRoads.has('Uppsalavägen|E4')).toBe(true);
+    expect(last()).toMatchObject({ action: 'Stängde', object: 'Uppsalavägen' });
+    expect(last().detail).toBe('10 av 150 patienter påverkade'); // Täby is cut off
+    s().toggleBlockedRoad('Uppsalavägen|E4');
+    expect(last().action).toBe('Öppnade');
     s().toggleBlockedNode('w-gorvaln'); // a water node
-    s().toggleBlockedLink('wl-gorvaln-solna'); // a water link
     s().togglePowerOut('atlantis');
-    expect(s().log).toHaveLength(n + 1);
+    expect(s().log).toHaveLength(n + 3);
   });
 
   it('sets and restores power and water outages per zone and logs them', () => {
@@ -92,10 +104,11 @@ describe('Hospital at Home disruptions (SPEC.md § 11.5)', () => {
     s().resetHomeDisruptions();
     expect(s().log).toHaveLength(n);
     s().toggleBlockedNode('r-centralbron');
-    s().toggleBlockedLink('rl-norra-lanken-lidingo');
+    s().toggleBlockedWay('9000004');
+    s().toggleBlockedRoad('Uppsalavägen');
     s().togglePowerOut('soderort');
     s().toggleWaterOut('solna');
-    expect(disruptionCount(s().home)).toBe(4);
+    expect(disruptionCount(s().home)).toBe(5);
     s().resetHomeDisruptions();
     expect(disruptionCount(s().home)).toBe(0);
     expect(last()).toMatchObject({ action: 'Återställde alla störningar', object: 'Sjukhus hemma', detail: '0 av 150 patienter påverkade' });
@@ -105,11 +118,12 @@ describe('Hospital at Home disruptions (SPEC.md § 11.5)', () => {
 
   it('computes the affected count for the scope', () => {
     s().setScope('solna');
-    s().toggleBlockedNode('r-essingeleden');
-    s().toggleBlockedNode('r-centralbron');
-    s().toggleBlockedNode('r-vasterbron');
-    // From Solna alone Söderort, Huddinge, Botkyrka, Nacka and Södermalm are cut off: 20 + 20 + 10 + 10 + 15.
+    for (const road of ['Essingeleden', 'Västerbron', 'Centralbron', 'Munkbroleden', 'Skeppsbron', 'Söderledstunneln', 'Katarinavägen', 'Stadsgårdsleden']) s().toggleBlockedRoad(road);
+    // From Solna alone Södermalm, Söderort, Huddinge, Botkyrka and Nacka are cut off: 15 + 20 + 20 + 10 + 10.
     expect(last().detail).toBe('75 av 150 patienter påverkade');
+    s().setScope('karolinska'); // reachable from either site: only the part of the south that hangs on closed roads stays cut off
+    s().toggleBlockedRoad('Stadsgårdsleden');
+    expect(last().detail).toBe('25 av 150 patienter påverkade');
   });
 
   it('the demo reset restores the defaults', () => {

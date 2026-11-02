@@ -11,6 +11,7 @@ import type { IconTileProps } from '@/components/Card';
 import { CapacityCard } from '@/modules/capacity/CapacityCard';
 import type { CardModel } from '@/modules/capacity/cards';
 import { startChapter } from './chapters';
+import { HomeCard } from './HomeCard';
 
 const tile = (icon: IconTileProps['icon'], tint: keyof typeof ICON_TINTS): IconTileProps => ({ icon, iconClass: ICON_TINTS[tint].icon, tileClass: ICON_TINTS[tint].tile });
 
@@ -83,6 +84,8 @@ export function StartPage() {
           ))}
         </div>
       </section>
+
+      <HomeCard />
 
       <p className="flex items-center gap-2 text-small text-text-muted">
         <BuildingIcon className="size-4" strokeWidth={1.5} aria-hidden />

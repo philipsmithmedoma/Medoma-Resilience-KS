@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { SiteId } from '@/data/types';
 import { useStore } from '@/data/store';
-import { t } from '@/lib/i18n';
+import { t, tm } from '@/lib/i18n';
 import { isInTransit } from '@/lib/evacuation';
 import { fmt } from '@/lib/format';
 import { defaultEvacuationSite, isSite, siteName } from '@/lib/scope';
@@ -32,6 +32,17 @@ export function EvacuationPage() {
   }, [scope]);
 
   const patients = useMemo(() => allPatients.filter((p) => p.nodeId === site), [allPatients, site]);
+  const homePatients = useStore((s) => s.pack.homePatients);
+  const homeWork = useStore((s) => s.home.work);
+  const equipmentLabels = tm('HOME.equipment');
+  // Hospital at Home patients brought in to this site (SPEC.md § 13.3): inbound lines, no move record.
+  const inbound = useMemo(
+    () =>
+      homePatients
+        .filter((p) => homeWork[p.id]?.bringInSite === site)
+        .map((p) => ({ id: p.id, name: `${p.familyName}, ${p.givenName}`, age: p.age, detail: [`${p.street} ${p.houseNo}`, ...p.equipment.map((e) => equipmentLabels[e])].join(', ') })),
+    [homePatients, homeWork, site, equipmentLabels],
+  );
   const selected = patients.find((p) => p.id === selectedId) ?? null;
 
   const counts = useMemo(() => {
@@ -113,7 +124,7 @@ export function EvacuationPage() {
 
       <div className="-mx-6 flex min-h-[520px] flex-1 border-t border-border">
         <div className="w-[380px] shrink-0 overflow-y-auto border-r border-border">
-          <PatientList patients={patients} selectedId={selectedId} onSelect={setSelectedId} />
+          <PatientList patients={patients} inbound={inbound} selectedId={selectedId} onSelect={setSelectedId} />
         </div>
         <div className="w-[320px] shrink-0 overflow-y-auto border-r border-border">
           <PlanningPane patient={selected} site={site} />
