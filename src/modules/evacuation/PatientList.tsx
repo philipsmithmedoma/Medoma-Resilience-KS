@@ -4,7 +4,7 @@ import { EVAC_STATUS_FILTERS, STABILITIES, TRANSPORT_NEEDS, type EvacStatusFilte
 import { t, tm } from '@/lib/i18n';
 import { isInTransit, patientName } from '@/lib/evacuation';
 import { cn } from '@/lib/utils';
-import { StatusChip } from '@/components/Chip';
+import { Chip, StatusChip } from '@/components/Chip';
 import { Button } from '@/components/ui/button';
 
 function statusMatches(p: Patient, f: EvacStatusFilter): boolean {
@@ -45,8 +45,17 @@ function FilterRow<T extends string>({ label, options, value, onChange }: { labe
   );
 }
 
+/** A Hospital at Home patient brought in to the site ("Ta in"); an inbound line without a move record (SPEC.md § 13.3). */
+export interface InboundLine {
+  id: string;
+  name: string;
+  age: number;
+  detail: string;
+}
+
 interface PatientListProps {
   patients: Patient[];
+  inbound?: InboundLine[];
   selectedId: string | null;
   onSelect: (id: string) => void;
 }
@@ -54,7 +63,7 @@ interface PatientListProps {
 const ALL = 'all' as const;
 
 /** Left pane – filter chips, grouped by ward, one row per patient. */
-export function PatientList({ patients, selectedId, onSelect }: PatientListProps) {
+export function PatientList({ patients, inbound = [], selectedId, onSelect }: PatientListProps) {
   const [stability, setStability] = useState<typeof ALL | Stability>(ALL);
   const [transport, setTransport] = useState<typeof ALL | TransportNeed>(ALL);
   const [status, setStatus] = useState<EvacStatusFilter>('all');
@@ -83,6 +92,26 @@ export function PatientList({ patients, selectedId, onSelect }: PatientListProps
         <FilterRow label={t('EVAC.filters.transport')} options={transportOptions} value={transport} onChange={setTransport} />
         <FilterRow label={t('EVAC.filters.status')} options={statusOptions} value={status} onChange={setStatus} />
       </div>
+      {inbound.length > 0 ? (
+        <section aria-label={t('EVAC.fromHome', { n: inbound.length })}>
+          <h3 className="bg-bg-muted px-4 py-1.5 text-body font-medium">
+            {t('EVAC.fromHome', { n: inbound.length })} <span className="font-normal text-text-secondary">{t('EVAC.fromHomeNote')}</span>
+          </h3>
+          <ul>
+            {inbound.map((l) => (
+              <li key={l.id} className="flex flex-col gap-1 border-b border-border px-4 py-2" data-testid="inbound-line">
+                <span className="flex w-full items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {l.name} <span className="font-normal text-text-secondary tabular">{l.age}</span>
+                  </span>
+                  <Chip tone="blue">{t('LABELS.fromHome')}</Chip>
+                </span>
+                <span className="text-small text-text-secondary">{l.detail}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {filtered.length === 0 ? (
         <div className="space-y-2 px-4 py-6">
           <p>{t('EVAC.noMatch')}</p>

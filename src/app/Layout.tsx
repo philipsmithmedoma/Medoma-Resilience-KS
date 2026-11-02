@@ -55,9 +55,13 @@ export function Layout() {
   }, [location.pathname, location.hash]);
   return (
     <div className="flex min-h-screen flex-col">
-      <Nav />
-      <IncidentBanner onClose={() => setCloseOpen(true)} />
-      <main className="flex-1 px-6 pt-4 pb-8">
+      <div className="print:hidden">
+        <Nav />
+      </div>
+      <div className="print:hidden">
+        <IncidentBanner onClose={() => setCloseOpen(true)} />
+      </div>
+      <main className="flex-1 px-6 pt-4 pb-8 print:px-0 print:pt-0 print:pb-0">
         <div key={locale} className="contents">
           <Outlet />
         </div>

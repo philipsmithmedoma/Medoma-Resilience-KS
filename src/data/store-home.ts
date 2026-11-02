@@ -3,14 +3,17 @@
 // to the audit log through logEntry() like every other action.
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
-import type { DataPack, HomeDisruption, HomeDisruptionKind, HomeDisruptionSource, HomeDisruptionTargetKind, InfraLayer, InfraNode, LocalizedText, ZoneId } from './types';
-import { lt, same, t } from '@/lib/i18n';
+import type { DataPack, HomeDisruption, HomeVisit, HomeWork, HomeWorkStatus, SiteId, TeamId, HomeDisruptionKind, HomeDisruptionSource, HomeDisruptionTargetKind, InfraLayer, InfraNode, LocalizedText, ZoneId } from './types';
+import { lt, same, t, tm } from '@/lib/i18n';
 import { CURRENT_USER, SYSTEM_ACTOR } from './vocab';
 import { deriveSets, expiredIds } from '@/lib/disruptions';
+import { freeSlots, effectiveVisits } from './packs/home-visits';
+import { formatClock } from '@/lib/time';
+import { haversineM } from '@/lib/roadGraph';
 import { getRoadModel } from '@/lib/roadModel';
 import { getAppliedNodes } from '@/lib/osmNodes';
 import { sitesInScope } from '@/lib/scope';
-import { disruptionCount, impact } from '@/lib/reachability';
+import { BOTH_SITES, disruptionCount, impact } from '@/lib/reachability';
 
 export type HomeLayerKey = InfraLayer | 'patients';
 export const HOME_LAYER_KEYS: HomeLayerKey[] = ['patients', 'roads', 'el', 'water'];
@@ -35,6 +38,10 @@ export interface HomeState {
   disruptions: HomeDisruption[];
   /** Zone → start of the earliest active power disruption covering it; the battery deadlines are computed from it. */
   powerStart: Map<ZoneId, number>;
+  /** The work on affected patients: the status chain and what was decided (SPEC.md § 13.3). A patient with no entry is Unhandled. */
+  work: Record<string, HomeWork>;
+  /** Today's visits; Move visit changes a slot or cancels one (SPEC.md § 14.3). */
+  visits: HomeVisit[];
   /** The infrastructure node the panel shows; the map dims everything it is not linked to. */
   selectedNode: string | null;
   /** In roads mode a tap blocks every way that shares the tapped way's name (view state). */
@@ -67,6 +74,18 @@ export interface HomeActions {
   settleHomeDisruptions: () => void;
   /** Advances the shared clock (the "+1 h" control), logs it and lets expired disruptions end. */
   advanceClock: (minutes: number) => void;
+  /** Contact – sets Contacted (the status never moves backwards) and records the note. */
+  contactPatient: (patientId: string, note: string) => void;
+  /** Move visit – a new slot from the team's free slots, or null for "no visit today"; sets Planned. */
+  moveVisit: (patientId: string, slot: number | null) => void;
+  /** Send team – sets Planned and records the team on the patient. */
+  sendTeam: (patientId: string, teamId: TeamId) => void;
+  /** Bring in – marks the patient for transfer to the nearest site in scope; sets Planned. */
+  bringInPatient: (patientId: string) => void;
+  /** Confirm – sets Confirmed. */
+  confirmPatient: (patientId: string) => void;
+  /** Contact all critical – Contacted on every critical row, note "bulk contact"; one log entry. */
+  contactAllCritical: () => void;
   /** Clears every disruption and writes one log entry; nothing happens when there is none. */
   resetHomeDisruptions: () => void;
   /** A scenario preset of the flag-setting kind (SPEC.md § 11.5): replaces the disruptions with the preset's and writes one log entry. */
@@ -83,7 +102,11 @@ export interface NewDisruption {
   source: HomeDisruptionSource;
 }
 
-export function initialHome(pack: Pick<DataPack, 'infraNodes'>): HomeState {
+export const WORK_STATUSES: HomeWorkStatus[] = ['Unhandled', 'Contacted', 'Planned', 'Confirmed'];
+const RANK = (s: HomeWorkStatus) => WORK_STATUSES.indexOf(s);
+const NO_WORK: HomeWork = { status: 'Unhandled', note: null, assignedTeam: null, bringInSite: null };
+
+export function initialHome(pack: Pick<DataPack, 'infraNodes'> & Partial<Pick<DataPack, 'homeVisits'>>): HomeState {
   return {
     layers: { patients: true, roads: true, el: false, water: false },
     mode: null,
@@ -94,6 +117,8 @@ export function initialHome(pack: Pick<DataPack, 'infraNodes'>): HomeState {
     waterOutZones: new Set(),
     disruptions: [],
     powerStart: new Map(),
+    work: {},
+    visits: structuredClone(pack.homeVisits ?? []),
     selectedNode: null,
     wholeRoad: false,
     geoReady: getRoadModel() !== null,
@@ -181,6 +206,39 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
     return true;
   };
 
+  const patientOf = (id: string) => get().pack.homePatients.find((p) => p.id === id);
+  const nameOf = (id: string) => {
+    const p = patientOf(id);
+    return p ? `${p.familyName}, ${p.givenName}` : id;
+  };
+  /** Sets the work record of a patient; the status never moves backwards. */
+  const setWork = (id: string, patch: Partial<HomeWork>, status: HomeWorkStatus) =>
+    set((s) => {
+      const cur = s.home.work[id] ?? NO_WORK;
+      const next: HomeWork = { ...cur, ...patch, status: RANK(status) > RANK(cur.status) ? status : cur.status };
+      return { home: { ...s.home, work: { ...s.home.work, [id]: next } } };
+    });
+  const teamName = (id: TeamId) => get().pack.homeTeams.find((x) => x.id === id)?.name ?? id;
+
+  /**
+   * Status resets to Unhandled only when the disruption that affected the patient has ended (SPEC.md § 13.3): a patient with
+   * work on them who is no longer affected from the sites in scope starts over. The log keeps the history.
+   */
+  const reconcile = () => {
+    const { pack, home, scope, clock, logEntry } = get();
+    const touched = Object.keys(home.work).filter((id) => home.work[id].status !== 'Unhandled');
+    if (touched.length === 0) return;
+    const affected = new Set(impact(pack, home, sitesInScope(scope), undefined, clock).rows.filter((r) => r.affected).map((r) => r.patient.id));
+    const reset = touched.filter((id) => !affected.has(id));
+    if (reset.length === 0) return;
+    set((s) => {
+      const work = { ...s.home.work };
+      for (const id of reset) delete work[id];
+      return { home: { ...s.home, work } };
+    });
+    logEntry(t('AUDIT.homeStatusReset'), t('AUDIT.homeObject'), t('AUDIT.homeStatusResetDetail', { n: reset.length }), SYSTEM_ACTOR, reset.join(','));
+  };
+
   return {
     setHomeLayer: (layer, on) =>
       set((s) => ({
@@ -206,18 +264,21 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       if (!node) return;
       const blocking = toggleRecord({ kind: 'road', target: id, targetKind: 'node', source: 'map' });
       logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), lt(node.name), detail());
+      reconcile();
     },
 
     toggleBlockedWay: (id) => {
       const { logEntry } = get();
       const blocking = toggleRecord({ kind: 'road', target: id, targetKind: 'way', source: 'map' });
       logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), wayLabel(id), detail());
+      reconcile();
     },
 
     toggleBlockedRoad: (key) => {
       const { logEntry } = get();
       const blocking = toggleRecord({ kind: 'road', target: key, targetKind: 'road', source: 'map' });
       logEntry(blocking ? t('AUDIT.homeBlocked') : t('AUDIT.homeUnblocked'), key.split('|')[0], detail());
+      reconcile();
     },
 
     setWholeRoad: (on) => set((s) => ({ home: { ...s.home, wholeRoad: on } })),
@@ -229,6 +290,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       if (!pack.homeZones.some((z) => z.id === zone)) return;
       const out = toggleRecord({ kind: 'power', target: zone, targetKind: 'zone', source: 'map' });
       logEntry(out ? t('AUDIT.homePowerOut') : t('AUDIT.homePowerRestored'), zoneName(zone), detail());
+      reconcile();
     },
 
     toggleWaterOut: (zone) => {
@@ -236,6 +298,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       if (!pack.homeZones.some((z) => z.id === zone)) return;
       const out = toggleRecord({ kind: 'water', target: zone, targetKind: 'zone', source: 'map' });
       logEntry(out ? t('AUDIT.homeWaterOut') : t('AUDIT.homeWaterRestored'), zoneName(zone), detail());
+      reconcile();
     },
 
     startHomeDisruption: (input) => {
@@ -250,6 +313,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       const d = endRecord((x) => x.id === id, 'manual');
       if (!d) return;
       get().logEntry(t('AUDIT.homeEnded'), lt(d.label), detail(), undefined, id);
+      reconcile();
     },
 
     settleHomeDisruptions: () => {
@@ -262,6 +326,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
           const d = endRecord((x) => x.id === id, 'expected');
           if (d) get().logEntry(t('AUDIT.homeEndedExpected'), lt(d.label), detail(), SYSTEM_ACTOR, id);
         }
+        reconcile();
       } finally {
         settlingHome = false;
       }
@@ -273,11 +338,73 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       get().logEntry(t('AUDIT.homeClockAdvanced'), t('AUDIT.homeObject'), t('AUDIT.homeClockDetail', { n: minutes }), undefined, undefined, { advance: false });
     },
 
+    contactPatient: (patientId, note) => {
+      if (!patientOf(patientId)) return;
+      const text = note.trim();
+      setWork(patientId, { note: text || null }, 'Contacted');
+      get().logEntry(t('AUDIT.homeContact'), nameOf(patientId), text || undefined, undefined, patientId);
+    },
+
+    moveVisit: (patientId, slot) => {
+      const { home, pack, clock } = get();
+      const visit = home.visits.find((v) => v.patientId === patientId);
+      const patient = patientOf(patientId);
+      if (!visit || !patient?.visitToday) return;
+      const team = pack.homeTeams.find((x) => x.id === (home.work[patientId]?.assignedTeam ?? visit.teamId));
+      if (!team) return;
+      const was = formatClock(visit.start);
+      if (slot === null) {
+        set((s) => ({ home: { ...s.home, visits: s.home.visits.map((v) => (v.id === visit.id ? { ...v, status: 'cancelled' } : v)) } }));
+        setWork(patientId, {}, 'Planned');
+        get().logEntry(t('AUDIT.homeVisitCancelled'), nameOf(patientId), t('AUDIT.homeVisitFrom', { from: was }), undefined, patientId);
+        return;
+      }
+      const free = freeSlots(effectiveVisits(home.visits, home.work).filter((v) => v.id !== visit.id), team, clock);
+      if (!free.includes(slot)) return;
+      set((s) => ({ home: { ...s.home, visits: s.home.visits.map((v) => (v.id === visit.id ? { ...v, start: slot, status: 'moved' } : v)) } }));
+      setWork(patientId, {}, 'Planned');
+      get().logEntry(t('AUDIT.homeVisitMoved'), nameOf(patientId), t('AUDIT.homeVisitMove', { from: was, to: formatClock(slot) }), undefined, patientId);
+    },
+
+    sendTeam: (patientId, teamId) => {
+      if (!patientOf(patientId) || !get().pack.homeTeams.some((x) => x.id === teamId)) return;
+      setWork(patientId, { assignedTeam: teamId }, 'Planned');
+      get().logEntry(t('AUDIT.homeSendTeam'), nameOf(patientId), teamName(teamId), undefined, patientId);
+    },
+
+    bringInPatient: (patientId) => {
+      const patient = patientOf(patientId);
+      if (!patient) return;
+      const { pack, scope } = get();
+      const inScope = sitesInScope(scope);
+      const candidates = (inScope.length ? inScope : BOTH_SITES).map((id) => pack.nodes.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => n?.lat !== undefined && n.lng !== undefined);
+      const nearest = candidates.sort((a, b) => haversineM(patient.lat, patient.lng, a.lat!, a.lng!) - haversineM(patient.lat, patient.lng, b.lat!, b.lng!))[0];
+      const site = (nearest?.id ?? (inScope[0] ?? BOTH_SITES[0])) as SiteId;
+      setWork(patientId, { bringInSite: site }, 'Planned');
+      get().logEntry(t('AUDIT.homeBringIn'), nameOf(patientId), tm('SCOPE_LABELS')[site], undefined, patientId);
+    },
+
+    confirmPatient: (patientId) => {
+      if (!patientOf(patientId)) return;
+      setWork(patientId, {}, 'Confirmed');
+      get().logEntry(t('AUDIT.homeConfirm'), nameOf(patientId), undefined, undefined, patientId);
+    },
+
+    contactAllCritical: () => {
+      const { pack, home, scope, clock } = get();
+      const rows = impact(pack, home, sitesInScope(scope), undefined, clock).rows.filter((r) => r.critical);
+      if (rows.length === 0) return;
+      const note = t('HOME.work.bulkNote');
+      for (const r of rows) setWork(r.patient.id, { note }, 'Contacted');
+      get().logEntry(t('AUDIT.homeBulk'), t('AUDIT.homeObject'), t('AUDIT.homeBulkDetail', { n: rows.length }), undefined, rows.map((r) => r.patient.id).join(','));
+    },
+
     resetHomeDisruptions: () => {
       const { home, logEntry } = get();
       if (disruptionCount(home) === 0) return;
       endAll('reset');
       logEntry(t('AUDIT.homeReset'), t('AUDIT.homeObject'), detail());
+      reconcile();
     },
 
     applyHomePreset: (key) => {
@@ -298,6 +425,7 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
         },
       }));
       logEntry(t('AUDIT.homePreset'), lt(preset.name), detail());
+      reconcile();
     },
   };
 };

@@ -9,6 +9,7 @@ import { ResourcesPage } from '@/modules/resources/ResourcesPage';
 import { NetworkPage } from '@/modules/network/NetworkPage';
 import { NodeDetailPage } from '@/modules/network/NodeDetailPage';
 import { HomePage } from '@/modules/home/HomePage';
+import { CallListPage } from '@/modules/home/CallListPage';
 import { PlatformStubPage } from '@/modules/home/PlatformStubPage';
 import { PLATFORM_DEFS } from '@/data/vocab';
 import { RootRedirect } from './RootRedirect';
@@ -29,6 +30,7 @@ export const routes: RouteDef[] = [
   { path: '/laget-nu/prognos', element: <FlowPage tab="forecast" /> },
   { path: '/laget-nu/utskrivningsklara', element: <FlowPage tab="discharge" /> },
   { path: '/home', element: <HomePage /> },
+  { path: '/home/ringlista', element: <CallListPage /> },
   { path: '/kapacitet', element: <CapacityPage /> },
   { path: '/incident', element: <IncidentPage /> },
   { path: '/incident/kanaler/:channelId', element: <ChannelPage /> },

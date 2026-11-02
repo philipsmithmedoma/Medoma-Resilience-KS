@@ -665,3 +665,28 @@ Spec: SPEC.md § 13.2
 Decision: `impact` takes the clock as an optional fifth argument and `Disruptions` an optional `powerStart` map, so callers and tests that pass neither (the 201 earlier tests) get no battery figures and unchanged results. `batteryEmptyAt` and `batteryEmpty` are optional on `ImpactRow` for the same reason. A row whose battery is empty is critical regardless of equipment and sits in priority tier 2. "N run out within 2 h" counts power-out patients whose `batteryEmptyAt <= clock + 120`, which includes those already empty. `prioritise` sorts by tier, then `batteryEmptyAt`, then battery hours for rows without a deadline, then name.
 Rejected: Counting only the not-yet-empty – a patient with an empty battery is the worst case of "runs out within 2 h"; requiring the new fields – it would change the earlier tests.
 Spec: SPEC.md § 13.2
+
+## 2026-11-04 – Batch 13 – Teams and visits are pulled forward from § 14 as data; Send team offers all four teams for now
+Decision: Move visit needs the team's free slots (§ 14.3) and Send team needs teams (§ 14.2), which batches 15 and 16 define. Batch 13 therefore adds the data only: `homeTeams` (`home-teams.ts`) and `homeVisits` (built by the pure, seeded `buildVisits`, seed 20261104, one visit per patient with `visitToday`), plus the slot helpers in `home-visits.ts`. Send team lists all four teams in this batch; batch 15 restricts the list to the teams that can reach the patient (`reachableBy`). Reachability, markers and the Planning page stay in their own batches.
+Rejected: Stubbing Move visit and Send team until batches 15–16 – the batch's definition of done needs a working chain; generating visits in `scripts/generate-patients.mjs` – the spec asks for "deterministic from the seed", and a pure function is testable without a script run.
+Spec: SPEC.md § 13.3, § 14.2, § 14.3
+
+## 2026-11-04 – Batch 13 – A team may start as many visits per slot as it has cars; slots before the clock are not offered
+Decision: With four teams and 60 visits today one team has more visits than there are slots between 08:00 and 17:00, so "free slots not used by its visits" cannot hold with one visit per slot. A slot is free for a team while fewer of its live (not cancelled) visits start there than it has cars (two); the generator respects the same limit. Move visit offers free slots from the clock onwards (a slot in the past cannot be booked), plus "inget besök i dag", which cancels the visit. A planned or moved visit whose end the clock has passed reads as done (`visitStatusAt`), so the stored status does not depend on the clock. Send team makes the sent team the patient's serving team for the visit (`effectiveVisits`) without rewriting the visit.
+Rejected: One visit per slot – impossible for ASIH Nord; offering past slots – the clock is the only time; storing `done` – it would go stale when the clock moves.
+Spec: SPEC.md § 14.3, § 13.3
+
+## 2026-11-04 – Batch 13 – Status chain: never backwards, reset on the affected set, work lives in the home slice
+Decision: The work on a patient is `home.work[patientId] = { status, note, assignedTeam, bringInSite }`; a patient with no entry is Unhandled. An action sets its status only when that is further along the chain (Contact on a Confirmed patient stores the note and logs, the status stays Confirmed). "Status resets only when the disruption that affected the patient ends" is implemented as: after every change that can end a disruption (map toggle, end now, expected end, reset, a preset replacing the others) a patient with work who is no longer affected from the sites in scope loses the entry; one System log entry names the count and carries the ids in `ref`. Every action logs one entry attributed to the current user with the patient id as `ref`. "Contact all critical" is one entry with the count and ids, not one per patient, so one click does not move the clock by 17 minutes; its note is the vocab text "samlad kontakt" / "bulk contact".
+Rejected: A reset per disruption record – a patient hit by two disruptions would lose the work when the first ends; one log entry per bulk patient – it floods the log and the clock.
+Spec: SPEC.md § 13.3, § 14.4
+
+## 2026-11-04 – Batch 13 – Bring in: nearest site in scope, an inbound line, no move record
+Decision: "Ta in" marks the patient for the nearest site in scope by straight-line distance (both sites when the scope has none) and sets Planned. In Evakuering the patient appears in a section "Från hemmet (N)" above the wards, with an "Från hemmet" chip, street and equipment; it is not selectable, has no move record, is not counted in "flyttade" and is not filtered by the stability, transport and status filters. It disappears when the status resets with the disruption.
+Rejected: A move record with a "home" origin – the spec says none; counting it in the evacuation target – it would present a transfer that has no transport.
+Spec: SPEC.md § 13.3
+
+## 2026-11-04 – Batch 13 – The call list is a route; actions are offered on affected rows
+Decision: "Ringlista" opens `/home/ringlista`, a plain page inside the app shell whose nav, banner and scenario panel are `print:hidden`, with `@page { size: A4 }`; it has a Print button and a link back. It lists the prioritised affected rows (detour-only rows are not affected and not listed). The row's expanded view with the status chain and the five buttons exists for affected rows; a detour-only or unaffected row expands to nothing. The route belongs to the resilience routes because it starts with `/home/`.
+Rejected: A new window with hand-written HTML – no vocab, no theme; actions on every row – the spec says "each affected patient".
+Spec: SPEC.md § 13.3

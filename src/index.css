@@ -422,3 +422,15 @@ html .leaflet-bar a:hover {
 .leaflet-tooltip.home-map-label-dim {
   opacity: 0.35;
 }
+
+/* SPEC.md § 13.3 – the call list prints plain on A4. */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+}

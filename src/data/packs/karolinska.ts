@@ -31,6 +31,8 @@ import type {
 } from './types';
 import { PATIENTS_BY_SITE } from './patients';
 import { HOME_PATIENTS } from './home-patients';
+import { HOME_TEAMS } from './home-teams';
+import { buildVisits } from './home-visits';
 import { en, sv, VEHICLES, type Vocab } from '../vocab';
 
 /** A text in both languages (DESIGN-LANG.md § 3). */
@@ -1506,6 +1508,8 @@ export const HOME_PRESETS: HomeDisruptionPreset[] = [
   { key: 'water', name: tx('Vattenstörning', 'Water disruption'), blockedNodes: [], powerOutZones: [], waterOutZones: ['solna'] },
 ];
 
+const HOME_VISITS = buildVisits(HOME_PATIENTS, HOME_TEAMS, 20261102 + 2);
+
 // ---------------------------------------------------------------------------
 export const KAROLINSKA_PACK: DataPack = {
   nodes: NODES,
@@ -1538,6 +1542,8 @@ export const KAROLINSKA_PACK: DataPack = {
   infraLinks: INFRA_LINKS,
   homeSources: HOME_SOURCES,
   homePresets: HOME_PRESETS,
+  homeTeams: HOME_TEAMS,
+  homeVisits: HOME_VISITS,
 };
 
 export function loadPack(): DataPack {
