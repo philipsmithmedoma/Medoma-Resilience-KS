@@ -15,7 +15,7 @@ type Form = null | 'contact' | 'move' | 'team';
  * The status chain and the five actions of one patient (SPEC.md § 13.3): Contact, Move visit (only with a visit today),
  * Send team, Bring in, Confirm. Used in the expanded row of /home and in the detail pane of /planning.
  */
-export function PatientActions({ patientId, reachableBy }: { patientId: string; reachableBy?: string[] }) {
+export function PatientActions({ patientId, reachableBy, moveOnly = false }: { patientId: string; reachableBy?: string[]; moveOnly?: boolean }) {
   const pack = useStore((s) => s.pack);
   const work = useStore((s) => s.home.work[patientId]);
   const visits = useStore((s) => s.home.visits);
@@ -46,28 +46,38 @@ export function PatientActions({ patientId, reachableBy }: { patientId: string; 
   return (
     <div className="space-y-3 pt-2" onClick={(e) => e.stopPropagation()}>
       <h4 className="text-small font-medium text-text-secondary">{t('HOME.work.title')}</h4>
-      <StatusChain steps={WORK_STATUSES} labels={labels} current={status} label={t('HOME.work.statusLabel')} />
-      {work?.note ? <p className="text-small text-text-secondary">{work.note}</p> : null}
-      {work?.assignedTeam ? <p className="text-small text-text-secondary">{t('HOME.work.assigned', { team: pack.homeTeams.find((x) => x.id === work.assignedTeam)?.name ?? work.assignedTeam })}</p> : null}
-      {work?.bringInSite ? <p className="text-small text-text-secondary">{t('HOME.work.broughtIn', { site: tm('SCOPE_LABELS')[work.bringInSite] })}</p> : null}
+      {moveOnly ? null : (
+        <>
+          <StatusChain steps={WORK_STATUSES} labels={labels} current={status} label={t('HOME.work.statusLabel')} />
+          {work?.note ? <p className="text-small text-text-secondary">{work.note}</p> : null}
+          {work?.assignedTeam ? <p className="text-small text-text-secondary">{t('HOME.work.assigned', { team: pack.homeTeams.find((x) => x.id === work.assignedTeam)?.name ?? work.assignedTeam })}</p> : null}
+          {work?.bringInSite ? <p className="text-small text-text-secondary">{t('HOME.work.broughtIn', { site: tm('SCOPE_LABELS')[work.bringInSite] })}</p> : null}
+        </>
+      )}
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" aria-expanded={form === 'contact'} onClick={() => toggle('contact')}>
-          {t('HOME.work.contact')}
-        </Button>
+        {moveOnly ? null : (
+          <Button size="sm" variant="secondary" aria-expanded={form === 'contact'} onClick={() => toggle('contact')}>
+            {t('HOME.work.contact')}
+          </Button>
+        )}
         {patient.visitToday && visit && visit.status !== 'cancelled' ? (
           <Button size="sm" variant="secondary" aria-expanded={form === 'move'} onClick={() => toggle('move')}>
             {t('HOME.work.moveVisit')}
           </Button>
         ) : null}
-        <Button size="sm" variant="secondary" aria-expanded={form === 'team'} onClick={() => toggle('team')}>
-          {t('HOME.work.sendTeam')}
-        </Button>
-        <Button size="sm" variant="secondary" onClick={() => bringInPatient(patientId)}>
-          {t('HOME.work.bringIn')}
-        </Button>
-        <Button size="sm" onClick={() => confirmPatient(patientId)}>
-          {t('HOME.work.confirm')}
-        </Button>
+        {moveOnly ? null : (
+          <>
+            <Button size="sm" variant="secondary" aria-expanded={form === 'team'} onClick={() => toggle('team')}>
+              {t('HOME.work.sendTeam')}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => bringInPatient(patientId)}>
+              {t('HOME.work.bringIn')}
+            </Button>
+            <Button size="sm" onClick={() => confirmPatient(patientId)}>
+              {t('HOME.work.confirm')}
+            </Button>
+          </>
+        )}
       </div>
       {form === 'contact' ? (
         <form

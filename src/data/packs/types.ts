@@ -440,6 +440,8 @@ export interface AuditEntry {
   object: string;
   detail?: string;
   ref?: string;
+  /** The module the entry belongs to, for the log drawer's filter (SPEC.md § 14.4). */
+  area?: 'home';
 }
 
 export type Profession = 'Doc' | 'Nrs' | 'AsPr' | 'Supp';

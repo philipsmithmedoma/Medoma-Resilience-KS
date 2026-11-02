@@ -72,7 +72,7 @@ export interface DataState {
 
 export interface Actions {
   /** Append an audit entry and advance the clock one minute (scenario-driven entries pass advance: false). Returns the entry id. */
-  logEntry: (action: string, object: string, detail?: string, actor?: string, ref?: string, options?: { advance?: boolean }) => string;
+  logEntry: (action: string, object: string, detail?: string, actor?: string, ref?: string, options?: { advance?: boolean; area?: 'home' }) => string;
   nextId: (prefix: string) => string;
   setScope: (scope: NodeId) => void;
   setEhrOutage: (on: boolean, detail?: string) => void;
@@ -163,7 +163,7 @@ export const useStore = create<AppStore>()((set, get, api) => ({
   logEntry: (action, object, detail, actor = CURRENT_USER.name, ref, options) => {
     const state = get();
     const id = `log-${state.log.length + 1}-${state.ids + 1}`;
-    const entry: AuditEntry = { id, at: formatClock(state.clock), actor, action, object, detail, ref };
+    const entry: AuditEntry = { id, at: formatClock(state.clock), actor, action, object, detail, ref, ...(options?.area ? { area: options.area } : {}) };
     set({ log: [...state.log, entry], clock: state.clock + (options?.advance === false ? 0 : 1), ids: state.ids + 1 });
     get().settleDischarges();
     get().settleHomeDisruptions();

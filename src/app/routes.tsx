@@ -10,6 +10,8 @@ import { NetworkPage } from '@/modules/network/NetworkPage';
 import { NodeDetailPage } from '@/modules/network/NodeDetailPage';
 import { HomePage } from '@/modules/home/HomePage';
 import { CallListPage } from '@/modules/home/CallListPage';
+import { PlanningPage } from '@/modules/home/PlanningPage';
+import { PatientsPage } from '@/modules/home/PatientsPage';
 import { PlatformStubPage } from '@/modules/home/PlatformStubPage';
 import { PLATFORM_DEFS } from '@/data/vocab';
 import { RootRedirect } from './RootRedirect';
@@ -42,7 +44,10 @@ export const routes: RouteDef[] = [
   { path: '/natverk/:nodeId', element: <NodeDetailPage /> },
   { path: '/kallor', element: <SourcesPage /> },
   // SPEC.md § 11.2: the five platform modules render a stub page that links to Hospital at Home.
-  ...PLATFORM_DEFS.map((m) => ({ path: m.path, element: <PlatformStubPage module={m} /> })),
+  // Patients and Planning are real pages (SPEC.md § 14.3); Activities, Employees and Reporting stay stubs.
+  { path: '/patients', element: <PatientsPage /> },
+  { path: '/planning', element: <PlanningPage /> },
+  ...PLATFORM_DEFS.filter((m) => m.key !== 'patients' && m.key !== 'planning').map((m) => ({ path: m.path, element: <PlatformStubPage module={m} /> })),
 ];
 
 /** Old routes of the first prototype redirect to their new equivalent or to Start (SPEC.md § 3). */
