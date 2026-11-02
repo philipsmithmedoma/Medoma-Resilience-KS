@@ -429,3 +429,40 @@ Spec: DESIGN-LANG.md § 3–4
 Decision: `format.ts` reads the locale on every call: `Intl.NumberFormat('sv-SE')` or `('en-GB')` for numbers, "95,6 %" (no-break space) or "95.6%" for percent, "dag n"/"day n" and "dygn"/"days" from the tables, "Okänt"/"Unknown" for null, and the demo date from `LABELS.demoDate`. Durations and clock times are identical in both languages. Tests set the locale explicitly.
 Rejected: Formatting at the component level – dozens of call sites.
 Spec: DESIGN-LANG.md § 2
+
+## Hospital at Home build
+
+## 2026-11-02 – Batch 0 – Work on branch home-module, not the session's default branch
+Decision: The prompt names the branch `home-module`, created from main; all six batches are committed and pushed there. The session's pre-assigned branch is not used for pushes.
+Rejected: Pushing to the pre-assigned branch – the user's explicit instruction names another one.
+Spec: SPEC.md § 11.7
+
+## 2026-11-02 – Batch 0 – PROMPTS.md holds the instruction text; the two embedded documents are referenced
+Decision: The new PROMPTS.md section reproduces the prose of the prompt and points at SPEC.md § 11 and DATA.md § 11 for the two documents it embeds, which batch 0 appends verbatim to those files.
+Rejected: Pasting both documents a second time into PROMPTS.md – three copies that must be kept in step.
+Spec: SPEC.md § 11.7 (batch 0)
+
+## 2026-11-02 – Batch 1 – Zone vertices are written `zone:<id>`; sites keep their plain ids
+Decision: Zone ids `solna` and `huddinge` are also the site ids, so a road-graph vertex for a zone is `zone:<ZoneId>` (also `HomeZone.graphNode`, "usually itself") while the sites stay `solna` and `huddinge` as SPEC.md § 11.3 says. Every link endpoint in the pack uses these forms; `GraphNodeId` is documented accordingly.
+Rejected: Plain zone ids everywhere – "site solna – zone solna" would be a self-loop on one vertex and the Solna site would be reachable from itself through its own neighbourhood; a prefix on the sites – contradicts the spec's vertex names.
+Spec: SPEC.md § 11.3
+
+## 2026-11-02 – Batch 1 – Home sources, presets and `noMarker` are additive members
+Decision: `DataPack` also gains `homeSources` (S-H1…S-H14, DATA.md § 11.4) and `homePresets` (the three flag presets of § 11.5); `InfraNode` gains optional `noMarker` (for `w-norrvatten-reserve` and `w-malaren`, which the data says have no marker of their own) and `figures` is typed `InfraFigure[]` (a `Figure` with `label`, `unit` and optional `valueMax` for a range). The S-H keys are kept out of `sources` because the existing pack test pins that list to S1–S22.
+Rejected: Appending S-H keys to `sources` – breaks an existing test the batch must leave unchanged; a second figure type unrelated to `Figure` – the confidence and source rendering is shared.
+Spec: SPEC.md § 11.3 ("additive only"), DATA.md § 11.4
+
+## 2026-11-02 – Batch 1 – Ranges and section totals in infrastructure figures
+Decision: Essingeleden's "140 000–170 000 vehicles/day" is one verified figure with `value` 140 000 and `valueMax` 170 000 (S-H12, 2026-08); the section total of about 309 000 vehicles/day (reported, S-H13, 2019) is carried as a second figure on Essingeleden because the data gives no node of its own for it. Liljeholmsbron's 37 000 has no year, so it carries a `basis` text saying so and no `asOf`.
+Rejected: Storing the range's midpoint – an invented number; dropping the section total – it is the figure that explains why the five bridges matter.
+Spec: DATA.md § 11.3
+
+## 2026-11-02 – Batch 1 – Link verification flags follow what the sources establish
+Decision: A link is `verified` only where DATA.md says the connection exists: Norrvatten–Solna and the Norrvatten–SVOA interconnection (S-H3), the existing 400 kV lines, and every road link; supply links from Lovö and Norsborg, Täby, Lidingö, Södermalm and Nacka, all planned lines (400 kV, the Anneberg cable) and both regional-grid links are `verified: false`. The reserve supply from Görvälnverket is a verified dotted link with an off-map arrow N whose `b` is the reserve node; every other off-map link has `b` equal to `a`. Links the data gives no label for carry an empty label rather than an invented one.
+Rejected: Marking all dashed links verified – the data says the supply areas of Lovö and Norsborg are not verified.
+Spec: DATA.md § 11 intro, § 11.1–11.3
+
+## 2026-11-02 – Batch 1 – Generator details the spec leaves open
+Decision: A patient's distance from the zone centre is the mean of two uniforms times the radius (a triangular spread, never outside the zone) at a uniform bearing; age is 24–91 like the hospital patients; names are drawn from the existing lists, unique across the 150 and distinct from staff and hospital patients; Home dialysis alone gives `batteryHours: null` because the spec lists no battery range for it; `elCritical` is Oxygen, IV infusion or Home ventilator only (Monitoring is not critical). The second generator has its own random stream, so regenerating leaves `patients.ts` byte-identical.
+Rejected: A single shared stream – extending the generator would silently change the 80 hospital patients and the tests pinned to them.
+Spec: SPEC.md § 11.4

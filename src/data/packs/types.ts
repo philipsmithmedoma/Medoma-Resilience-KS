@@ -486,6 +486,91 @@ export interface Organisation {
 }
 
 // ---------------------------------------------------------------------------
+// Hospital at Home (SPEC.md § 11.3, DATA.md § 11) – additive
+export type HomeEquipment = 'Oxygen' | 'IV infusion' | 'Monitoring' | 'Home ventilator' | 'Home dialysis';
+export type ZoneId = string;
+
+/**
+ * A vertex of the road graph: a SiteId ('solna', 'huddinge'), a road InfraNode id, or a zone vertex written
+ * `zone:<ZoneId>` (zone ids 'solna' and 'huddinge' would otherwise collide with the sites).
+ */
+export type GraphNodeId = string;
+
+/** A locality that patients live in and that outages are reported per. */
+export interface HomeZone {
+  id: ZoneId;
+  name: LocalizedText;
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  graphNode: GraphNodeId; // the road-graph vertex the zone hangs on (usually itself: `zone:<id>`)
+  coordConfidence: Confidence;
+  coordSource: string;
+}
+
+export interface HomePatient {
+  id: string;
+  familyName: string;
+  givenName: string;
+  age: number;
+  zone: ZoneId;
+  lat: number; // synthetic, within the zone radius
+  lng: number;
+  team: string; // illustrative ASIH team name
+  equipment: HomeEquipment[];
+  batteryHours: number | null; // null when no powered equipment
+  visitToday: boolean;
+  elCritical: boolean; // derived: Oxygen, IV infusion or Home ventilator
+  waterCritical: boolean; // derived: Home dialysis
+}
+
+export type InfraLayer = 'water' | 'el' | 'roads';
+export type InfraKind = 'waterworks' | 'reserve' | 'pumping' | 'transmission' | 'generation' | 'junction' | 'bridge' | 'tunnel';
+
+/** A figure on an infrastructure node with its label and unit; a range keeps its upper bound in valueMax. */
+export interface InfraFigure extends Figure {
+  label: LocalizedText;
+  unit: LocalizedText;
+  valueMax?: number;
+}
+
+export interface InfraNode {
+  id: string;
+  layer: InfraLayer;
+  kind: InfraKind;
+  name: LocalizedText;
+  lat: number;
+  lng: number;
+  role: LocalizedText; // two or three sentences
+  status: LocalizedText; // verification status text shown in the panel
+  verified: boolean; // false renders the node hollow with a question mark
+  coordConfidence: Confidence;
+  coordSource: string;
+  figures?: InfraFigure[]; // e.g. vehicles per day, each with confidence and source
+  noMarker?: boolean; // drawn as an arrow or as status text on other nodes, not as a marker
+}
+
+export interface InfraLink {
+  id: string;
+  layer: InfraLayer;
+  a: GraphNodeId;
+  b: GraphNodeId; // for an off-map arrow: the node the arrow stands for, else equal to a
+  label: LocalizedText; // empty when the source gives no label
+  style: 'solid' | 'dashed' | 'dotted' | 'road' | 'street';
+  verified: boolean; // the connection exists per the source; dashed/dotted or verified=false renders as schematic
+  offmap?: { dir: 'N' | 'S' | 'E' | 'W'; text: LocalizedText }; // an arrow leaving the map instead of a second node
+}
+
+/** A scenario preset of the flag-setting kind (SPEC.md § 11.5). */
+export interface HomeDisruptionPreset {
+  key: 'bridge' | 'power' | 'water';
+  name: LocalizedText;
+  blockedNodes: string[];
+  powerOutZones: ZoneId[];
+  waterOutZones: ZoneId[];
+}
+
+// ---------------------------------------------------------------------------
 // The pack
 export interface EdRooms {
   akutrum: Figure;
@@ -518,4 +603,11 @@ export interface DataPack {
   presetSites: Site[];
   initialLog: AuditEntry[];
   demoNow: '14:40';
+  // Hospital at Home (SPEC.md § 11.3)
+  homeZones: HomeZone[];
+  homePatients: HomePatient[];
+  infraNodes: InfraNode[];
+  infraLinks: InfraLink[];
+  homeSources: SourceRef[]; // DATA.md § 11.4 (S-H1…S-H14), kept apart from `sources` (DATA.md § 9)
+  homePresets: HomeDisruptionPreset[];
 }
