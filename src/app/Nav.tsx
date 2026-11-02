@@ -37,19 +37,19 @@ export function Nav() {
         </Link>
         <ScopeSelector />
       </div>
-      <nav aria-label={t('LABELS.modulesAria')} className="ml-8 flex h-full shrink-0 items-center gap-8">
+      <nav aria-label={t('LABELS.modulesAria')} className="ml-4 flex h-full shrink-0 items-center gap-6 min-[1600px]:gap-8">
         {MODULE_DEFS.map((m) => (
           <ModuleTab key={m.key} label={t(`MODULES.${m.key}`)} path={m.path} />
         ))}
       </nav>
-      <div className="ml-auto flex shrink-0 items-center gap-2 pl-3">
-        <span title={t('LABELS.chat')} className="text-text">
+      <div className="ml-auto flex shrink-0 items-center gap-1 min-[1536px]:gap-2 min-[1536px]:pl-3">
+        <span title={t('LABELS.chat')} className="hidden text-text min-[1536px]:inline">
           <MessageSquareIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </span>
-        <span title={t('LABELS.support')} className="text-text">
+        <span title={t('LABELS.support')} className="hidden text-text min-[1536px]:inline">
           <HeadphonesIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </span>
-        <span title={t('LABELS.documentation')} className="text-text">
+        <span title={t('LABELS.documentation')} className="hidden text-text min-[1536px]:inline">
           <BookOpenIcon className="size-5" strokeWidth={1.5} aria-hidden />
         </span>
         <ClockControl />

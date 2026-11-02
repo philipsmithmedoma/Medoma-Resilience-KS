@@ -8,6 +8,7 @@ import { EvacuationPage } from '@/modules/evacuation/EvacuationPage';
 import { ResourcesPage } from '@/modules/resources/ResourcesPage';
 import { NetworkPage } from '@/modules/network/NetworkPage';
 import { NodeDetailPage } from '@/modules/network/NodeDetailPage';
+import { HomePage } from '@/modules/home/HomePage';
 import { SourcesPage } from '@/modules/sources/SourcesPage';
 
 export interface RouteDef {
@@ -22,6 +23,7 @@ export const routes: RouteDef[] = [
   { path: '/laget-nu/placering', element: <FlowPage tab="placement" /> },
   { path: '/laget-nu/prognos', element: <FlowPage tab="forecast" /> },
   { path: '/laget-nu/utskrivningsklara', element: <FlowPage tab="discharge" /> },
+  { path: '/home', element: <HomePage /> },
   { path: '/kapacitet', element: <CapacityPage /> },
   { path: '/incident', element: <IncidentPage /> },
   { path: '/incident/kanaler/:channelId', element: <ChannelPage /> },

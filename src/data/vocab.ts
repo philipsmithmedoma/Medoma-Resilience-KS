@@ -30,7 +30,7 @@ import type {
 // ---------------------------------------------------------------------------
 // Swedish (default)
 export const sv = {
-  MODULES: { flow: 'Läget nu', capacity: 'Kapacitet', incident: 'Incident', evacuation: 'Evakuering', resources: 'Resurser', network: 'Nätverk', sources: 'Källor', start: 'Start' },
+  MODULES: { flow: 'Läget nu', home: 'Sjukhus hemma', capacity: 'Kapacitet', incident: 'Incident', evacuation: 'Evakuering', resources: 'Resurser', network: 'Nätverk', sources: 'Källor', start: 'Start' },
 
   SCOPE_LABELS: {
     karolinska: 'Karolinska',
@@ -686,6 +686,32 @@ export const sv = {
   },
 
   // Källor (SPEC.md § 6.10)
+  HOME: {
+    title: 'Sjukhus hemma',
+    mapAria: 'Karta över patienter i hemmet och deras infrastruktur',
+    layersAria: 'Kartlager',
+    layers: { patients: 'Patienter', roads: 'Vägar', el: 'El', water: 'Vatten' },
+    kinds: {
+      waterworks: 'Vattenverk',
+      reserve: 'Reserv',
+      pumping: 'Pumpstation',
+      transmission: 'Stamnätsstation',
+      generation: 'Kraftverk',
+      junction: 'Trafikplats',
+      bridge: 'Bro',
+      tunnel: 'Tunnel',
+    },
+    unverified: 'Ej verifierad',
+    legend: {
+      title: 'Teckenförklaring',
+      patient: 'Patient',
+      verifiedLink: 'Verifierad förbindelse',
+      schematicLink: 'Schematisk förbindelse',
+      bridge: 'Bro',
+      unverifiedNode: 'Ej verifierad nod',
+    },
+  },
+
   SOURCES: {
     title: 'Källor',
     intro: 'Alla uppgifter i demon är antingen verifierade mot öppna källor, rapporterade av Medoma, estimat med angiven grund eller illustrativa scenariovärden.',
@@ -826,7 +852,7 @@ export type Vocab = typeof sv;
 // ---------------------------------------------------------------------------
 // English. Proper nouns, ward names, abbreviations and the region's legal terms stay Swedish (DESIGN-LANG.md § 4).
 export const en: Vocab = {
-  MODULES: { flow: 'Live status', capacity: 'Capacity', incident: 'Incident', evacuation: 'Evacuation', resources: 'Resources', network: 'Network', sources: 'Sources', start: 'Start' },
+  MODULES: { flow: 'Live status', home: 'Hospital at Home', capacity: 'Capacity', incident: 'Incident', evacuation: 'Evacuation', resources: 'Resources', network: 'Network', sources: 'Sources', start: 'Start' },
 
   SCOPE_LABELS: {
     karolinska: 'Karolinska',
@@ -1478,6 +1504,32 @@ export const en: Vocab = {
     asihLabel: 'ASIH',
   },
 
+  HOME: {
+    title: 'Hospital at Home',
+    mapAria: 'Map of patients at home and the infrastructure they depend on',
+    layersAria: 'Map layers',
+    layers: { patients: 'Patients', roads: 'Roads', el: 'Electricity', water: 'Water' },
+    kinds: {
+      waterworks: 'Waterworks',
+      reserve: 'Reserve',
+      pumping: 'Pumping station',
+      transmission: 'Transmission station',
+      generation: 'Power plant',
+      junction: 'Junction',
+      bridge: 'Bridge',
+      tunnel: 'Tunnel',
+    },
+    unverified: 'Not verified',
+    legend: {
+      title: 'Legend',
+      patient: 'Patient',
+      verifiedLink: 'Verified link',
+      schematicLink: 'Schematic link',
+      bridge: 'Bridge',
+      unverifiedNode: 'Unverified node',
+    },
+  },
+
   SOURCES: {
     title: 'Sources',
     intro: 'Every figure in the demo is either verified against open sources, reported by Medoma, an estimate with a stated basis or an illustrative scenario value.',
@@ -1637,6 +1689,7 @@ export interface ModuleDef {
 }
 export const MODULE_DEFS: ModuleDef[] = [
   { key: 'flow', path: '/laget-nu' },
+  { key: 'home', path: '/home' },
   { key: 'capacity', path: '/kapacitet' },
   { key: 'incident', path: '/incident' },
   { key: 'evacuation', path: '/evakuering' },
