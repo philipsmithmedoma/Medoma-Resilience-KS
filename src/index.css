@@ -361,8 +361,8 @@ html .leaflet-bar a:hover {
 .home-node {
   box-sizing: border-box;
   display: flex;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   align-items: center;
   justify-content: center;
   border: 2px solid var(--node-colour);
@@ -377,8 +377,8 @@ html .leaflet-bar a:hover {
   border-radius: 3px;
 }
 .home-node-diamond {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   margin: 2px;
   border-radius: 3px;
   transform: rotate(45deg);

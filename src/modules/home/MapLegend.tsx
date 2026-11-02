@@ -21,6 +21,15 @@ export function MapLegend({ className }: { className?: string }) {
       <Swatch label={t('HOME.legend.patient')}>
         <span className="size-1.5 rounded-full bg-text-muted opacity-60" />
       </Swatch>
+      <Swatch label={t('HOME.legend.affected')}>
+        <span className="size-2 rounded-full bg-red" />
+      </Swatch>
+      <Swatch label={t('HOME.legend.critical')}>
+        <span className="size-2.5 rounded-full border-2 border-red" />
+      </Swatch>
+      <Swatch label={t('HOME.legend.detour')}>
+        <span className="size-2 rounded-full bg-orange" />
+      </Swatch>
       <Swatch label={t('HOME.legend.verifiedLink')}>
         <span className={line('border-solid')} />
       </Swatch>

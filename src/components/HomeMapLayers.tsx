@@ -1,8 +1,8 @@
 import { Fragment, useMemo } from 'react';
 import L from 'leaflet';
-import { CircleMarker, Marker, Polyline, Tooltip, useMapEvents } from 'react-leaflet';
+import { Circle, CircleMarker, Marker, Polyline, Tooltip, useMapEvents } from 'react-leaflet';
 import type { CareNode, HomePatient, HomeZone, InfraLayer, InfraLink, InfraNode } from '@/data/types';
-import type { HomeLayerKey } from '@/data/store-home';
+import type { HomeLayerKey, HomeMode } from '@/data/store-home';
 import { lt, t, tm } from '@/lib/i18n';
 import { isSchematic, linkedVertices, offmapEnd, offmapRotation, offmapSlots, vertexPositions, type LatLng } from '@/lib/home-geo';
 import { cssColor } from '@/lib/theme';
@@ -18,7 +18,21 @@ export interface HomeOverlay {
   selectedId?: string | null;
   /** Click on a node (selects it) or on the empty map (null). Without it the nodes take no clicks. */
   onSelectNode?: (id: string | null) => void;
+  /** Disruptions (SPEC.md § 11.5): what a tap does depends on the mode; blocked elements and outage zones are drawn in the danger colour. */
+  mode?: HomeMode;
+  blockedNodes?: ReadonlySet<string>;
+  blockedLinks?: ReadonlySet<string>;
+  powerOutZones?: ReadonlySet<string>;
+  waterOutZones?: ReadonlySet<string>;
+  /** How a patient dot is drawn when it is affected; patients not in the map keep the neutral dot. */
+  patientMarks?: ReadonlyMap<string, PatientMark>;
+  onToggleNode?: (id: string) => void;
+  onToggleLink?: (id: string) => void;
+  onToggleZone?: (zone: string) => void;
 }
+
+export type PatientMark = 'affected' | 'critical' | 'detour';
+const EMPTY: ReadonlySet<string> = new Set();
 
 /** Layer colours are design tokens: water teal, electricity olive, roads text-secondary. */
 export const LAYER_TOKEN: Record<InfraLayer, string> = {
@@ -48,18 +62,18 @@ export function homeFitPoints(overlay: HomeOverlay, sites: CareNode[]): LatLng[]
 const iconCache = new Map<string, L.DivIcon>();
 
 /** Marker shapes: water circle, electricity diamond, bridge square, tunnel circle; unverified nodes are hollow with a question mark. */
-function nodeIcon(node: InfraNode, selected: boolean, dim: boolean): L.DivIcon {
+function nodeIcon(node: InfraNode, selected: boolean, dim: boolean, blocked: boolean): L.DivIcon {
   const shape = node.layer === 'el' ? 'diamond' : node.kind === 'bridge' ? 'square' : 'circle';
-  const key = `${node.layer}|${shape}|${node.verified}|${selected}|${dim}`;
+  const key = `${node.layer}|${shape}|${node.verified}|${selected}|${dim}|${blocked}`;
   let icon = iconCache.get(key);
   if (!icon) {
-    const colour = `var(${LAYER_TOKEN[node.layer]})`;
-    const open = (node.verified ? '' : ' home-node-open') + (selected ? ' home-node-selected' : '') + (dim ? ' home-node-dim' : '');
+    const colour = blocked ? 'var(--color-red)' : `var(${LAYER_TOKEN[node.layer]})`;
+    const open = (node.verified || blocked ? '' : ' home-node-open') + (selected ? ' home-node-selected' : '') + (dim ? ' home-node-dim' : '');
     icon = L.divIcon({
       className: 'home-node-wrap',
-      html: `<span class="home-node home-node-${shape}${open}" style="--node-colour:${colour}">${node.verified ? '' : '<span aria-hidden="true">?</span>'}</span>`,
-      iconSize: [22, 22],
-      iconAnchor: [11, 11],
+      html: `<span class="home-node home-node-${shape}${open}" style="--node-colour:${colour}">${blocked ? '<span aria-hidden="true">×</span>' : node.verified ? '' : '<span aria-hidden="true">?</span>'}</span>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
     });
     iconCache.set(key, icon);
   }
@@ -100,9 +114,13 @@ function ClearOnMapClick({ onClear }: { onClear: () => void }) {
   return null;
 }
 
-/** Leaflet children of NodeMap: zone points, infrastructure links and nodes per layer, off-map arrows and the patient dots. */
+/** Leaflet children of NodeMap: zone points and circles, infrastructure links and nodes per layer, off-map arrows and the patient dots. */
 export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
-  const { layers, zones, infraNodes, infraLinks, patients, selectedId = null, onSelectNode } = overlay;
+  const {
+    layers, zones, infraNodes, infraLinks, patients, selectedId = null, onSelectNode,
+    mode = null, blockedNodes = EMPTY, blockedLinks = EMPTY, powerOutZones = EMPTY, waterOutZones = EMPTY, patientMarks,
+    onToggleNode, onToggleLink, onToggleZone,
+  } = overlay;
   const positions = useMemo(() => vertexPositions(sites, zones, infraNodes), [sites, zones, infraNodes]);
   const slots = useMemo(() => offmapSlots(infraLinks), [infraLinks]);
   // With a node selected, everything that is not linked to it is dimmed (SPEC.md § 11.5).
@@ -111,21 +129,44 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
   const NEUTRAL = cssColor('--color-text-secondary');
   const MUTED = cssColor('--color-text-muted');
   const SURFACE = cssColor('--color-surface');
+  const DANGER = cssColor('--color-red');
+  const AMBER = cssColor('--color-orange');
   const linkDim = (l: InfraLink) => linked !== null && l.a !== selectedId && l.b !== selectedId;
   const vertexDim = (id: string) => linked !== null && !linked.has(id);
+  const zoneMode = mode === 'el' || mode === 'water';
+  // The outage the current mode edits; outside the outage modes any outage shows.
+  const zoneOut = (id: string) => (mode === 'el' ? powerOutZones.has(id) : mode === 'water' ? waterOutZones.has(id) : powerOutZones.has(id) || waterOutZones.has(id));
 
   return (
     <>
-      {onSelectNode ? <ClearOnMapClick onClear={() => selectedId && onSelectNode(null)} /> : null}
+      {onSelectNode && mode === null ? <ClearOnMapClick onClear={() => selectedId && onSelectNode(null)} /> : null}
+
+      {zones
+        .filter((z) => zoneMode || zoneOut(z.id))
+        .map((z) => {
+          const out = zoneOut(z.id);
+          return (
+            <Circle
+              key={`area-${z.id}`}
+              center={[z.lat, z.lng]}
+              radius={z.radiusKm * 1000}
+              pathOptions={{ color: out ? DANGER : NEUTRAL, weight: out ? 2 : 1, fillColor: out ? DANGER : NEUTRAL, fillOpacity: out ? 0.22 : 0.06, dashArray: out ? undefined : '4 4' }}
+              interactive={zoneMode}
+              eventHandlers={zoneMode && onToggleZone ? { click: () => onToggleZone(z.id) } : undefined}
+            />
+          );
+        })}
+
       {infraLinks
         .filter((l) => layers[l.layer])
         .map((l) => {
-          const colour = cssColor(LAYER_TOKEN[l.layer]);
+          const blocked = blockedLinks.has(l.id);
+          const colour = blocked ? DANGER : cssColor(LAYER_TOKEN[l.layer]);
           const label = lt(l.label);
-          const schematic = isSchematic(l);
+          const schematic = isSchematic(l) && !blocked;
           const dashArray = !schematic ? undefined : l.style === 'dotted' ? DASH_DOTTED : DASH_SCHEMATIC;
-          const weight = l.style === 'road' ? 3 : 2;
-          const opacity = linkDim(l) ? 0.15 : l.style === 'street' ? 0.7 : 0.9;
+          const weight = (l.style === 'road' ? 3 : 2) + (blocked ? 1 : 0);
+          const opacity = blocked ? 1 : linkDim(l) ? 0.15 : l.style === 'street' ? 0.7 : 0.9;
           const from = positions.get(l.a);
           if (!from) return null;
           if (l.offmap) {
@@ -145,10 +186,19 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
           }
           const to = positions.get(l.b);
           if (!to) return null;
+          // In roads mode a link takes taps through a 14 px transparent hit path laid over the visible line.
+          const hit = mode === 'roads' && l.layer === 'roads' && onToggleLink;
           return (
-            <Polyline key={l.id} positions={[from, to]} pathOptions={{ color: colour, weight, dashArray, opacity }}>
-              {label ? <Tooltip sticky>{label}</Tooltip> : null}
-            </Polyline>
+            <Fragment key={l.id}>
+              <Polyline positions={[from, to]} pathOptions={{ color: colour, weight, dashArray, opacity }} interactive={!hit}>
+                {!hit && label ? <Tooltip sticky>{label}</Tooltip> : null}
+              </Polyline>
+              {hit ? (
+                <Polyline positions={[from, to]} pathOptions={{ color: colour, weight: 14, opacity: 0 }} eventHandlers={{ click: () => onToggleLink(l.id) }}>
+                  {label ? <Tooltip sticky>{label}</Tooltip> : null}
+                </Polyline>
+              ) : null}
+            </Fragment>
           );
         })}
 
@@ -171,39 +221,46 @@ export function HomeMapLayers({ overlay, sites }: HomeMapLayersProps) {
 
       {infraNodes
         .filter((n) => layers[n.layer] && !n.noMarker)
-        .map((n) => (
-          <Marker
-            key={n.id}
-            position={[n.lat, n.lng]}
-            icon={nodeIcon(n, n.id === selectedId, vertexDim(n.id))}
-            title={lt(n.name)}
-            alt={lt(n.name)}
-            eventHandlers={onSelectNode ? { click: () => onSelectNode(n.id) } : undefined}
-          >
-            <Tooltip direction="top" offset={[0, -10]}>
-              {lt(n.name)}
-              <br />
-              <span className="text-text-secondary">{kinds[n.kind]}</span>
-              {n.verified ? null : (
-                <>
-                  <br />
-                  <span className="text-red">{t('HOME.unverified')}</span>
-                </>
-              )}
-            </Tooltip>
-          </Marker>
-        ))}
+        .map((n) => {
+          const blocked = blockedNodes.has(n.id);
+          const onClick = mode === 'roads' ? (n.layer === 'roads' && onToggleNode ? () => onToggleNode(n.id) : undefined) : mode === null && onSelectNode ? () => onSelectNode(n.id) : undefined;
+          return (
+            <Marker
+              key={n.id}
+              position={[n.lat, n.lng]}
+              icon={nodeIcon(n, n.id === selectedId, vertexDim(n.id), blocked)}
+              title={lt(n.name)}
+              alt={lt(n.name)}
+              eventHandlers={onClick ? { click: onClick } : undefined}
+            >
+              <Tooltip direction="top" offset={[0, -10]}>
+                {lt(n.name)}
+                <br />
+                <span className="text-text-secondary">{kinds[n.kind]}</span>
+                {n.verified ? null : (
+                  <>
+                    <br />
+                    <span className="text-red">{t('HOME.unverified')}</span>
+                  </>
+                )}
+              </Tooltip>
+            </Marker>
+          );
+        })}
 
       {layers.patients
-        ? patients.map((p) => (
-            <CircleMarker
-              key={p.id}
-              center={[p.lat, p.lng]}
-              radius={2}
-              pathOptions={{ stroke: false, fillColor: MUTED, fillOpacity: vertexDim(`zone:${p.zone}`) ? 0.1 : 0.3 }}
-              interactive={false}
-            />
-          ))
+        ? patients.map((p) => {
+            const mark = patientMarks?.get(p.id);
+            if (mark === 'critical') {
+              return <CircleMarker key={p.id} center={[p.lat, p.lng]} radius={4} pathOptions={{ stroke: true, color: DANGER, weight: 2, fillOpacity: 0 }} interactive={false} />;
+            }
+            if (mark) {
+              return (
+                <CircleMarker key={p.id} center={[p.lat, p.lng]} radius={3} pathOptions={{ stroke: false, fillColor: mark === 'affected' ? DANGER : AMBER, fillOpacity: 0.95 }} interactive={false} />
+              );
+            }
+            return <CircleMarker key={p.id} center={[p.lat, p.lng]} radius={2} pathOptions={{ stroke: false, fillColor: MUTED, fillOpacity: vertexDim(`zone:${p.zone}`) ? 0.1 : 0.3 }} interactive={false} />;
+          })
         : null}
     </>
   );

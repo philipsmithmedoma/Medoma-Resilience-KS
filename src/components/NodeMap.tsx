@@ -16,6 +16,8 @@ interface NodeMapProps {
   center?: [number, number];
   zoom?: number;
   className?: string;
+  /** Wheel zoom; off on the pages that scroll, on for Hospital at Home where the inner-city nodes are close together. */
+  scrollWheelZoom?: boolean;
   onSelect?: (nodeId: string) => void;
   /** Hospital at Home overlay (SPEC.md § 11.6): infrastructure layers, zones and patient dots; the map fits all of it. */
   home?: HomeOverlay;
@@ -49,7 +51,7 @@ function FitBounds({ nodes, extra, center, zoom }: { nodes: CareNode[]; extra?: 
  * DESIGN-KS.md § 8 maps: OpenStreetMap tiles, circle markers (radius 10) coloured by status and labelled
  * with the short name; ASIH as a soft 25 km circle centred on Stockholm with its label at the top.
  */
-export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, onSelect, home }: NodeMapProps) {
+export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, scrollWheelZoom = false, onSelect, home }: NodeMapProps) {
   // Leaflet paints SVG paths with literal colours: resolve the tokens for the current theme.
   useTheme((s) => s.theme);
   const PRIMARY = cssColor('--color-primary');
@@ -60,7 +62,7 @@ export function NodeMap({ nodes, selectedId, lineFrom, center, zoom, className, 
   const from = nodes.find((n) => n.id === lineFrom);
   const fitExtra = useMemo(() => (home ? homeFitPoints(home, markers) : undefined), [home, markers]);
   return (
-    <MapContainer center={center ?? [59.35, 18.0]} zoom={zoom ?? 9} scrollWheelZoom={false} className={cn('h-full w-full', className)} attributionControl>
+    <MapContainer center={center ?? [59.35, 18.0]} zoom={zoom ?? 9} scrollWheelZoom={scrollWheelZoom} className={cn('h-full w-full', className)} attributionControl>
       <TileLayer attribution={t('EVAC.map.attribution')} url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <FitBounds nodes={markers} extra={fitExtra} center={center} zoom={zoom} />
       {areas.map((n) => {

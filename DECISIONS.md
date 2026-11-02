@@ -511,3 +511,33 @@ Spec: SPEC.md § 11.3, DESIGN-KS.md § 4, § 9
 Decision: The patient list keeps its zone, equipment, visit-today and affected-only filters in component state (they are not scenario state and not logged). The affected-only chip is disabled, with a title explaining why, until a disruption exists (batch 4 passes the affected ids). Rows show name, age, area, team, equipment with battery hours and a "Besök i dag" chip; groups are the zones in pack order and patients are sorted by family and given name.
 Rejected: Filters in the store – nothing else reads them, and a demo reset would clear what the presenter set.
 Spec: SPEC.md § 11.6
+
+## 2026-11-02 – Batch 4 – Which Hospital at Home actions are logged
+Decision: Closing or reopening a road node or link, setting or restoring a power or water outage, and the reset are logged through `logEntry()` as Eva Lind with the object's name and the detail "N av 150 patienter påverkade" for the state after the change and the scope in force; each advances the scenario clock one minute like any action. Picking a mode, selecting a node and switching a layer are view state and are not logged. The reset chip writes one entry ("Återställde alla störningar") and does nothing when nothing is disrupted; it keeps the mode and the selection. A closed link is named by its two ends and its label ("Norra länken (E4/E20) – Lidingö (via Lidingöbron …)").
+Rejected: Logging mode changes – they change nothing about the care; one entry per element on reset – a reset of ten disruptions would bury the log.
+Spec: SPEC.md § 11.5 ("all writes go through logEntry()")
+
+## 2026-11-02 – Batch 4 – Rows, tiers and the meaning of "affected" and "critical"
+Decision: `impact()` returns a row for every patient with any flag, including patients who only have a detour; "affected" (the headline count, the filled dot, the "Påverkade" section and the "affected only" filter) is unreachable, power or water, so a detour-only patient is a row but not affected and is counted separately ("nås via omväg"). `prioritise()` has the spec's five tiers plus one the spec does not name: tier 5 is a patient without power or with a water disruption who is neither el-critical nor on dialysis; it sorts after "unreachable" and before "detour". Ties go by battery hours ascending (no battery last), then by name so the order is stable. The black "Prioritera" badge marks tiers 1–3 (the groups the spec orders first); the hollow ring on the map marks an affected patient who is el- or water-critical (`HomePatient.elCritical`/`waterCritical`), the definition the summary uses. The two are close but not identical: an unreachable patient with a visit today and no powered equipment gets the badge and a filled dot.
+Rejected: One flag for both – the spec describes the ring by criticality and the badge by priority; dropping the non-critical power/water patients from the list – they are affected and must be seen.
+Spec: SPEC.md § 11.5–11.6
+
+## 2026-11-02 – Batch 4 – The five-bridge case leaves Södermalm cut off from both sites
+Decision: In the road graph Södermalm's only links are bridge nodes, so blocking Essingeleden, Centralbron, Västerbron, Liljeholmsbron and Skanstullsbron isolates it from Solna and from Huddinge alike. The test for "every zone south of Saltsjö–Mälaren is unreachable from Solna but not from Huddinge" therefore covers Söderort, Huddinge, Botkyrka and Nacka, and asserts separately that Södermalm is unreachable from both and that from Huddinge the northern zones are the unreachable ones. At Karolinska scope (reachable from either site) only Södermalm's 15 patients remain unreachable.
+Rejected: Adding a road link to Södermalm so that it stays reachable – DATA.md § 11.3 lists the links exactly.
+Spec: SPEC.md § 11.7 batch 4, DATA.md § 11.3
+
+## 2026-11-02 – Batch 4 – Mode behaviour on the map
+Decision: Picking a mode also switches on the layer it acts on (roads, el or water). In roads mode a tap on a road marker toggles `blockedNodes`, and every road link has a 14 px transparent hit path over the visible line that toggles `blockedLinks`; in el and water mode the ten zones draw as dashed, translucent circles and a tap toggles that zone's outage of the active kind; outside those modes the circles of zones in outage stay visible. Blocked nodes turn the danger colour with a cross in the marker (not colour alone), blocked links are solid and one weight heavier, outage zones fill the danger colour at 22 %. With a mode active a tap never selects a node and the empty map does not clear the selection. Patient dots: affected 3 px filled danger colour, affected and critical 4 px hollow ring, detour-only 3 px amber, others unchanged; they take no clicks. The middle pane shows the result when there is any disruption, the mode's instruction sentence when there is a mode and none yet, else the selected node's panel.
+Rejected: A tap that both selects and blocks – ambiguous; hit areas on the markers only – the spec wants links blockable too.
+Spec: SPEC.md § 11.5–11.6
+
+## 2026-11-02 – Batch 4 – The list, the headline and the illustrative chip
+Decision: With disruptions the left list shows three sections: "Påverkade" in priority order, "Nås via omväg" and "Övriga" (by zone, then name); without disruptions it is grouped by zone as in batch 3. Rows show their reasons as chips (red for unreachable, power and water; warning for detour) and the badge. The "affected only" chip is enabled while a disruption exists and keeps exactly the affected patients. The headline "N av 150 patienter påverkade" carries the grey "Illustrativt" chip, because the patient count is a synthetic figure; its basis text says the patients were generated for the demo.
+Rejected: A single flat list – the spec orders by priority but the unaffected must still be findable; leaving the count without a chip – CLAUDE.md requires the confidence wherever a figure is shown.
+Spec: SPEC.md § 11.6, CLAUDE.md
+
+## 2026-11-02 – Batch 4 – Map usability: smaller markers and wheel zoom on this map only
+Decision: At the default zoom the inner-city bridges are 15–17 px apart, so the node markers are 18 px (was 20 px) and `NodeMap` gets the optional `scrollWheelZoom` prop, switched on for Hospital at Home (the page does not scroll, and zooming in is how a presenter separates Västerbron from Liljeholmsbron). Other maps are unchanged.
+Rejected: Spreading the markers apart – their positions are the sourced coordinates; a higher default zoom – the whole region must be in view at first.
+Spec: SPEC.md § 11.5–11.6
