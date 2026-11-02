@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useStore } from '@/data/store';
 import { t, tm, lt } from '@/lib/i18n';
 import { formatClock } from '@/lib/time';
+import { fictionalMarking } from '@/lib/home-sites';
 import { prioritise } from '@/lib/reachability';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { PageTitle } from '@/components/PageTitle';
@@ -18,6 +19,7 @@ export function CallListPage() {
   const clock = useStore((s) => s.clock);
   const work = useStore((s) => s.home.work);
   const zones = useStore((s) => s.pack.homeZones);
+  const packId = useStore((s) => s.pack.homePackId);
   const equipment = tm('HOME.equipment');
   const statuses = tm('HOME.work.status');
   const rows = prioritise(impact.rows.filter((r) => r.affected));
@@ -36,7 +38,7 @@ export function CallListPage() {
         <h1 className="text-heading">{t('HOME.callList.title')}</h1>
       </div>
       <p>{t('HOME.callList.intro', { hhmm: formatClock(clock) })}</p>
-      <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
+      <p className="text-small text-text-muted">{fictionalMarking(packId)}</p>
       {rows.length === 0 ? (
         <p>{t('HOME.callList.empty')}</p>
       ) : (

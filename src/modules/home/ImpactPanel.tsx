@@ -2,6 +2,7 @@ import { useStore } from '@/data/store';
 import { t, tn, lt } from '@/lib/i18n';
 import { activeDisruptions } from '@/lib/disruptions';
 import { formatClock } from '@/lib/time';
+import { fictionalBasis } from '@/lib/home-sites';
 import type { Impact } from '@/lib/reachability';
 import { ConfidenceChip } from '@/components/ConfidenceChip';
 import { Button } from '@/components/ui/button';
@@ -71,7 +72,7 @@ export function ImpactPanel({ impact }: { impact: Impact }) {
           {summary.detour > 0 ? t('HOME.impact.detour', { n: summary.detour }) : ''}
         </h2>
         {/* The patient count is a synthetic figure, so it carries the illustrative chip. */}
-        <ConfidenceChip figure={{ value: total, confidence: 'illustrative', basis: t('HOME.impact.basis') }} />
+        <ConfidenceChip figure={{ value: total, confidence: 'illustrative', basis: fictionalBasis(pack.homePackId) }} />
         {facts.length ? (
           <ul className="space-y-1">
             {facts.map((f) => (

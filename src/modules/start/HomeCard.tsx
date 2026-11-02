@@ -5,6 +5,7 @@ import { useStore } from '@/data/store';
 import { ICON_TINTS } from '@/data/vocab';
 import { t } from '@/lib/i18n';
 import { preparednessActive } from '@/lib/preparedness';
+import { fictionalBasis } from '@/lib/home-sites';
 import { Card } from '@/components/Card';
 import { FigureText } from '@/components/FigureLines';
 import { useHomeImpact } from '@/modules/home/useHomeImpact';
@@ -26,10 +27,11 @@ export function HomeCard() {
   const incident = useStore((s) => s.incident);
   const scenario = useStore((s) => s.scenario);
   const total = useStore((s) => s.pack.homePatients.length);
+  const packId = useStore((s) => s.pack.homePackId);
   const roadsClosed = useStore((s) => s.home.blockedWays.size + s.home.blockedRoads.size + s.home.blockedNodes.size > 0);
   const { impact } = useHomeImpact();
   if (!preparednessActive({ preparednessOn, incident, scenario }, location.pathname)) return null;
-  const fig = (value: number): Figure => ({ value, confidence: 'illustrative', basis: t('HOME.impact.basis') });
+  const fig = (value: number): Figure => ({ value, confidence: 'illustrative', basis: fictionalBasis(packId) });
   const rows: Array<{ key: string; label: string; figure: Figure }> = [
     { key: 'atHome', label: t('HOME.startPage.atHome'), figure: fig(total) },
     { key: 'affected', label: t('HOME.startPage.affected'), figure: fig(impact.summary.affected) },

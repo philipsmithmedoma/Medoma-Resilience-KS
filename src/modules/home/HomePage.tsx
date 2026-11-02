@@ -11,6 +11,7 @@ import { HomeMessagesTab } from './HomeMessagesTab';
 import { SubTabs } from '@/components/SubTabs';
 import { useHomeImpact } from './useHomeImpact';
 import { useHomeGeo } from './useHomeGeo';
+import { homePacks } from '@/data/packs/home-packs';
 
 /** SPEC.md § 11.6 – Sjukhus hemma: patient list (380 px), panel (320 px) and the map, as in Evakuering. */
 export function HomePage() {
@@ -32,7 +33,7 @@ export function HomePage() {
   return (
     <div className="flex flex-col" style={{ height: incident ? 'calc(100vh - 136px)' : 'calc(100vh - 96px)' }}>
       <div className="mb-4">
-        <PageTitle title={t('HOME.title')} scope={scopeName(scope, nodes)} />
+        <PageTitle title={t('HOME.title')} scope={pack.homePackId === 'karolinska' ? scopeName(scope, nodes) : homePacks[pack.homePackId].name} />
       </div>
       <div className="-mx-6 flex min-h-[520px] flex-1 border-t border-border">
         <div className="w-[380px] shrink-0 overflow-y-auto border-r border-border">

@@ -5,6 +5,7 @@ import { formatClock } from '@/lib/time';
 import { planningGroups, teamSequence, type VisitRow } from '@/lib/planning';
 import { blockedWayIdSet, type ImpactRow } from '@/lib/reachability';
 import { getRoadModel } from '@/lib/roadModel';
+import { fictionalMarking } from '@/lib/home-sites';
 import type { ChipTone } from '@/data/vocab';
 import { cn } from '@/lib/utils';
 import { Chip } from '@/components/Chip';
@@ -127,7 +128,7 @@ export function PlanningPage() {
         <div className="w-[380px] shrink-0 overflow-y-auto border-r border-border">
           <div className="sticky top-0 z-10 space-y-1 border-b border-border bg-surface px-4 py-3">
             <h2 className="text-heading">{t('HOME.planning.visits', { n: total })}</h2>
-            <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
+            <p className="text-small text-text-muted">{fictionalMarking(pack.homePackId)}</p>
           </div>
           {groups.map((g) => (
             <section key={g.team.id} aria-label={g.team.name}>

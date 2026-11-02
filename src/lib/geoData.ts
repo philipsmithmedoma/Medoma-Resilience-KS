@@ -1,7 +1,9 @@
-// Loads the OpenStreetMap GeoJSON of SPEC.md § 12.2 from src/data/packs/geo/ with dynamic imports, so the files are
+// Loads the OpenStreetMap GeoJSON of SPEC.md § 12.2 from src/data/packs/geo/<pack>/ with dynamic imports, so the files are
 // fetched only when Hospital at Home needs them and never enter the initial bundle. A file that has not been fetched
 // yet (scripts/fetch-osm.mjs) is replaced by its hand-designed fixture, which has the same schema. The app makes no
 // network request for this data.
+import type { GeoLoader, HomePackId } from '@/data/types';
+import { homePacks } from '@/data/packs/home-packs';
 import type { RoadCollection } from './roadGraph';
 
 export type Source = 'osm' | 'fixture';
@@ -30,29 +32,29 @@ export interface GeoData {
   source: Record<'roads' | 'streets' | 'power' | 'water', Source>;
 }
 
-// Only files that exist are in the map, so a missing roads.json is not a build error.
-const files = import.meta.glob('../data/packs/geo/*.json') as Record<string, () => Promise<{ default: unknown }>>;
-const find = (name: string) => files[`../data/packs/geo/${name}.json`];
-
-async function pick<T>(osmName: string, fixtureName: string): Promise<{ data: T; source: Source }> {
-  const osm = find(osmName);
-  if (osm) return { data: (await osm()).default as T, source: 'osm' };
-  const fixture = find(fixtureName);
-  if (!fixture) throw new Error(`Neither ${osmName}.json nor ${fixtureName}.json exists in src/data/packs/geo/`);
-  return { data: (await fixture()).default as T, source: 'fixture' };
+async function pick<T>(loader: GeoLoader, label: string): Promise<{ data: T; source: Source }> {
+  if (loader.osm) return { data: (await loader.osm()).default as T, source: 'osm' };
+  if (!loader.fixture) throw new Error(`Neither ${label}.json nor its fixture exists under src/data/packs/geo/`);
+  return { data: (await loader.fixture()).default as T, source: 'fixture' };
 }
 
-let cached: Promise<GeoData> | null = null;
+const cache = new Map<HomePackId, Promise<GeoData>>();
 
-export function loadGeoData(): Promise<GeoData> {
-  cached ??= (async () => {
-    const [roads, streets, power, water] = await Promise.all([
-      pick<RoadCollection>('roads', 'fixture'),
-      pick<GeoData['streets']>('streets', 'fixture-streets'),
-      pick<GeoData['power']>('power', 'fixture-power'),
-      pick<GeoData['water']>('water', 'fixture-water'),
-    ]);
-    return { roads: roads.data, streets: streets.data, power: power.data, water: water.data, source: { roads: roads.source, streets: streets.source, power: power.source, water: water.source } };
-  })();
-  return cached;
+/** The geometry of a home pack (default Karolinska), loaded once per pack with dynamic imports. */
+export function loadGeoData(packId: HomePackId = 'karolinska'): Promise<GeoData> {
+  let loading = cache.get(packId);
+  if (!loading) {
+    const geo = homePacks[packId].geo;
+    loading = (async () => {
+      const [roads, streets, power, water] = await Promise.all([
+        pick<RoadCollection>(geo.roads, 'roads'),
+        pick<GeoData['streets']>(geo.streets, 'streets'),
+        pick<GeoData['power']>(geo.power, 'power'),
+        pick<GeoData['water']>(geo.water, 'water'),
+      ]);
+      return { roads: roads.data, streets: streets.data, power: power.data, water: water.data, source: { roads: roads.source, streets: streets.source, power: power.source, water: water.source } };
+    })();
+    cache.set(packId, loading);
+  }
+  return loading;
 }

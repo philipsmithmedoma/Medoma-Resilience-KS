@@ -49,6 +49,7 @@ export const sv = {
   },
 
   SCOPE_LABELS: {
+    notApplicableLund: 'Gäller inte SUS Lund',
     karolinska: 'Karolinska',
     karolinskaLong: 'Karolinska (båda siter)',
     solna: 'Karolinska Solna',
@@ -191,6 +192,7 @@ export const sv = {
     switchLocale: 'Switch to English',
     otherLocaleCode: 'EN',
     fictionalPatients: 'Fiktiva patientuppgifter – inte Karolinskas data.',
+    fictionalPatientsLund: 'Fiktiva patientuppgifter – inte SUS Lunds data.',
     fromHome: 'Från hemmet',
     days: '{n} dygn',
     lastSync: 'Senaste synk {at}',
@@ -209,6 +211,8 @@ export const sv = {
   },
 
   AUDIT: {
+    homePackSwitched: 'Bytte sjukhus för Sjukhus hemma till',
+    homePackDetail: '{n} patienter, {m} team',
     ehrLost: 'Journalsystemet frånkopplat, drift på operativ spegel',
     ehrRestored: 'Journalsystemet återanslutet',
     ehrObject: 'Journalsystem',
@@ -755,6 +759,7 @@ export const sv = {
   },
 
   HOME: {
+    packSwitch: { label: 'Sjukhus' },
     planning: {
       visits: 'Besök i dag ({n})',
       teamHeading: '{team} ({n})',
@@ -902,6 +907,7 @@ export const sv = {
       headline: '{n} av {total} patienter påverkade',
       detour: ', {n} nås via omväg',
       basis: 'Fiktiva patientuppgifter som genererats för demon, inte Karolinskas data.',
+      basisLund: 'Fiktiva patientuppgifter som genererats för demon, inte SUS Lunds data.',
       active: 'Aktiva störningar',
       closed: 'Stängt: {names}',
       powerOut: 'Elavbrott: {names}',
@@ -959,6 +965,7 @@ export const sv = {
   },
 
   SOURCES: {
+    homeHeadingPack: 'Sjukhus hemma: infrastruktur, {pack}',
     homeHeading: 'Sjukhus hemma: infrastruktur',
     homeIntro: 'Källor till kartlagren för vatten, el och vägar. Nodernas läge är från Google Places (avläst 2026-11-02) om inget annat anges i panelen; dragningen av varje förbindelse är schematisk.',
     title: 'Källor',
@@ -1118,6 +1125,7 @@ export const en: Vocab = {
   },
 
   SCOPE_LABELS: {
+    notApplicableLund: 'Not applicable to SUS Lund',
     karolinska: 'Karolinska',
     karolinskaLong: 'Karolinska (both sites)',
     solna: 'Karolinska Solna',
@@ -1263,6 +1271,7 @@ export const en: Vocab = {
     switchLocale: 'Byt till svenska',
     otherLocaleCode: 'SV',
     fictionalPatients: 'Fictional patient data – not Karolinska data.',
+    fictionalPatientsLund: 'Fictional patient data – not SUS Lund data.',
     fromHome: 'From home',
     days: '{n} days',
     lastSync: 'Last sync {at}',
@@ -1281,6 +1290,8 @@ export const en: Vocab = {
   },
 
   AUDIT: {
+    homePackSwitched: 'Switched the Hospital at Home hospital to',
+    homePackDetail: '{n} patients, {m} teams',
     ehrLost: 'EHR disconnected, operating on the operational mirror',
     ehrRestored: 'EHR reconnected',
     ehrObject: 'EHR',
@@ -1820,6 +1831,7 @@ export const en: Vocab = {
   },
 
   HOME: {
+    packSwitch: { label: 'Hospital' },
     planning: {
       visits: 'Visits today ({n})',
       teamHeading: '{team} ({n})',
@@ -1967,6 +1979,7 @@ export const en: Vocab = {
       headline: '{n} of {total} patients affected',
       detour: ', {n} reached via detour',
       basis: 'Fictional patient data generated for the demo, not Karolinska data.',
+      basisLund: 'Fictional patient data generated for the demo, not SUS Lund data.',
       active: 'Active disruptions',
       closed: 'Closed: {names}',
       powerOut: 'Power outage: {names}',
@@ -2024,6 +2037,7 @@ export const en: Vocab = {
   },
 
   SOURCES: {
+    homeHeadingPack: 'Hospital at Home: infrastructure, {pack}',
     homeHeading: 'Hospital at Home: infrastructure',
     homeIntro: 'Sources for the water, electricity and road layers. Node positions are from Google Places (read 2026-11-02) unless the panel says otherwise; the routing of every link is schematic.',
     title: 'Sources',

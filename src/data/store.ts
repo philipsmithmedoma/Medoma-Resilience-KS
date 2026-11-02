@@ -34,6 +34,7 @@ import { createNetworkSlice, type NetworkActions } from './store-network';
 import { createFlowSlice, type FlowActions } from './store-flow';
 import { createScenarioSlice, type ScenarioActions } from './store-scenario';
 import type { PreparednessReason } from '@/lib/preparedness';
+import { setActiveRoadPack } from '@/lib/roadModel';
 import { createHomeSlice, initialHome, type HomeActions, type HomeState } from './store-home';
 
 export interface DataState {
@@ -213,7 +214,10 @@ export const useStore = create<AppStore>()((set, get, api) => ({
     set({ clock: INITIAL_CLOCK });
   },
 
-  reset: () => set({ ...initialData() }),
+  reset: () => {
+    setActiveRoadPack('karolinska'); // a demo reset is back to the Karolinska pack
+    set({ ...initialData() });
+  },
 
   openScenarioPanel: (key) => set({ scenarioPanel: { open: true, key } }),
 

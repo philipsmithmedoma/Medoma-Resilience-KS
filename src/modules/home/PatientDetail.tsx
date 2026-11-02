@@ -1,6 +1,7 @@
 import { useStore } from '@/data/store';
 import { t, tm, lt } from '@/lib/i18n';
 import { formatClock } from '@/lib/time';
+import { fictionalMarking } from '@/lib/home-sites';
 import { visitStatusAt } from '@/data/packs/home-visits';
 import type { ImpactReason, ImpactRow } from '@/lib/reachability';
 import type { ChipTone } from '@/data/vocab';
@@ -41,7 +42,7 @@ export function PatientDetail({ patientId, row, prep }: PatientDetailProps) {
         <h2 className="text-heading">
           {p.familyName}, {p.givenName} <span className="font-normal text-text-secondary tabular">{p.age}</span>
         </h2>
-        <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
+        <p className="text-small text-text-muted">{fictionalMarking(pack.homePackId)}</p>
       </div>
       {prep && row ? (
         <div className="flex flex-wrap gap-1" aria-label={t('HOME.detail.flags')}>

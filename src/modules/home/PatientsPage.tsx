@@ -3,6 +3,7 @@ import { useStore } from '@/data/store';
 import { t, tm } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { PageTitle } from '@/components/PageTitle';
+import { fictionalMarking } from '@/lib/home-sites';
 import { PatientDetail } from './PatientDetail';
 import { useHomeGeo } from './useHomeGeo';
 import { useHomeImpact } from './useHomeImpact';
@@ -19,6 +20,7 @@ export function PatientsPage() {
   const prep = usePreparednessActive();
   const patients = useStore((s) => s.pack.homePatients);
   const teams = useStore((s) => s.pack.homeTeams);
+  const packId = useStore((s) => s.pack.homePackId);
   const work = useStore((s) => s.home.work);
   const incident = useStore((s) => s.incident);
   const { impact } = useHomeImpact();
@@ -36,7 +38,7 @@ export function PatientsPage() {
         <div className="w-[380px] shrink-0 overflow-y-auto border-r border-border">
           <div className="sticky top-0 z-10 space-y-1 border-b border-border bg-surface px-4 py-3">
             <h2 className="text-heading">{t('HOME.patientsPage.title', { n: sorted.length })}</h2>
-            <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
+            <p className="text-small text-text-muted">{fictionalMarking(packId)}</p>
           </div>
           <ul>
             {sorted.map((p) => {

@@ -1,12 +1,13 @@
 // Hospital at Home reachability and impact – SPEC.md § 11.5 and § 12.3. Pure: Dijkstra by length over the road graph from
 // the sites in scope, a status per patient, one row per affected patient and their priority order. Zones keep their role
 // for power and water outages only.
-import type { DataPack, HomePatient, HomeTeam, SiteId, TeamId, ZoneId } from '@/data/types';
+import type { DataPack, HomePatient, HomeTeam, TeamId, ZoneId } from '@/data/types';
 import { blockedWayFlags, dijkstra, pathWayNames, snapToGraph, type RoadGraph } from './roadGraph';
 import { getRoadModel, sourceVertices, teamDistancesFrom, type RoadModel } from './roadModel';
 import { batteryEmptyAt } from './disruptions';
 
-export const BOTH_SITES: SiteId[] = ['solna', 'huddinge'];
+/** The Karolinska sites: a scope that yields none falls back to both (SPEC.md § 11.1). A pack with its own sites always passes them. */
+export const BOTH_SITES: string[] = ['solna', 'huddinge'];
 
 /** Everything that can be disrupted (SPEC.md § 11.5, § 12.3). */
 export interface Disruptions {
@@ -144,7 +145,7 @@ export function blockedWayIdSet(model: RoadModel, state: Disruptions, pack: Road
 export function impact(
   pack: Pick<DataPack, 'homeZones' | 'homePatients' | 'infraNodes'> & Partial<Pick<DataPack, 'homeTeams'>>,
   state: Disruptions,
-  scopeSites: SiteId[],
+  scopeSites: string[],
   model: RoadModel | null = getRoadModel(),
   clock: number | null = null,
 ): Impact {
@@ -247,7 +248,7 @@ export function impact(
 export function explainPath(
   pack: Pick<DataPack, 'infraNodes'>,
   state: Disruptions,
-  scopeSites: SiteId[],
+  scopeSites: string[],
   model: RoadModel,
   patient: Pick<HomePatient, 'id'>,
 ): string[] | null {

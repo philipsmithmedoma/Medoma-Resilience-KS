@@ -6,6 +6,7 @@ import { t, tm } from '@/lib/i18n';
 import { isMirror } from '@/lib/figure';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Chip } from './Chip';
+import { HOME_PACK_IDS, homePacks } from '@/data/packs/home-packs';
 
 /** The Källor anchor for a figure: its source key, or the confidence class row. */
 export function sourceAnchor(figure: Figure): string {
@@ -51,7 +52,7 @@ export function ConfidenceChip({ figure, showSource = false, className }: Confid
 
 export function ConfidencePopover({ figure, children }: { figure: Figure; children: React.ReactNode }) {
   const pack = useStore((s) => s.pack);
-  const sources = [...pack.sources, ...pack.homeSources]; // S1–S22 and S-H1–S-H14
+  const sources = [...pack.sources, ...HOME_PACK_IDS.flatMap((id) => homePacks[id].sources)]; // S1–S22, S-H1–S-H14 and S-L1–S-L5
   const since = useStore((s) => s.ehrOutageSince);
   const source = figure.source ? sources.find((s) => s.key === figure.source) : undefined;
   const mirror = isMirror(figure);

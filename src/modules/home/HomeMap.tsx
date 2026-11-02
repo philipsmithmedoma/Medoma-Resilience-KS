@@ -6,6 +6,7 @@ import { getRoadModel } from '@/lib/roadModel';
 import { roadKey, type RoadProps } from '@/lib/roadGraph';
 import type { GeoData } from '@/lib/geoData';
 import { powerLines } from '@/lib/osmNodes';
+import { homeSiteNodes } from '@/lib/home-sites';
 import { NodeMap } from '@/components/NodeMap';
 import type { HomeOverlay, PatientMark } from '@/components/HomeMapLayers';
 import { LayerChips } from './LayerChips';
@@ -27,8 +28,8 @@ export function HomeMap({ impact, geo }: { impact: Impact; geo: GeoData | null }
   const toggleBlockedRoad = useStore((s) => s.toggleBlockedRoad);
   const togglePowerOut = useStore((s) => s.togglePowerOut);
   const toggleWaterOut = useStore((s) => s.toggleWaterOut);
-  // Only the two Karolinska sites are care nodes on this map; the region's hospitals are not part of the picture.
-  const sites = useMemo(() => nodes.filter((n) => n.id === 'solna' || n.id === 'huddinge'), [nodes]);
+  // Only the sites of the active home pack are care nodes on this map (Solna and Huddinge, or SUS Lund); the region's hospitals are not part of the picture.
+  const sites = useMemo(() => homeSiteNodes(pack, nodes), [pack, nodes]);
   // Affected patients are filled, affected and critical ones a hollow ring, detour-only ones amber (SPEC.md § 11.5).
   const patientMarks = useMemo(() => {
     const marks = new Map<string, PatientMark>();

@@ -28,12 +28,19 @@ export function detectKind(text: string): HomeDisruptionKind {
   return 'road';
 }
 
-/** The longest road name that occurs in the text (case-insensitive), or '' when none does. */
+/**
+ * The longest road name that occurs in the text (case-insensitive), or '' when none does. An interchange is named in a notice
+ * without its "Trafikplats" ("E22 vid Lund Södra"), so a name also matches by what follows that word.
+ */
 export function matchRoad(text: string, roadNames: readonly string[]): string {
   const lower = text.toLowerCase();
-  let best = '';
-  for (const name of roadNames) if (name.length > best.length && lower.includes(name.toLowerCase())) best = name;
-  return best;
+  let best = { name: '', len: 0 };
+  for (const name of roadNames) {
+    for (const form of [name, name.replace(/^Trafikplats /i, '')]) {
+      if (form.length > best.len && lower.includes(form.toLowerCase())) best = { name, len: form.length };
+    }
+  }
+  return best.name;
 }
 
 /** A zone by the longest of its names, or the first words of them ("Solna" for "Solna och Sundbyberg"), found in the text. */

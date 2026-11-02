@@ -1577,6 +1577,7 @@ export const KAROLINSKA_PACK: DataPack = {
   homeTeams: HOME_TEAMS,
   homeVisits: HOME_VISITS,
   homeMessages: HOME_MESSAGES,
+  homePackId: 'karolinska',
 };
 
 export function loadPack(): DataPack {

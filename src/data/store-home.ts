@@ -3,17 +3,18 @@
 // to the audit log through logEntry() (by way of logHome, which marks the entry as this module's) like every other action.
 import type { StateCreator } from 'zustand';
 import type { AppStore } from './store';
-import type { DataPack, HomeDisruption, HomeVisit, HomeWork, HomeWorkStatus, SiteId, TeamId, HomeDisruptionKind, HomeDisruptionSource, HomeDisruptionTargetKind, InfraLayer, InfraNode, LocalizedText, ZoneId } from './types';
-import { lt, same, t, tm } from '@/lib/i18n';
+import type { DataPack, HomeDisruption, HomePackId, HomeVisit, HomeWork, HomeWorkStatus, TeamId, HomeDisruptionKind, HomeDisruptionSource, HomeDisruptionTargetKind, InfraLayer, InfraNode, LocalizedText, ZoneId } from './types';
+import { lt, same, t } from '@/lib/i18n';
 import { CURRENT_USER, SYSTEM_ACTOR } from './vocab';
 import { deriveSets, expiredIds } from '@/lib/disruptions';
 import { freeSlots, effectiveVisits } from './packs/home-visits';
 import { formatClock } from '@/lib/time';
 import { haversineM } from '@/lib/roadGraph';
-import { getRoadModel } from '@/lib/roadModel';
+import { getRoadModel, setActiveRoadPack } from '@/lib/roadModel';
 import { getAppliedNodes } from '@/lib/osmNodes';
-import { sitesInScope } from '@/lib/scope';
-import { BOTH_SITES, disruptionCount, impact } from '@/lib/reachability';
+import { homeSiteName, homeSitesInScope } from '@/lib/home-sites';
+import { homePackIdOf, homePacks, withHomePack } from './packs/home-packs';
+import { disruptionCount, impact } from '@/lib/reachability';
 
 export type HomeLayerKey = InfraLayer | 'patients';
 export const HOME_LAYER_KEYS: HomeLayerKey[] = ['patients', 'roads', 'el', 'water'];
@@ -74,6 +75,8 @@ export interface HomeActions {
   settleHomeDisruptions: () => void;
   /** Advances the shared clock (the "+1 h" control), logs it and lets expired disruptions end. */
   advanceClock: (minutes: number) => void;
+  /** Switches the home pack (SPEC.md § 14.5): patients, infrastructure, teams, visits and messages are the pack's; disruptions and work start over. Logged. */
+  setHomePack: (id: HomePackId) => void;
   /** Contact – sets Contacted (the status never moves backwards) and records the note. */
   contactPatient: (patientId: string, note: string) => void;
   /** Move visit – a new slot from the team's free slots, or null for "no visit today"; sets Planned. */
@@ -108,7 +111,7 @@ export const WORK_STATUSES: HomeWorkStatus[] = ['Unhandled', 'Contacted', 'Plann
 const RANK = (s: HomeWorkStatus) => WORK_STATUSES.indexOf(s);
 const NO_WORK: HomeWork = { status: 'Unhandled', note: null, assignedTeam: null, bringInSite: null };
 
-export function initialHome(pack: Pick<DataPack, 'infraNodes'> & Partial<Pick<DataPack, 'homeVisits'>>): HomeState {
+export function initialHome(pack: Pick<DataPack, 'infraNodes'> & Partial<Pick<DataPack, 'homeVisits' | 'homePackId'>>): HomeState {
   return {
     layers: { patients: true, roads: true, el: false, water: false },
     mode: null,
@@ -124,7 +127,7 @@ export function initialHome(pack: Pick<DataPack, 'infraNodes'> & Partial<Pick<Da
     selectedNode: null,
     wholeRoad: false,
     geoReady: getRoadModel() !== null,
-    infraNodes: getAppliedNodes()?.nodes ?? pack.infraNodes,
+    infraNodes: getAppliedNodes(homePackIdOf(pack))?.nodes ?? pack.infraNodes,
   };
 }
 
@@ -147,8 +150,8 @@ let settlingHome = false;
 export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set, get) => {
   /** "N of 150 patients affected" for the current state and scope: the detail of every disruption log entry. */
   const detail = () => {
-    const { pack, home, scope } = get();
-    const r = impact(pack, home, sitesInScope(scope), undefined, get().clock);
+    const { pack, home } = get();
+    const r = impact(pack, home, scopeSites(), undefined, get().clock);
     return t('AUDIT.homeDetail', { n: r.summary.affected, total: pack.homePatients.length });
   };
   const zoneName = (zone: ZoneId) => {
@@ -156,6 +159,8 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
     return z ? lt(z.name) : zone;
   };
 
+  /** The sites reachability runs from: the scope's for Karolinska, SUS Lund's one site for the Lund pack. */
+  const scopeSites = () => homeSitesInScope(get().pack.homePackId, get().scope);
   const labelOf = (input: NewDisruption): LocalizedText => {
     if (input.label) return input.label;
     const { pack } = get();
@@ -227,8 +232,8 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
     });
   /** True when the patient is affected now from the sites in scope (unreachable, without power or water). */
   const affectedNow = (id: string) => {
-    const { pack, home, scope, clock } = get();
-    return impact(pack, home, sitesInScope(scope), undefined, clock).rows.some((r) => r.affected && r.patient.id === id);
+    const { pack, home, clock } = get();
+    return impact(pack, home, scopeSites(), undefined, clock).rows.some((r) => r.affected && r.patient.id === id);
   };
   const teamName = (id: TeamId) => get().pack.homeTeams.find((x) => x.id === id)?.name ?? id;
 
@@ -237,10 +242,10 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
    * work on them who is no longer affected from the sites in scope starts over. The log keeps the history.
    */
   const reconcile = () => {
-    const { pack, home, scope, clock } = get();
+    const { pack, home, clock } = get();
     const touched = Object.keys(home.work).filter((id) => home.work[id].status !== 'Unhandled');
     if (touched.length === 0) return;
-    const affected = new Set(impact(pack, home, sitesInScope(scope), undefined, clock).rows.filter((r) => r.affected).map((r) => r.patient.id));
+    const affected = new Set(impact(pack, home, scopeSites(), undefined, clock).rows.filter((r) => r.affected).map((r) => r.patient.id));
     const reset = touched.filter((id) => !affected.has(id));
     if (reset.length === 0) return;
     set((s) => {
@@ -348,6 +353,14 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
       logHome(t('AUDIT.homeClockAdvanced'), t('AUDIT.homeObject'), t('AUDIT.homeClockDetail', { n: minutes }), undefined, undefined, { advance: false });
     },
 
+    setHomePack: (id) => {
+      if (get().pack.homePackId === id) return;
+      setActiveRoadPack(id);
+      const next = withHomePack(get().pack, id);
+      set((s) => ({ pack: next, home: { ...initialHome(next), layers: s.home.layers } }));
+      logHome(t('AUDIT.homePackSwitched'), homePacks[id].name, t('AUDIT.homePackDetail', { n: next.homePatients.length, m: next.homeTeams.length }));
+    },
+
     contactPatient: (patientId, note) => {
       if (!patientOf(patientId)) return;
       const text = note.trim();
@@ -386,13 +399,12 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
     bringInPatient: (patientId) => {
       const patient = patientOf(patientId);
       if (!patient) return;
-      const { pack, scope } = get();
-      const inScope = sitesInScope(scope);
-      const candidates = (inScope.length ? inScope : BOTH_SITES).map((id) => pack.nodes.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => n?.lat !== undefined && n.lng !== undefined);
-      const nearest = candidates.sort((a, b) => haversineM(patient.lat, patient.lng, a.lat!, a.lng!) - haversineM(patient.lat, patient.lng, b.lat!, b.lng!))[0];
-      const site = (nearest?.id ?? (inScope[0] ?? BOTH_SITES[0])) as SiteId;
-      setWork(patientId, { bringInSite: site }, 'Planned');
-      logHome(t('AUDIT.homeBringIn'), nameOf(patientId), tm('SCOPE_LABELS')[site], undefined, patientId);
+      const packId = get().pack.homePackId;
+      const inScope = scopeSites();
+      const candidates = homePacks[packId].sites.filter((x) => inScope.length === 0 || inScope.includes(x.id));
+      const nearest = [...candidates].sort((a, b) => haversineM(patient.lat, patient.lng, a.lat, a.lng) - haversineM(patient.lat, patient.lng, b.lat, b.lng))[0] ?? homePacks[packId].sites[0];
+      setWork(patientId, { bringInSite: nearest.id }, 'Planned');
+      logHome(t('AUDIT.homeBringIn'), nameOf(patientId), homeSiteName(packId, nearest.id), undefined, patientId);
     },
 
     confirmPatient: (patientId) => {
@@ -402,8 +414,8 @@ export const createHomeSlice: StateCreator<AppStore, [], [], HomeActions> = (set
     },
 
     contactAllCritical: () => {
-      const { pack, home, scope, clock } = get();
-      const rows = impact(pack, home, sitesInScope(scope), undefined, clock).rows.filter((r) => r.critical);
+      const { pack, home, clock } = get();
+      const rows = impact(pack, home, scopeSites(), undefined, clock).rows.filter((r) => r.critical);
       if (rows.length === 0) return;
       const note = t('HOME.work.bulkNote');
       for (const r of rows) setWork(r.patient.id, { note }, 'Contacted');

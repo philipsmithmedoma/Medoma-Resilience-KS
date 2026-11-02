@@ -577,6 +577,8 @@ export interface HomeDisruptionPreset {
   blockedNodes: string[];
   powerOutZones: ZoneId[];
   waterOutZones: ZoneId[];
+  /** The sentence the scenario panel shows; a pack without one uses the Karolinska texts of the vocab. */
+  description?: LocalizedText;
 }
 
 /** A disruption as a record in time (SPEC.md § 13.2); the blocked and outage sets are derived from the active ones. */
@@ -631,7 +633,47 @@ export interface HomeWork {
   note: string | null;
   assignedTeam: TeamId | null;
   /** The site the patient is brought in to ("Ta in"); shown in Evakuering as an inbound line, without a move record. */
-  bringInSite: SiteId | null;
+  bringInSite: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Home packs (SPEC.md § 14.5): the Hospital at Home data of one hospital, kept apart from the hospital pack.
+export type HomePackId = 'karolinska' | 'lund';
+export interface HomeSite {
+  id: string; // 'solna', 'huddinge' (Karolinska care nodes) or 'suslund'
+  name: string;
+  lat: number;
+  lng: number;
+}
+export type GeoFileKind = 'roads' | 'streets' | 'power' | 'water';
+/** The OpenStreetMap file of a pack (absent until it has been fetched) and the fixture that stands in for it; both are dynamic imports. */
+export interface GeoLoader {
+  osm?: () => Promise<{ default: unknown }>;
+  fixture: () => Promise<{ default: unknown }>;
+}
+export interface HomeOsmMatch {
+  nodeId: string;
+  term: string;
+  file: 'power' | 'water';
+}
+export interface HomePack {
+  id: HomePackId;
+  name: string;
+  sites: HomeSite[];
+  zones: HomeZone[];
+  patients: HomePatient[];
+  teams: HomeTeam[];
+  visits: HomeVisit[];
+  infraNodes: InfraNode[];
+  infraLinks: InfraLink[];
+  messages: Message[];
+  /** Beyond § 14.5's list: the scenario presets and the sources of this pack's infrastructure (DECISIONS.md). */
+  presets: HomeDisruptionPreset[];
+  sources: SourceRef[];
+  /** How nodes take positions from OpenStreetMap, and nodes that exist only once OpenStreetMap has a match (Kolbotten). */
+  osmMatches: HomeOsmMatch[];
+  osmExtra: Record<string, Omit<InfraNode, 'lat' | 'lng' | 'coordConfidence' | 'coordSource'>>;
+  geo: Record<GeoFileKind, GeoLoader>;
 }
 
 // ---------------------------------------------------------------------------
@@ -679,4 +721,6 @@ export interface DataPack {
   homeVisits: HomeVisit[];
   /** Illustrative notices that can become disruptions (SPEC.md § 13.4, DATA.md § 13). */
   homeMessages: Message[];
+  /** The home pack the home members above belong to (SPEC.md § 14.5); the store swaps them when the pack switch is used. */
+  homePackId: HomePackId;
 }

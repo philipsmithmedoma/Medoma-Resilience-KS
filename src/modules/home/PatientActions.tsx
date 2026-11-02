@@ -4,6 +4,7 @@ import { WORK_STATUSES } from '@/data/store-home';
 import { t, tm, lt } from '@/lib/i18n';
 import { effectiveVisits, freeSlots } from '@/data/packs/home-visits';
 import { formatClock } from '@/lib/time';
+import { homeSiteName } from '@/lib/home-sites';
 import { StatusChain } from '@/components/StatusChain';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +52,7 @@ export function PatientActions({ patientId, reachableBy, moveOnly = false }: { p
           <StatusChain steps={WORK_STATUSES} labels={labels} current={status} label={t('HOME.work.statusLabel')} />
           {work?.note ? <p className="text-small text-text-secondary">{work.note}</p> : null}
           {work?.assignedTeam ? <p className="text-small text-text-secondary">{t('HOME.work.assigned', { team: pack.homeTeams.find((x) => x.id === work.assignedTeam)?.name ?? work.assignedTeam })}</p> : null}
-          {work?.bringInSite ? <p className="text-small text-text-secondary">{t('HOME.work.broughtIn', { site: tm('SCOPE_LABELS')[work.bringInSite] })}</p> : null}
+          {work?.bringInSite ? <p className="text-small text-text-secondary">{t('HOME.work.broughtIn', { site: homeSiteName(pack.homePackId, work.bringInSite) })}</p> : null}
         </>
       )}
       <div className="flex flex-wrap gap-2">

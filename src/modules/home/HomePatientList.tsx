@@ -7,6 +7,7 @@ import { NO_FILTERS, filterPatients, groupByZone, hasFilters, type HomeFilters }
 import { isPrioritised, prioritise, type Impact, type ImpactReason, type ImpactRow } from '@/lib/reachability';
 import { cn } from '@/lib/utils';
 import { Chip } from '@/components/Chip';
+import { fictionalMarking } from '@/lib/home-sites';
 import { getRoadModel } from '@/lib/roadModel';
 import { formatClock } from '@/lib/time';
 import type { ChipTone } from '@/data/vocab';
@@ -117,6 +118,7 @@ function SectionList({ title, rows, patients, expandedId, onToggle }: { title: s
 /** Left pane (SPEC.md § 11.6): one row per patient grouped by zone, with the zone, equipment, visit-today and affected-only filters. */
 export function HomePatientList({ patients, impact, active }: HomePatientListProps) {
   const zones = useStore((s) => s.pack.homeZones);
+  const packId = useStore((s) => s.pack.homePackId);
   const [filters, setFilters] = useState<HomeFilters>(NO_FILTERS);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const toggleRow = (id: string) => setExpandedId((cur) => (cur === id ? null : id));
@@ -140,7 +142,7 @@ export function HomePatientList({ patients, impact, active }: HomePatientListPro
     <div>
       <div className="sticky top-0 z-10 space-y-2 border-b border-border bg-surface px-4 py-3">
         <h2 className="text-heading">{t('HOME.list.title', { n: filtered.length })}</h2>
-        <p className="text-small text-text-muted">{t('LABELS.fictionalPatients')}</p>
+        <p className="text-small text-text-muted">{fictionalMarking(packId)}</p>
         {active ? (
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" disabled={!impact.rows.some((r) => r.critical)} onClick={contactAllCritical}>
