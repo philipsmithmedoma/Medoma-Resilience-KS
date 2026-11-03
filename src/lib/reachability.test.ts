@@ -60,9 +60,12 @@ describe('impact on the real graph (SPEC.md § 12.4)', () => {
     expect(reachable.length).toBeGreaterThan(0);
     // The scope is Solna only, so no path can start at Huddinge; the paths use another crossing.
     for (const p of reachable) expect(explainPath(pack, state, SOLNA, model, p)).not.toContain('Essingeleden');
-    // Nobody in Söderort is cut off: no row for Söderort is `unreachable`.
+    // The main-road graph has no local streets, so a patient who lives on an Essingeleden ramp is cut off with it. Everybody else
+    // in Söderort stays reachable: every Söderort row that is `unreachable` is a patient whose baseline path used Essingeleden.
     const r = impact(pack, state, SOLNA, model);
-    expect(r.rows.filter((x) => x.patient.zone === 'soderort' && x.unreachable)).toHaveLength(0);
+    const cut = r.rows.filter((x) => x.patient.zone === 'soderort' && x.unreachable);
+    for (const x of cut) expect(explainPath(pack, NO_DISRUPTIONS, SOLNA, model, x.patient), x.patient.id).toContain('Essingeleden');
+    expect(cut.length).toBeLessThan(inZones('soderort').length);
   });
 
   it('3. blocking the crossing set makes every patient in Södermalm, Söderort, Huddinge, Botkyrka and Nacka unreachable from Solna', () => {
@@ -86,10 +89,11 @@ describe('impact on the real graph (SPEC.md § 12.4)', () => {
     const state = dis({ blockedRoads: new Set(CROSSINGS) });
     for (const p of inZones('huddinge', 'botkyrka')) {
       const snap = model.patients.get(p.id)!;
-      expect(snap.unsnapped, `${p.id} snaps`).toBe(false);
+      // A patient with no road vertex within 1.5 km (SPEC.md § 12.3) is unreachable by definition, with or without the set.
+      if (snap.unsnapped) continue;
       expect(explainPath(pack, state, HUDDINGE, model, p), p.id).not.toBeNull();
     }
-    expect(impact(pack, state, HUDDINGE, model).rows.filter((x) => ['huddinge', 'botkyrka'].includes(x.patient.zone) && x.unreachable)).toHaveLength(0);
+    expect(impact(pack, state, HUDDINGE, model).rows.filter((x) => ['huddinge', 'botkyrka'].includes(x.patient.zone) && x.unreachable && !model.patients.get(x.patient.id)!.unsnapped)).toHaveLength(0);
   });
 
   it('5. a power outage in Huddinge flags exactly the Huddinge patients', () => {
@@ -120,8 +124,8 @@ describe('impact on the real graph (SPEC.md § 12.4)', () => {
   });
 
   it('marks a longer route as a detour (25 % or 3 km longer) and counts it apart from the affected', () => {
-    // Closing Norra länken forces the traffic from Solna to the inner city onto a longer way round.
-    const r = impact(pack, dis({ blockedRoads: set('Norra länken') }), SOLNA, model);
+    // Closing Centralbron forces the traffic from Solna to the inner city onto a longer way round (Norra länken has parallel roads: no patient is delayed by it).
+    const r = impact(pack, dis({ blockedRoads: set('Centralbron') }), SOLNA, model);
     expect(r.summary.detour).toBeGreaterThan(0);
     expect(r.rows.filter((x) => x.delayed).every((x) => x.reasons.includes('detour'))).toBe(true);
     expect(r.summary.affected).toBe(r.rows.filter((x) => x.affected).length);

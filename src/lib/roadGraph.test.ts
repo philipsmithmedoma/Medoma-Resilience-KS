@@ -112,3 +112,46 @@ describe('snapToGraph (SPEC.md § 12.3)', () => {
     expect(snapToGraph(g, 59.3, 18.01, 50000).unsnapped).toBe(false);
   });
 });
+
+describe('snapping and one-way ramps (regression: 0 % of the patients had a path from Solna)', () => {
+  // A two-way road P—Q—R, and a one-way exit ramp from Q to the dead end X that lies nearer to the point than any vertex of the road.
+  const P: LngLat = [18.0, 59.3];
+  const Q: LngLat = [18.01, 59.3];
+  const R: LngLat = [18.02, 59.3];
+  const X: LngLat = [18.01, 59.3009];
+  const ramp: RoadCollection = {
+    type: 'FeatureCollection',
+    features: [way(1, 'Vägen', [P, Q]), way(2, 'Vägen', [Q, R]), way(3, 'Avfarten', [Q, X], { oneway: true })],
+  };
+  const g = buildRoadGraph(ramp);
+  const nearX = [59.3011, 18.0101] as const;
+
+  it('does not attach a point to the end of a one-way ramp that has no way out, where a search could never start', () => {
+    const s = snapToGraph(g, nearX[0], nearX[1]);
+    expect(g.lat[s.vertex]).toBe(Q[1]);
+    expect(g.lng[s.vertex]).toBe(Q[0]);
+    expect(Number.isFinite(dijkstra(g, [s.vertex]).dist[g.vertexCount - 1])).toBe(true);
+  });
+
+  it('does not attach a point to the start of a one-way entry ramp that nothing leads into, where a search could never end', () => {
+    const entry = buildRoadGraph({ type: 'FeatureCollection', features: [way(1, 'Vägen', [P, Q]), way(2, 'Vägen', [Q, R]), way(3, 'Påfarten', [X, Q], { oneway: true })] });
+    const s = snapToGraph(entry, nearX[0], nearX[1]);
+    expect(entry.lng[s.vertex]).toBe(Q[0]);
+    expect(entry.lat[s.vertex]).toBe(Q[1]);
+  });
+
+  it('marks only the strongly connected core: the road vertices, not the dead end of the ramp', () => {
+    expect([...g.core].reduce((a, b) => a + b, 0)).toBe(3);
+  });
+});
+
+describe('the committed OpenStreetMap graph (SPEC.md § 12.3)', () => {
+  it('lets the Solna site reach most of the graph: it snaps to a vertex a search can leave', async () => {
+    const roadsJson = (await import('@/data/packs/geo/karolinska/roads.json')).default as unknown as RoadCollection;
+    const g = buildRoadGraph(roadsJson);
+    const s = snapToGraph(g, 59.3522, 18.0322);
+    expect(s.unsnapped).toBe(false);
+    const reached = dijkstra(g, [s.vertex]).dist.filter(Number.isFinite).length;
+    expect(reached / g.vertexCount).toBeGreaterThan(0.8);
+  });
+});

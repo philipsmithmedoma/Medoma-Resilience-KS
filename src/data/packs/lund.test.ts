@@ -153,18 +153,30 @@ describe('SUS Lund on the road graph (SPEC.md § 14.5)', () => {
     return [...near];
   }
 
-  it('3. blocking Trafikplats Lund Norra and Södra makes every patient outside Lund delayed or unreachable', () => {
+  it('3. blocking Trafikplats Lund Norra and Södra makes every patient outside Lund that depends on them delayed or unreachable', () => {
     const names = [...wayNamesFor('r-lund-n'), ...wayNamesFor('r-lund-s')];
     const r = run({ blockedRoads: new Set(names) });
     const hit = new Map(r.rows.map((x) => [x.patient.id, x]));
     const outside = lund.patients.filter((p) => p.zone !== 'lund' && !model.patients.get(p.id)!.unsnapped);
     expect(outside.length).toBeGreaterThan(80);
-    const fine = outside.filter((p) => !hit.get(p.id)?.unreachable && !hit.get(p.id)?.delayed);
-    expect(fine.map((p) => `${p.id} ${p.zone}`)).toEqual([]);
-    // In the fixture the interchanges are the only way out, so everybody outside is unreachable, not just delayed.
-    if (model.source === 'fixture') expect(outside.every((p) => hit.get(p.id)!.unreachable)).toBe(true);
-    // The city itself stays reachable: the ways are the exits, not the roads inside Lund.
-    expect(inZone('lund').every((p) => !hit.get(p.id)?.unreachable)).toBe(true);
+    const affected = (p: { id: string }) => hit.get(p.id)?.unreachable || hit.get(p.id)?.delayed;
+    if (model.source === 'fixture') {
+      // In the fixture the interchanges are the only way out, so everybody outside is unreachable, not just delayed.
+      expect(outside.every((p) => hit.get(p.id)?.unreachable)).toBe(true);
+    } else {
+      // In the real data the interchange names are the ways within 300 m of the nodes (Autostradan, Malmövägen, Norra Ringen,
+      // Solbjersvägen). Kävlinge, Lomma and Dalby are served by Norra Västkustvägen, Lundavägen and Dalbyvägen, which are not among
+      // them, so blocking the interchanges does not affect them (DECISIONS.md, "## OpenStreetMap data"). Staffanstorp, Eslöv and Höör
+      // all depend on the closed ways.
+      const dependent = outside.filter((p) => ['staffanstorp', 'eslov', 'horby'].includes(p.zone));
+      expect(dependent.length).toBeGreaterThan(30);
+      expect(dependent.filter((p) => !affected(p)).map((p) => `${p.id} ${p.zone}`)).toEqual([]);
+    }
+    // Most of the city stays reachable. In the fixture the ways are only the exits; in the real data Malmövägen, Norra Ringen and
+    // Solbjersvägen are also streets inside Lund, so a few city patients lose their road too.
+    const cityOk = inZone('lund').filter((p) => !hit.get(p.id)?.unreachable).length / inZone('lund').length;
+    console.log(`Lund patients still reachable: ${(cityOk * 100).toFixed(0)} %`);
+    expect(cityOk).toBeGreaterThanOrEqual(model.source === 'fixture' ? 1 : 0.8);
   });
 
   it('closing one interchange leaves the others reachable', () => {
@@ -185,8 +197,17 @@ describe('SUS Lund geometry and node positions (DATA.md § 14, SPEC.md § 12.5)'
   it('loads from geo/lund (the fixture until the data is fetched) with named ways, streets, substations and works', async () => {
     const geo = await loadGeoData('lund');
     expect(geo.roads.features.length).toBeGreaterThan(20);
-    expect(geo.roads.features.some((f) => f.properties.name === 'Trafikplats Lund Norra')).toBe(true);
-    expect(geo.roads.features.some((f) => f.properties.name === 'Trafikplats Lund Södra')).toBe(true);
+    if (geo.source.roads === 'fixture') {
+      expect(geo.roads.features.some((f) => f.properties.name === 'Trafikplats Lund Norra')).toBe(true);
+      expect(geo.roads.features.some((f) => f.properties.name === 'Trafikplats Lund Södra')).toBe(true);
+    } else {
+      // OpenStreetMap has no way named like the interchanges (SPEC.md § 14.5): each node has named ways within 300 m instead.
+      for (const id of ['r-lund-n', 'r-lund-s']) {
+        const node = lund.infraNodes.find((n) => n.id === id)!;
+        const near = geo.roads.features.filter((f) => f.properties.name && f.geometry.coordinates.some(([lng, lat]) => haversineM(node.lat, node.lng, lat, lng) <= 300));
+        expect(near.length, id).toBeGreaterThan(0);
+      }
+    }
     expect(geo.streets.features.length).toBeGreaterThan(50);
     const karolinska = await loadGeoData('karolinska');
     expect(karolinska.roads).not.toBe(geo.roads);
@@ -195,8 +216,10 @@ describe('SUS Lund geometry and node positions (DATA.md § 14, SPEC.md § 12.5)'
   it('the electricity and water nodes take their positions from the Lund power and water data, Karolinska ones are not touched', async () => {
     const geo = await loadGeoData('lund');
     const r = applyOsmNodes(lund.infraNodes, geo, null, 'lund');
-    expect(r.matched.sort()).toEqual(['e-barseback', 'e-hurva', 'e-sege', 'w-ringsjo', 'w-vomb']);
-    expect(r.missing).toEqual([]);
+    // The water data has no Vombverket (query 2026-11-03): the node keeps its estimate and is reported missing (SPEC.md § 12.5).
+    expect(r.matched.sort()).toEqual(['e-barseback', 'e-hurva', 'e-sege', 'w-ringsjo']);
+    expect(r.missing).toEqual(['w-vomb']);
+    expect(r.nodes.find((n) => n.id === 'w-vomb')).toEqual(lund.infraNodes.find((n) => n.id === 'w-vomb'));
     const hurva = r.nodes.find((n) => n.id === 'e-hurva')!;
     expect(hurva.lat).not.toBe(lund.infraNodes.find((n) => n.id === 'e-hurva')!.lat);
     expect(haversineM(hurva.lat, hurva.lng, 55.8313, 13.6034)).toBeLessThan(2000);

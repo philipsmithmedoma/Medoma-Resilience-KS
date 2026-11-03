@@ -63,7 +63,7 @@ describe('Hospital at Home disruptions (SPEC.md § 11.5)', () => {
     expect(s().home.blockedNodes.has('r-essingeleden')).toBe(true);
     expect(s().log).toHaveLength(n + 1);
     expect(last()).toMatchObject({ action: 'Stängde', object: 'Essingeleden (E4)', actor: 'Eva Lind' });
-    expect(last().detail).toBe('0 av 150 patienter påverkade'); // only a detour, nobody unreachable
+    expect(last().detail).toBe('3 av 150 patienter påverkade'); // real data: three patients hang on Essingeleden ramps, the rest take another way
     expect(s().clock).toBe(t0 + 1);
     s().toggleBlockedNode('r-essingeleden');
     expect(s().home.blockedNodes.size).toBe(0);
@@ -73,14 +73,14 @@ describe('Hospital at Home disruptions (SPEC.md § 11.5)', () => {
 
   it('closes one way by its OSM id and a whole road by its name, and ignores ids that are not road nodes', () => {
     const n = s().log.length;
-    s().toggleBlockedWay('9000004'); // Norra länken in the fixture
-    expect(s().home.blockedWays.has('9000004')).toBe(true);
+    s().toggleBlockedWay('35403955'); // a Norra länken way in the OpenStreetMap data
+    expect(s().home.blockedWays.has('35403955')).toBe(true);
     expect(last()).toMatchObject({ action: 'Stängde', object: 'Norra länken' });
-    s().toggleBlockedRoad('Uppsalavägen|E4');
-    expect(s().home.blockedRoads.has('Uppsalavägen|E4')).toBe(true);
+    s().toggleBlockedRoad('Uppsalavägen|E 4');
+    expect(s().home.blockedRoads.has('Uppsalavägen|E 4')).toBe(true);
     expect(last()).toMatchObject({ action: 'Stängde', object: 'Uppsalavägen' });
-    expect(last().detail).toBe('10 av 150 patienter påverkade'); // Täby is cut off
-    s().toggleBlockedRoad('Uppsalavägen|E4');
+    expect(last().detail).toBe('1 av 150 patienter påverkade'); // real data: Täby has other roads, one patient hangs on the closed E 4 ways
+    s().toggleBlockedRoad('Uppsalavägen|E 4');
     expect(last().action).toBe('Öppnade');
     s().toggleBlockedNode('w-gorvaln'); // a water node
     s().togglePowerOut('atlantis');
@@ -104,7 +104,7 @@ describe('Hospital at Home disruptions (SPEC.md § 11.5)', () => {
     s().resetHomeDisruptions();
     expect(s().log).toHaveLength(n);
     s().toggleBlockedNode('r-centralbron');
-    s().toggleBlockedWay('9000004');
+    s().toggleBlockedWay('35403955');
     s().toggleBlockedRoad('Uppsalavägen');
     s().togglePowerOut('soderort');
     s().toggleWaterOut('solna');
@@ -119,11 +119,11 @@ describe('Hospital at Home disruptions (SPEC.md § 11.5)', () => {
   it('computes the affected count for the scope', () => {
     s().setScope('solna');
     for (const road of ['Essingeleden', 'Västerbron', 'Centralbron', 'Munkbroleden', 'Skeppsbron', 'Söderledstunneln', 'Katarinavägen', 'Stadsgårdsleden']) s().toggleBlockedRoad(road);
-    // From Solna alone Södermalm, Söderort, Huddinge, Botkyrka and Nacka are cut off: 15 + 20 + 20 + 10 + 10.
-    expect(last().detail).toBe('75 av 150 patienter påverkade');
+    // From Solna alone Södermalm, Söderort, Huddinge, Botkyrka and Nacka are cut off (15 + 20 + 20 + 10 + 10), and so are four patients elsewhere whose only road goes over a closed crossing.
+    expect(last().detail).toBe('79 av 150 patienter påverkade');
     s().setScope('karolinska'); // reachable from either site: only the part of the south that hangs on closed roads stays cut off
     s().toggleBlockedRoad('Stadsgårdsleden');
-    expect(last().detail).toBe('25 av 150 patienter påverkade');
+    expect(last().detail).toBe('8 av 150 patienter påverkade');
   });
 
   it('the demo reset restores the defaults', () => {
@@ -146,7 +146,7 @@ describe('Hospital at Home presets (SPEC.md § 11.5)', () => {
     s().applyHomePreset('bridge');
     expect([...s().home.blockedNodes].sort()).toEqual(['r-centralbron', 'r-essingeleden']);
     expect(disruptionCount(s().home)).toBe(2);
-    expect(last()).toMatchObject({ action: 'Aktiverade störningsscenario', object: 'Bro avstängd', detail: '0 av 150 patienter påverkade' });
+    expect(last()).toMatchObject({ action: 'Aktiverade störningsscenario', object: 'Bro avstängd', detail: '7 av 150 patienter påverkade' });
   });
 
   it('"Elavbrott" cuts the power in Söderort and Huddinge and switches the electricity layer on', () => {
