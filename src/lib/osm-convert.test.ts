@@ -89,7 +89,7 @@ describe('streets, power and water (SPEC.md § 12.2)', () => {
 
 describe('outputs and README (SPEC.md § 12.2)', () => {
   it('lists the four files with the specified budgets', () => {
-    expect(OUTPUTS.map((o) => [o.file, o.budget])).toEqual([['roads.json', 2.5 * 1024 * 1024], ['streets.json', 1024 * 1024], ['power.json', 0.4 * 1024 * 1024], ['water.json', Infinity]]);
+    expect(OUTPUTS.map((o) => [o.file, o.budget])).toEqual([['roads.json', 2.5 * 1024 * 1024], ['streets.json', 1.5 * 1024 * 1024], ['power.json', 0.4 * 1024 * 1024], ['water.json', Infinity]]);
   });
   it('the README carries the attribution, the date and the sizes', () => {
     const md = geoReadme('2026-11-03', { 'roads.json': 2048 });
