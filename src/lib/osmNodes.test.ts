@@ -12,15 +12,26 @@ const point = (id: number, name: string, lat: number, lng: number): PointFeature
 const withPower = (features: GeoData['power']['features']): GeoData => ({ ...geo, power: { type: 'FeatureCollection', features } });
 
 describe('nodes from OpenStreetMap (SPEC.md § 12.5)', () => {
-  it('gives Överby, Beckomberga, Hagby, Skanstull and Görväln the position of the matching object and adds Kolbotten', () => {
+  it('gives Överby, Beckomberga, Hagby and Görväln the position of the matching object, adds Kolbotten, and reports Skanstull (no match in the data) as missing', () => {
     const r = applyOsmNodes(pack.infraNodes, geo, null);
-    expect(r.missing).toEqual([]);
-    expect(r.matched.sort()).toEqual(['e-beckomberga', 'e-hagby', 'e-kolbotten', 'e-overby', 'e-skanstull', 'w-gorvaln']);
+    // OpenStreetMap has no substation named Skanstull (query 2026-11-03): the node keeps its estimate and is reported (SPEC.md § 12.5).
+    expect(r.missing).toEqual(['e-skanstull']);
+    expect(r.matched.sort()).toEqual(['e-beckomberga', 'e-hagby', 'e-kolbotten', 'e-overby', 'w-gorvaln']);
+    expect(r.nodes.find((n) => n.id === 'e-skanstull')).toEqual(pack.infraNodes.find((n) => n.id === 'e-skanstull'));
     const node = (id: string) => r.nodes.find((n) => n.id === id)!;
-    const sub = (name: string) => geo.power.features.find((f) => f.properties.name?.includes(name))!.geometry.coordinates as [number, number];
-    expect([node('e-overby').lng, node('e-overby').lat]).toEqual(sub('Överby'));
-    expect([node('e-beckomberga').lng, node('e-beckomberga').lat]).toEqual(sub('Beckomberga')); // "Beckomberga ställverk": a substring match
-    expect([node('w-gorvaln').lng, node('w-gorvaln').lat]).toEqual(geo.water.features.find((f) => f.properties.name === 'Görvälnverket')!.geometry.coordinates);
+    // The real data can hold several objects with a name (two Överby substations, two Görväln works); the code takes the one nearest
+    // the old estimate, so the expectation does too.
+    const expected = (nodeId: string, term: string, features: Array<{ properties: { name?: string | null }; geometry: { coordinates: unknown } }>) => {
+      const est = pack.infraNodes.find((n) => n.id === nodeId)!;
+      const hits = features.filter((f) => f.properties.name?.toLowerCase().includes(term.toLowerCase())) as Array<{ geometry: { coordinates: [number, number] } }>;
+      const d = (f: (typeof hits)[number]) => Math.hypot(f.geometry.coordinates[1] - est.lat, f.geometry.coordinates[0] - est.lng);
+      return [...hits].sort((x, y) => d(x) - d(y))[0].geometry.coordinates;
+    };
+    const at = (id: string) => [node(id).lng, node(id).lat];
+    expect(at('e-overby')).toEqual(expected('e-overby', 'Överby', geo.power.features));
+    expect(at('e-beckomberga')).toEqual(expected('e-beckomberga', 'Beckomberga', geo.power.features)); // "Stamstation Beckomberga": a substring match
+    expect(at('e-hagby')).toEqual(expected('e-hagby', 'Hagby', geo.power.features.filter((f) => f.properties.power === 'substation')));
+    expect(at('w-gorvaln')).toEqual(expected('w-gorvaln', 'Görväln', geo.water.features));
     expect(node('e-kolbotten')).toMatchObject({ layer: 'el', kind: 'transmission', verified: true });
     expect(r.nodes).toHaveLength(pack.infraNodes.length + 1);
   });
@@ -45,7 +56,7 @@ describe('nodes from OpenStreetMap (SPEC.md § 12.5)', () => {
   it('keeps the estimate of a node with no match, reports it as missing and adds no Kolbotten', () => {
     const only = geo.power.features.filter((f) => !/hagby|kolbotten/i.test(f.properties.name ?? ''));
     const r = applyOsmNodes(pack.infraNodes, withPower(only), null);
-    expect(r.missing.sort()).toEqual(['e-hagby', 'e-kolbotten']);
+    expect(r.missing.sort()).toEqual(['e-hagby', 'e-kolbotten', 'e-skanstull']); // Skanstull has no match in the real data either
     expect(r.nodes.find((n) => n.id === 'e-hagby')).toEqual(pack.infraNodes.find((n) => n.id === 'e-hagby'));
     expect(r.nodes.some((n) => n.id === 'e-kolbotten')).toBe(false);
   });

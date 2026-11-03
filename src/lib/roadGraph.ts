@@ -55,6 +55,69 @@ export interface RoadGraph {
   adjStart: Int32Array;
   adjEdges: Int32Array;
   wayIndexById: Map<number, number>;
+  /** 1 for vertices in the largest strongly connected component: a vertex you can both enter and leave. Snapping only uses these. */
+  core: Uint8Array;
+}
+
+/** The largest strongly connected component (iterative Kosaraju), as a 0/1 mask. One-way ramps make dead-end vertices that no path can use. */
+function largestStrongComponent(n: number, from: Int32Array, to: Int32Array, adjStart: Int32Array, adjEdges: Int32Array): Uint8Array {
+  const order: number[] = [];
+  const seen = new Uint8Array(n);
+  const pos = Int32Array.from(adjStart.subarray(0, n));
+  for (let s = 0; s < n; s++) {
+    if (seen[s]) continue;
+    seen[s] = 1;
+    const stack = [s];
+    while (stack.length) {
+      const u = stack[stack.length - 1];
+      if (pos[u] < adjStart[u + 1]) {
+        const v = to[adjEdges[pos[u]++]];
+        if (!seen[v]) {
+          seen[v] = 1;
+          stack.push(v);
+        }
+      } else {
+        order.push(u);
+        stack.pop();
+      }
+    }
+  }
+  // Reverse adjacency.
+  const rStart = new Int32Array(n + 1);
+  for (let e = 0; e < to.length; e++) rStart[to[e] + 1]++;
+  for (let i = 0; i < n; i++) rStart[i + 1] += rStart[i];
+  const fill = rStart.slice(0, n);
+  const rEdges = new Int32Array(to.length);
+  for (let e = 0; e < to.length; e++) rEdges[fill[to[e]]++] = from[e];
+  const comp = new Int32Array(n).fill(-1);
+  const sizes: number[] = [];
+  for (let i = order.length - 1; i >= 0; i--) {
+    const s = order[i];
+    if (comp[s] >= 0) continue;
+    const c = sizes.length;
+    let size = 0;
+    const stack = [s];
+    comp[s] = c;
+    while (stack.length) {
+      const u = stack.pop()!;
+      size++;
+      for (let k = rStart[u]; k < rStart[u + 1]; k++) {
+        const v = rEdges[k];
+        if (comp[v] < 0) {
+          comp[v] = c;
+          stack.push(v);
+        }
+      }
+    }
+    sizes.push(size);
+  }
+  let best = -1;
+  sizes.forEach((sz, c) => {
+    if (best < 0 || sz > sizes[best]) best = c;
+  });
+  const core = new Uint8Array(n);
+  for (let v = 0; v < n; v++) if (comp[v] === best) core[v] = 1;
+  return core;
 }
 
 const keyOf = (c: LngLat) => `${c[0]},${c[1]}`;
@@ -124,18 +187,21 @@ export function buildRoadGraph(roads: RoadCollection): RoadGraph {
     adjEdges[fill[a]++] = e;
   });
 
+  const fromA = Int32Array.from(from);
+  const toA = Int32Array.from(to);
   return {
     vertexCount: n,
     lat: Float64Array.from(vLat),
     lng: Float64Array.from(vLng),
     ways,
-    edgeFrom: Int32Array.from(from),
-    edgeTo: Int32Array.from(to),
+    edgeFrom: fromA,
+    edgeTo: toA,
     edgeLen: Float64Array.from(len),
     edgeWay: Int32Array.from(wayOf),
     adjStart,
     adjEdges,
     wayIndexById,
+    core: largestStrongComponent(n, fromA, toA, adjStart, adjEdges),
   };
 }
 
@@ -147,7 +213,10 @@ export interface Snap {
   unsnapped: boolean;
 }
 
-/** The nearest vertex to a point; `unsnapped` when none lies within `maxM`. */
+/**
+ * The nearest vertex to a point that lies in the strongly connected core of the graph; `unsnapped` when none lies within `maxM`.
+ * Without the core a point can snap to the end of a one-way ramp that has no way out (or no way in), and then nothing is reachable.
+ */
 export function snapToGraph(g: RoadGraph, lat: number, lng: number, maxM = SNAP_MAX_M): Snap {
   // Compare in a local flat projection first; only the winner needs the exact distance.
   const kx = Math.cos(rad(lat)) * 111320;
@@ -155,6 +224,7 @@ export function snapToGraph(g: RoadGraph, lat: number, lng: number, maxM = SNAP_
   let best = -1;
   let bestD2 = Infinity;
   for (let v = 0; v < g.vertexCount; v++) {
+    if (!g.core[v]) continue;
     const dx = (g.lng[v] - lng) * kx;
     const dy = (g.lat[v] - lat) * ky;
     const d2 = dx * dx + dy * dy;
