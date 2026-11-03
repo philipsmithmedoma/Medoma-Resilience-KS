@@ -10,14 +10,13 @@
 //   node scripts/fetch-osm.mjs [pack] --out DIR      write somewhere other than src/data/packs/geo/<pack> (to try the script out)
 //   node scripts/fetch-osm.mjs [pack] --write-queries   write the query files under scripts/overpass/ and stop (no network)
 //
-// This script is the only code in the repository that talks to the internet, and only to OVERPASS below. The app
+// This script is the only code in the repository that talks to the internet, and only to the Overpass endpoints below (ENDPOINTS; OVERPASS_URL goes first). The app
 // never calls Overpass; the files it writes are committed.
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OUTPUTS, PACKS, buildQuery, geoReadme } from './osm-convert.mjs';
 
-const OVERPASS = 'https://overpass-api.de/api/interpreter';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const queryDir = path.join(here, 'overpass');
 const args = process.argv.slice(2);
@@ -50,23 +49,80 @@ if (args.includes('--write-queries')) {
   process.exit(0);
 }
 
-async function query(name) {
-  const ql = queryText(name);
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    const res = await fetch(OVERPASS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'medoma-resilience-ks/fetch-osm (https://github.com/philipsmithmedoma/Medoma-Resilience-KS)' },
-      body: new URLSearchParams({ data: ql }),
-    });
-    if (res.ok) return res.json();
-    // 429 and 504 mean the public instance is busy: wait and retry.
-    if ((res.status === 429 || res.status === 504 || res.status === 502) && attempt < 4) {
-      await new Promise((r) => setTimeout(r, 15000 * attempt));
-      continue;
+// Endpoints are tried in order until one answers; OVERPASS_URL, when set, goes first.
+const ENDPOINTS = [...new Set([process.env.OVERPASS_URL, 'https://overpass-api.de/api/interpreter', 'https://lz4.overpass-api.de/api/interpreter', 'https://z.overpass-api.de/api/interpreter'].filter(Boolean))];
+const TILE_PAUSE_MS = Number(process.env.TILE_PAUSE_MS ?? 20_000);
+const BUSY_WAIT_MS = 90_000;
+const MAX_ATTEMPTS = 3;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let endpointIndex = 0; // the endpoint that last answered; later tiles start there
+let firstRequest = true;
+
+// A bounding box (south, west, north, east) split into four equal tiles (2 x 2).
+function tiles([s, w, n, e]) {
+  const mLat = (s + n) / 2;
+  const mLon = (w + e) / 2;
+  return [[s, w, mLat, mLon], [s, mLon, mLat, e], [mLat, w, n, mLon], [mLat, mLon, n, e]];
+}
+
+// One query text against the endpoints: 503 and 429 wait 90 s and retry the same query (at most three attempts per
+// endpoint); any other failure moves on to the next endpoint.
+async function post(label, ql) {
+  const failures = [];
+  for (let k = 0; k < ENDPOINTS.length; k++) {
+    const idx = (endpointIndex + k) % ENDPOINTS.length;
+    const url = ENDPOINTS[idx];
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      let status;
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'medoma-resilience-ks/fetch-osm (https://github.com/philipsmithmedoma/Medoma-Resilience-KS)' },
+          body: new URLSearchParams({ data: ql }),
+          signal: AbortSignal.timeout(240_000),
+        });
+        if (res.ok) {
+          endpointIndex = idx;
+          return await res.json();
+        }
+        status = res.status;
+      } catch (err) {
+        failures.push(`${url}: ${err.cause?.code ?? err.name}`);
+        break;
+      }
+      if ((status === 503 || status === 429) && attempt < MAX_ATTEMPTS) {
+        console.log(`${label}: HTTP ${status} from ${url}, waiting ${BUSY_WAIT_MS / 1000} s (attempt ${attempt} of ${MAX_ATTEMPTS})`);
+        await sleep(BUSY_WAIT_MS);
+        continue;
+      }
+      failures.push(`${url}: HTTP ${status}`);
+      break;
     }
-    throw new Error(`Overpass ${name}: HTTP ${res.status}`);
   }
-  throw new Error(`Overpass ${name}: no answer`);
+  throw new Error(`Overpass ${label}: no endpoint answered (${failures.join('; ')})`);
+}
+
+// Fetches one output: bounding-box queries tile by tile (20 s apart), merged with de-duplication on OSM type and id.
+async function query(name) {
+  const parts = name === 'streets' ? [{ label: name, ql: queryText(name) }] : tiles(bbox ?? PACKS[pack].bbox[name]).map((t, i) => ({ label: `${name} tile ${i + 1}/4`, ql: buildQuery(pack, name, t) }));
+  const merged = new Map();
+  let base;
+  for (const part of parts) {
+    if (!firstRequest) await sleep(TILE_PAUSE_MS);
+    firstRequest = false;
+    const raw = await post(part.label, part.ql);
+    base ??= raw;
+    let added = 0;
+    for (const el of raw.elements ?? []) {
+      const key = `${el.type}/${el.id}`;
+      if (!merged.has(key)) {
+        merged.set(key, el);
+        added++;
+      }
+    }
+    console.log(`${part.label}: ${(raw.elements ?? []).length} elements, ${added} new`);
+  }
+  return { ...base, elements: [...merged.values()] };
 }
 
 mkdirSync(outDir, { recursive: true });
