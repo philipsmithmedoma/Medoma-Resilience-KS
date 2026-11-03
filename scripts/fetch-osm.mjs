@@ -10,9 +10,13 @@
 //   node scripts/fetch-osm.mjs [pack] --out DIR      write somewhere other than src/data/packs/geo/<pack> (to try the script out)
 //   node scripts/fetch-osm.mjs [pack] --write-queries   write the query files under scripts/overpass/ and stop (no network)
 //
+// Each file is written as soon as it is complete. A file that already exists is skipped unless FORCE=1 is set. A file that
+// cannot be fetched gives a warning and the script goes on with the next one; when all the others are written it exits
+// with code 2 (1 is a file over its size budget, 2 is also used for bad arguments).
+//
 // This script is the only code in the repository that talks to the internet, and only to the Overpass endpoints below (ENDPOINTS; OVERPASS_URL goes first). The app
 // never calls Overpass; the files it writes are committed.
-import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OUTPUTS, PACKS, buildQuery, geoReadme } from './osm-convert.mjs';
@@ -52,8 +56,10 @@ if (args.includes('--write-queries')) {
 // Endpoints are tried in order until one answers; OVERPASS_URL, when set, goes first.
 const ENDPOINTS = [...new Set([process.env.OVERPASS_URL, 'https://overpass-api.de/api/interpreter', 'https://lz4.overpass-api.de/api/interpreter', 'https://z.overpass-api.de/api/interpreter'].filter(Boolean))];
 const TILE_PAUSE_MS = Number(process.env.TILE_PAUSE_MS ?? 20_000);
-const BUSY_WAIT_MS = 90_000;
-const MAX_ATTEMPTS = 3;
+const BUSY_WAIT_MS = Number(process.env.BUSY_WAIT_MS ?? 120_000);
+const MAX_ATTEMPTS = 5;
+const RETRY_STATUSES = new Set([502, 503, 504, 429]);
+const FORCE = process.env.FORCE === '1';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let endpointIndex = 0; // the endpoint that last answered; later tiles start there
 let firstRequest = true;
@@ -65,41 +71,38 @@ function tiles([s, w, n, e]) {
   return [[s, w, mLat, mLon], [s, mLon, mLat, e], [mLat, w, n, mLon], [mLat, mLon, n, e]];
 }
 
-// One query text against the endpoints: 503 and 429 wait 90 s and retry the same query (at most three attempts per
-// endpoint); any other failure moves on to the next endpoint.
+// One query text, at most MAX_ATTEMPTS attempts. Each attempt goes to the next endpoint in turn. 502, 503, 504 and 429 wait
+// BUSY_WAIT_MS (120 s) before the next attempt; any other failure (a network error, another status) moves on at once.
 async function post(label, ql) {
   const failures = [];
-  for (let k = 0; k < ENDPOINTS.length; k++) {
-    const idx = (endpointIndex + k) % ENDPOINTS.length;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const idx = (endpointIndex + attempt - 1) % ENDPOINTS.length;
     const url = ENDPOINTS[idx];
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      let status;
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'medoma-resilience-ks/fetch-osm (https://github.com/philipsmithmedoma/Medoma-Resilience-KS)' },
-          body: new URLSearchParams({ data: ql }),
-          signal: AbortSignal.timeout(240_000),
-        });
-        if (res.ok) {
-          endpointIndex = idx;
-          return await res.json();
-        }
-        status = res.status;
-      } catch (err) {
-        failures.push(`${url}: ${err.cause?.code ?? err.name}`);
-        break;
+    let retryable = false;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'medoma-resilience-ks/fetch-osm (https://github.com/philipsmithmedoma/Medoma-Resilience-KS)' },
+        body: new URLSearchParams({ data: ql }),
+        signal: AbortSignal.timeout(240_000),
+      });
+      if (res.ok) {
+        endpointIndex = idx;
+        return await res.json();
       }
-      if ((status === 503 || status === 429) && attempt < MAX_ATTEMPTS) {
-        console.log(`${label}: HTTP ${status} from ${url}, waiting ${BUSY_WAIT_MS / 1000} s (attempt ${attempt} of ${MAX_ATTEMPTS})`);
+      failures.push(`${url}: HTTP ${res.status}`);
+      retryable = RETRY_STATUSES.has(res.status);
+    } catch (err) {
+      failures.push(`${url}: ${err.cause?.code ?? err.name}`);
+    }
+    if (attempt < MAX_ATTEMPTS) {
+      if (retryable) {
+        console.log(`${label}: ${failures.at(-1)}, waiting ${BUSY_WAIT_MS / 1000} s (attempt ${attempt} of ${MAX_ATTEMPTS})`);
         await sleep(BUSY_WAIT_MS);
-        continue;
-      }
-      failures.push(`${url}: HTTP ${status}`);
-      break;
+      } else console.log(`${label}: ${failures.at(-1)}, trying the next endpoint (attempt ${attempt} of ${MAX_ATTEMPTS})`);
     }
   }
-  throw new Error(`Overpass ${label}: no endpoint answered (${failures.join('; ')})`);
+  throw new Error(`Overpass ${label}: no answer after ${MAX_ATTEMPTS} attempts (${failures.join('; ')})`);
 }
 
 // Fetches one output: bounding-box queries tile by tile (20 s apart), merged with de-duplication on OSM type and id.
@@ -128,13 +131,26 @@ async function query(name) {
 mkdirSync(outDir, { recursive: true });
 const date = new Date().toISOString().slice(0, 10);
 const sizes = {};
+const missing = [];
 let overBudget = false;
 for (const o of OUTPUTS) {
   if (only && only !== o.query) continue;
-  const raw = fromDir ? JSON.parse(readFileSync(path.join(fromDir, `${o.query}.json`), 'utf8')) : await query(o.query);
-  const geo = o.convert(raw);
   const file = path.join(outDir, o.file);
-  writeFileSync(file, JSON.stringify(geo));
+  if (!fromDir && !FORCE && existsSync(file)) {
+    sizes[o.file] = statSync(file).size;
+    console.log(`${o.file}: already exists (${(sizes[o.file] / 1024).toFixed(1)} KB), skipped (FORCE=1 fetches it again)`);
+    continue;
+  }
+  let geo;
+  try {
+    const raw = fromDir ? JSON.parse(readFileSync(path.join(fromDir, `${o.query}.json`), 'utf8')) : await query(o.query);
+    geo = o.convert(raw);
+  } catch (err) {
+    missing.push(o.file);
+    console.warn(`WARNING: ${o.file} was not written: ${err.message}`);
+    continue;
+  }
+  writeFileSync(file, JSON.stringify(geo)); // written as soon as the file is complete
   sizes[o.file] = statSync(file).size;
   const ok = sizes[o.file] <= o.budget;
   overBudget ||= !ok;
@@ -144,4 +160,8 @@ if (!only) writeFileSync(path.join(outDir, 'README.md'), geoReadme(date, sizes, 
 if (overBudget) {
   console.error('A file exceeds its budget (SPEC.md § 12.2): tighten the simplification or the query before committing.');
   process.exit(1);
+}
+if (missing.length) {
+  console.error(`MISSING: ${missing.join(', ')} (${pack}). Everything else is written; run again to fetch only these (existing files are skipped).`);
+  process.exit(2);
 }

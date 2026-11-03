@@ -35,10 +35,23 @@ jobs:
       - run: npm ci
 
       - name: Fetch OpenStreetMap geometry
+        # Exit code 2 from the script means that every file it could fetch is written and some are missing: carry on.
         run: |
           if [ "$PACK" = "both" ]; then packs="karolinska lund"; else packs="$PACK"; fi
+          : > "$RUNNER_TEMP/missing.txt"
           for p in $packs; do
+            set +e
             node scripts/fetch-osm.mjs "$p"
+            code=$?
+            set -e
+            if [ "$code" -eq 2 ]; then
+              echo "::warning::fetch-osm.mjs $p: some files could not be fetched; continuing with what exists."
+            elif [ "$code" -ne 0 ]; then
+              exit "$code"
+            fi
+            for f in roads streets power water; do
+              [ -f "src/data/packs/geo/$p/$f.json" ] || echo "$p/$f.json" >> "$RUNNER_TEMP/missing.txt"
+            done
           done
 
       - name: Generate patients
@@ -72,6 +85,14 @@ jobs:
             done
             echo
             echo "Pack: $PACK"
+            echo
+            if [ -s "$RUNNER_TEMP/missing.txt" ]; then
+              echo "Filer som saknas (hämtningen från Overpass misslyckades, kör om workflowen för dem):"
+              echo
+              while read -r f; do printf -- '- `%s`\n' "$f"; done < "$RUNNER_TEMP/missing.txt"
+            else
+              echo "Inga filer saknas."
+            fi
             echo
             echo "Testutskrift, sista 60 raderna:"
             echo

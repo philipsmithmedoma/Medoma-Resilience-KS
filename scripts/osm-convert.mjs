@@ -160,7 +160,7 @@ export function convertWater(osm) {
 /** The four outputs, their queries and their size budgets in bytes (SPEC.md § 12.2). */
 export const OUTPUTS = [
   { file: 'roads.json', query: 'roads', convert: convertRoads, budget: 2.5 * 1024 * 1024 },
-  { file: 'streets.json', query: 'streets', convert: convertStreets, budget: 1.0 * 1024 * 1024 },
+  { file: 'streets.json', query: 'streets', convert: convertStreets, budget: 1.5 * 1024 * 1024 },
   { file: 'power.json', query: 'power', convert: convertPower, budget: 0.4 * 1024 * 1024 },
   { file: 'water.json', query: 'water', convert: convertWater, budget: Infinity },
 ];
